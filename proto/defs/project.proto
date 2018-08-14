@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package runm;
+
+// A grouping of users of the system. A user may have permissions to read or
+// take action within one or more Projects. Projects may be parents of other
+// Projects, creating a tree structure.
+message Project {
+    string uuid = 1;
+    string display_name = 2;
+    string slug = 3;
+    Project parent = 4;
+    uint32 generation = 100;
+}

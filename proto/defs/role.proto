@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package runm;
+
+import "permission.proto";
+
+// A role is a set of permissions that may be applied to a user, globally or
+// scoped to a specific project
+message Role {
+    string uuid = 1;
+    string display_name = 2;
+    string slug = 3;
+    uint32 generation = 100;
+    PermissionSet permissions = 101;
+}

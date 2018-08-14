@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package runm;
+
+import "permission.proto";
+
+// Basic information about a user of the system
+message User {
+    string uuid = 1;
+    string email = 2;
+    string display_name = 3;
+    string slug = 4;
+    uint32 generation = 100;
+}
+
+// The set of system and scoped permissions that a user has
+message UserPermissions {
+    // The user these permissions apply to
+    User user = 1;
+    // Globally-applicable permissions
+    PermissionSet system = 2;
+    // A map, keyed by the scope (typically the project UUID), containing
+    // permissions for a user against that particular scope
+    map<string, PermissionSet> scoped = 3;
+}

@@ -1,3 +1,9 @@
+# Don't store vendored code in tree
+vendor/
+
+# Don't store generated code in tree
+proto/*.go
+
 # Binaries for programs and plugins
 *.exe
 *.exe~

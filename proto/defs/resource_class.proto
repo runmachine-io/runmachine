@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package runm;
+
+// A class of consumable resource provided by one or more providers in the
+// system.
+message ResourceClass {
+    string key = 1;
+    string description = 2;
+    uint32 generation = 100;
+}

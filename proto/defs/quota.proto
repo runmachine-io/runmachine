@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package runm;
+
+import "project.proto";
+import "resource_class.proto";
+
+// The maximum amount of a particular resource that a project is limited to
+// consuming
+message ProjectQuota {
+    ResourceClass resource_class = 1;
+    Project project = 2;
+    uint32 amount = 3;
+    uint32 generation = 100;
+}

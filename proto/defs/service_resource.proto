@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package runm;
 
+import "consumer.proto";
 import "error.proto";
 import "resource_class.proto";
 import "search.proto";
@@ -23,6 +24,18 @@ service RunmResource {
 
     // Returns information about multiple resource classs
     rpc resource_class_list(ResourceClassListRequest) returns (stream ResourceClass) {}
+
+    // Returns information about a specific consumer type
+    rpc consumer_type_get(ConsumerTypeGetRequest) returns (ConsumerType) {}
+
+    // Deletes one or more consumer typees
+    rpc consumer_type_delete(ConsumerTypeDeleteRequest) returns (ConsumerTypeDeleteResponse) {}
+
+    // Set information about a specific consumer type
+    rpc consumer_type_set(ConsumerTypeSetRequest) returns (ConsumerTypeSetResponse) {}
+
+    // Returns information about multiple consumer types
+    rpc consumer_type_list(ConsumerTypeListRequest) returns (stream ConsumerType) {}
 }
 
 // RPC Request payload messages
@@ -32,7 +45,7 @@ message ResourceClassGetRequest {
 }
 
 message ResourceClassSetFields {
-    StringValue key = 1;
+    StringValue code = 1;
     StringValue display_name = 2;
     StringValue description = 3;
 }
@@ -64,6 +77,48 @@ message ResourceClassDeleteRequest {
 }
 
 message ResourceClassDeleteResponse {
+    repeated Error errors = 1;
+    uint64 num_deleted = 2;
+}
+
+message ConsumerTypeGetRequest {
+    Session session = 1;
+    string search = 2;
+}
+
+message ConsumerTypeSetFields {
+    StringValue code = 1;
+    StringValue display_name = 2;
+    StringValue description = 3;
+}
+
+message ConsumerTypeSetRequest {
+    Session session = 1;
+    ConsumerType consumer_type = 2;
+    ConsumerTypeSetFields changed = 3;
+}
+
+message ConsumerTypeSetResponse {
+    repeated Error errors = 1;
+    ConsumerType consumer_type = 2;
+}
+
+message ConsumerTypeListFilters {
+    repeated string identifiers = 1;
+}
+
+message ConsumerTypeListRequest {
+    Session session = 1;
+    ConsumerTypeListFilters filters = 2;
+    SearchOptions options = 3;
+}
+
+message ConsumerTypeDeleteRequest {
+    Session session = 1;
+    string search = 2;
+}
+
+message ConsumerTypeDeleteResponse {
     repeated Error errors = 1;
     uint64 num_deleted = 2;
 }

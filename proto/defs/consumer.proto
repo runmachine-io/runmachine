@@ -2,9 +2,8 @@ syntax = "proto3";
 
 package runm;
 
-// A class of consumable resource provided by one or more providers in the
-// system.
-message ResourceClass {
+// A type of consumer of resources in the system.
+message ConsumerType {
     string code = 1;
     string display_name = 2;
     string description = 3;

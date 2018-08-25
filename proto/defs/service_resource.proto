@@ -1,0 +1,69 @@
+syntax = "proto3";
+
+package runm;
+
+import "error.proto";
+import "resource_class.proto";
+import "search.proto";
+import "session.proto";
+import "wrappers.proto";
+
+// The runm-resource gRPC service manages inventory of the deployment's set of
+// resource providers, the transactional claims of resources, basic scheduling
+// and reservations.
+service RunmResource {
+    // Returns information about a specific resource class
+    rpc resource_class_get(ResourceClassGetRequest) returns (ResourceClass) {}
+
+    // Deletes one or more resource classes
+    rpc resource_class_delete(ResourceClassDeleteRequest) returns (ResourceClassDeleteResponse) {}
+
+    // Set information about a specific resource class
+    rpc resource_class_set(ResourceClassSetRequest) returns (ResourceClassSetResponse) {}
+
+    // Returns information about multiple resource classs
+    rpc resource_class_list(ResourceClassListRequest) returns (stream ResourceClass) {}
+}
+
+// RPC Request payload messages
+message ResourceClassGetRequest {
+    Session session = 1;
+    string search = 2;
+}
+
+message ResourceClassSetFields {
+    StringValue key = 1;
+    StringValue display_name = 2;
+    StringValue description = 3;
+}
+
+message ResourceClassSetRequest {
+    Session session = 1;
+    ResourceClass resource_class = 2;
+    ResourceClassSetFields changed = 3;
+}
+
+message ResourceClassSetResponse {
+    repeated Error errors = 1;
+    ResourceClass resource_class = 2;
+}
+
+message ResourceClassListFilters {
+    repeated string identifiers = 1;
+}
+
+message ResourceClassListRequest {
+    Session session = 1;
+    ResourceClassListFilters filters = 2;
+    SearchOptions options = 3;
+}
+
+message ResourceClassDeleteRequest {
+    Session session = 1;
+    string search = 2;
+}
+
+message ResourceClassDeleteResponse {
+    repeated Error errors = 1;
+    uint64 num_deleted = 2;
+}

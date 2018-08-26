@@ -38,6 +38,18 @@ service RunmResource {
     // Returns information about multiple consumer types
     rpc consumer_type_list(ConsumerTypeListRequest) returns (stream ConsumerType) {}
 
+    // Returns information about a specific consumer type
+    rpc consumer_get(ConsumerGetRequest) returns (Consumer) {}
+
+    // Deletes one or more consumer typees
+    rpc consumer_delete(ConsumerDeleteRequest) returns (ConsumerDeleteResponse) {}
+
+    // Set information about a specific consumer type
+    rpc consumer_set(ConsumerSetRequest) returns (ConsumerSetResponse) {}
+
+    // Returns information about multiple consumer types
+    rpc consumer_list(ConsumerListRequest) returns (stream Consumer) {}
+
     // Returns information about a specific distance type
     rpc distance_type_get(DistanceTypeGetRequest) returns (DistanceType) {}
 
@@ -102,6 +114,52 @@ message ResourceClassDeleteRequest {
 }
 
 message ResourceClassDeleteResponse {
+    repeated Error errors = 1;
+    uint64 num_deleted = 2;
+}
+
+message ConsumerGetRequest {
+    Session session = 1;
+    string search = 2;
+}
+
+message ConsumerSetFields {
+    StringValue display_name = 1;
+    ConsumerType type = 50;
+    Project project = 51;
+    User user = 52;
+}
+
+message ConsumerSetRequest {
+    Session session = 1;
+    Consumer consumer = 2;
+    ConsumerSetFields changed = 3;
+}
+
+message ConsumerSetResponse {
+    repeated Error errors = 1;
+    Consumer consumer = 2;
+}
+
+message ConsumerListFilters {
+    repeated string identifiers = 1;
+    repeated string type_identifiers = 2;
+    repeated string project_identifiers = 3;
+    repeated string user_identifiers = 4;
+}
+
+message ConsumerListRequest {
+    Session session = 1;
+    ConsumerListFilters filters = 2;
+    SearchOptions options = 3;
+}
+
+message ConsumerDeleteRequest {
+    Session session = 1;
+    repeated Consumer consumers = 2;
+}
+
+message ConsumerDeleteResponse {
     repeated Error errors = 1;
     uint64 num_deleted = 2;
 }

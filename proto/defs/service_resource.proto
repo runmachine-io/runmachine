@@ -3,6 +3,7 @@ syntax = "proto3";
 package runm;
 
 import "consumer.proto";
+import "distance.proto";
 import "error.proto";
 import "resource_class.proto";
 import "search.proto";
@@ -36,6 +37,30 @@ service RunmResource {
 
     // Returns information about multiple consumer types
     rpc consumer_type_list(ConsumerTypeListRequest) returns (stream ConsumerType) {}
+
+    // Returns information about a specific distance type
+    rpc distance_type_get(DistanceTypeGetRequest) returns (DistanceType) {}
+
+    // Deletes one or more distance typees
+    rpc distance_type_delete(DistanceTypeDeleteRequest) returns (DistanceTypeDeleteResponse) {}
+
+    // Set information about a specific distance type
+    rpc distance_type_set(DistanceTypeSetRequest) returns (DistanceTypeSetResponse) {}
+
+    // Returns information about multiple distance types
+    rpc distance_type_list(DistanceTypeListRequest) returns (stream DistanceType) {}
+
+    // Returns information about a specific distance
+    rpc distance_get(DistanceGetRequest) returns (Distance) {}
+
+    // Deletes one or more distancees
+    rpc distance_delete(DistanceDeleteRequest) returns (DistanceDeleteResponse) {}
+
+    // Set information about a specific distance
+    rpc distance_set(DistanceSetRequest) returns (DistanceSetResponse) {}
+
+    // Returns information about multiple distances
+    rpc distance_list(DistanceListRequest) returns (stream Distance) {}
 }
 
 // RPC Request payload messages
@@ -73,7 +98,7 @@ message ResourceClassListRequest {
 
 message ResourceClassDeleteRequest {
     Session session = 1;
-    string search = 2;
+    repeated ResourceClass resource_classes = 2;
 }
 
 message ResourceClassDeleteResponse {
@@ -115,10 +140,96 @@ message ConsumerTypeListRequest {
 
 message ConsumerTypeDeleteRequest {
     Session session = 1;
-    string search = 2;
+    repeated ConsumerType consumer_types = 2;
 }
 
 message ConsumerTypeDeleteResponse {
+    repeated Error errors = 1;
+    uint64 num_deleted = 2;
+}
+
+message DistanceTypeGetRequest {
+    Session session = 1;
+    string search = 2;
+}
+
+message DistanceTypeSetFields {
+    StringValue code = 1;
+    StringValue display_name = 2;
+    StringValue description = 3;
+}
+
+message DistanceTypeSetRequest {
+    Session session = 1;
+    DistanceType distance_type = 2;
+    DistanceTypeSetFields changed = 3;
+}
+
+message DistanceTypeSetResponse {
+    repeated Error errors = 1;
+    DistanceType distance_type = 2;
+}
+
+message DistanceTypeListFilters {
+    repeated string identifiers = 1;
+}
+
+message DistanceTypeListRequest {
+    Session session = 1;
+    DistanceTypeListFilters filters = 2;
+    SearchOptions options = 3;
+}
+
+message DistanceTypeDeleteRequest {
+    Session session = 1;
+    repeated DistanceType distance_types = 2;
+}
+
+message DistanceTypeDeleteResponse {
+    repeated Error errors = 1;
+    uint64 num_deleted = 2;
+}
+
+message DistanceGetRequest {
+    Session session = 1;
+    string search = 2;
+}
+
+message DistanceSetFields {
+    StringValue code = 1;
+    StringValue display_name = 2;
+    UInt32Value position = 3;
+    DistanceType type = 50;
+}
+
+message DistanceSetRequest {
+    Session session = 1;
+    Distance distance = 2;
+    DistanceSetFields changed = 3;
+}
+
+message DistanceSetResponse {
+    repeated Error errors = 1;
+    Distance distance = 2;
+}
+
+message DistanceListFilters {
+    repeated string identifiers = 1;
+    repeated string type_identifiers = 2;
+}
+
+message DistanceListRequest {
+    Session session = 1;
+    DistanceListFilters filters = 2;
+    SearchOptions options = 3;
+}
+
+message DistanceDeleteRequest {
+    Session session = 1;
+    repeated Distance distances = 2;
+}
+
+message DistanceDeleteResponse {
     repeated Error errors = 1;
     uint64 num_deleted = 2;
 }

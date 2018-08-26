@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package runm;
+
+// A provider exposes inventory of resources to be claimed by consumers of
+// those resources. Each provider may belong to zero or more provider groups
+// and have traits associated with it.
+message Provider {
+    string uuid = 1;
+    string display_name = 2;
+    string slug = 3;
+    uint32 generation = 100;
+}

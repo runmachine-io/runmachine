@@ -73,6 +73,18 @@ service RunmResource {
 
     // Returns information about multiple distances
     rpc distance_list(DistanceListRequest) returns (stream Distance) {}
+
+    // Returns information about a specific provider
+    rpc provider_get(ProviderGetRequest) returns (Provider) {}
+
+    // Deletes one or more provideres
+    rpc provider_delete(ProviderDeleteRequest) returns (ProviderDeleteResponse) {}
+
+    // Set information about a specific provider
+    rpc provider_set(ProviderSetRequest) returns (ProviderSetResponse) {}
+
+    // Returns information about multiple providers
+    rpc provider_list(ProviderListRequest) returns (stream Provider) {}
 }
 
 // RPC Request payload messages
@@ -288,6 +300,50 @@ message DistanceDeleteRequest {
 }
 
 message DistanceDeleteResponse {
+    repeated Error errors = 1;
+    uint64 num_deleted = 2;
+}
+
+message ProviderGetRequest {
+    Session session = 1;
+    string search = 2;
+}
+
+message ProviderSetFields {
+    StringValue code = 1;
+    StringValue display_name = 2;
+    UInt32Value position = 3;
+    ProviderType type = 50;
+}
+
+message ProviderSetRequest {
+    Session session = 1;
+    Provider provider = 2;
+    ProviderSetFields changed = 3;
+}
+
+message ProviderSetResponse {
+    repeated Error errors = 1;
+    Provider provider = 2;
+}
+
+message ProviderListFilters {
+    repeated string identifiers = 1;
+    repeated string type_identifiers = 2;
+}
+
+message ProviderListRequest {
+    Session session = 1;
+    ProviderListFilters filters = 2;
+    SearchOptions options = 3;
+}
+
+message ProviderDeleteRequest {
+    Session session = 1;
+    repeated Provider providers = 2;
+}
+
+message ProviderDeleteResponse {
     repeated Error errors = 1;
     uint64 num_deleted = 2;
 }

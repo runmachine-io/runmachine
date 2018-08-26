@@ -2,6 +2,9 @@ syntax = "proto3";
 
 package runm;
 
+import "project.proto";
+import "user.proto";
+
 // A type of consumer of resources in the system.
 message ConsumerType {
     string code = 1;

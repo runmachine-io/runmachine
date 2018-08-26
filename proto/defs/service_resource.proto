@@ -5,9 +5,12 @@ package runm;
 import "consumer.proto";
 import "distance.proto";
 import "error.proto";
+import "project.proto";
+import "provider.proto";
 import "resource_class.proto";
 import "search.proto";
 import "session.proto";
+import "user.proto";
 import "wrappers.proto";
 
 // The runm-resource gRPC service manages inventory of the deployment's set of
@@ -77,7 +80,7 @@ service RunmResource {
     // Returns information about a specific provider
     rpc provider_get(ProviderGetRequest) returns (Provider) {}
 
-    // Deletes one or more provideres
+    // Deletes one or more providers
     rpc provider_delete(ProviderDeleteRequest) returns (ProviderDeleteResponse) {}
 
     // Set information about a specific provider
@@ -85,6 +88,21 @@ service RunmResource {
 
     // Returns information about multiple providers
     rpc provider_list(ProviderListRequest) returns (stream Provider) {}
+
+    // Returns information about a specific provider group
+    rpc provider_group_get(ProviderGroupGetRequest) returns (ProviderGroup) {}
+
+    // Deletes one or more provider groups
+    rpc provider_group_delete(ProviderGroupDeleteRequest) returns (ProviderGroupDeleteResponse) {}
+
+    // Set information about a specific provider group
+    rpc provider_group_set(ProviderGroupSetRequest) returns (ProviderGroupSetResponse) {}
+
+    // Returns information about multiple provider groups
+    rpc provider_group_list(ProviderGroupListRequest) returns (stream ProviderGroup) {}
+
+    // Add or remove providers from a provider group
+    rpc provider_group_members_set(ProviderGroupMembersSetRequest) returns (ProviderGroupMembersSetResponse) {}
 }
 
 // RPC Request payload messages
@@ -310,10 +328,7 @@ message ProviderGetRequest {
 }
 
 message ProviderSetFields {
-    StringValue code = 1;
-    StringValue display_name = 2;
-    UInt32Value position = 3;
-    ProviderType type = 50;
+    StringValue display_name = 1;
 }
 
 message ProviderSetRequest {
@@ -329,7 +344,6 @@ message ProviderSetResponse {
 
 message ProviderListFilters {
     repeated string identifiers = 1;
-    repeated string type_identifiers = 2;
 }
 
 message ProviderListRequest {
@@ -346,4 +360,62 @@ message ProviderDeleteRequest {
 message ProviderDeleteResponse {
     repeated Error errors = 1;
     uint64 num_deleted = 2;
+}
+
+message ProviderGroupGetRequest {
+    Session session = 1;
+    string search = 2;
+}
+
+message ProviderGroupSetFields {
+    StringValue display_name = 1;
+}
+
+message ProviderGroupSetRequest {
+    Session session = 1;
+    ProviderGroup provider_group = 2;
+    ProviderGroupSetFields changed = 3;
+}
+
+message ProviderGroupSetResponse {
+    repeated Error errors = 1;
+    ProviderGroup provider_group = 2;
+}
+
+message ProviderGroupListFilters {
+    repeated string identifiers = 1;
+}
+
+message ProviderGroupListRequest {
+    Session session = 1;
+    ProviderGroupListFilters filters = 2;
+    SearchOptions options = 3;
+}
+
+message ProviderGroupDeleteRequest {
+    Session session = 1;
+    repeated ProviderGroup provider_groups = 2;
+}
+
+message ProviderGroupDeleteResponse {
+    repeated Error errors = 1;
+    uint64 num_deleted = 2;
+}
+
+message ProviderGroupMembersSetRequest {
+    Session session = 1;
+    ProviderGroup provider_group = 2;
+    repeated string add = 3;
+    repeated string remove = 4;
+}
+
+message ProviderGroupMembersSetResponse {
+    repeated Error errors = 1;
+    uint64 num_added = 2;
+    uint64 num_removed = 3;
+}
+
+message ProviderGroupMembersListRequest {
+    Session session = 1;
+    ProviderGroup provider_group = 2;
 }

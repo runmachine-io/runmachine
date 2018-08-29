@@ -5,6 +5,7 @@ package runm;
 import "consumer.proto";
 import "distance.proto";
 import "error.proto";
+import "inventory.proto";
 import "project.proto";
 import "provider.proto";
 import "resource_class.proto";
@@ -104,6 +105,9 @@ service RunmResource {
 
     // Add or remove traits from a provider
     rpc provider_traits_set(ProviderTraitsSetRequest) returns (ProviderTraitsSetResponse) {}
+
+    // Add, remove and modify inventories for a provider
+    rpc provider_inventories_set(ProviderInventoriesSetRequest) returns (ProviderInventoriesSetResponse) {}
 
     // Returns information about a specific provider group
     rpc provider_group_get(ProviderGroupGetRequest) returns (ProviderGroup) {}
@@ -430,8 +434,25 @@ message ProviderTraitsSetRequest {
 
 message ProviderTraitsSetResponse {
     repeated Error errors = 1;
-    uint64 num_added = 2;
-    uint64 num_removed = 3;
+    Provider provider = 2;
+    uint64 num_added = 3;
+    uint64 num_removed = 4;
+}
+
+message ProviderInventoriesSetRequest {
+    Session session = 1;
+    Provider provider = 2;
+    repeated Inventory add = 3;
+    repeated Inventory remove = 4;
+    repeated Inventory modify = 5;
+}
+
+message ProviderInventoriesSetResponse {
+    repeated Error errors = 1;
+    Provider provider = 2;
+    uint64 num_added = 3;
+    uint64 num_removed = 4;
+    uint64 num_modified = 5;
 }
 
 message ProviderGroupGetRequest {

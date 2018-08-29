@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package runm;
+
+import "allocation.proto";
+
+// A claim is a discrete request to transactionally allocate resources on a set
+// of providers for a given consumer.
+message Claim {
+    string uuid = 1;
+    int64 request_time = 2;
+    Allocation allocation = 50;
+}

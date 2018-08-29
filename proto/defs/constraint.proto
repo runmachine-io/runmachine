@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package runm;
+
+import "provider.proto";
+import "resource_class.proto";
+import "trait.proto";
+
+message ProviderGroupConstraint {
+    // All providers involved in the request group must collectively be
+    // associated with ALL provider groups in this list
+    repeated ProviderGroup require = 1;
+    // No provider involved in the request group may be associated with ANY of
+    // the provider groups in this list
+    repeated ProviderGroup forbid = 2;
+    // At least one provider involved in the request group must be associated
+    // with AT LEAST ONE of the provider groups in this list
+    repeated ProviderGroup any = 3;
+}
+
+message TraitConstraint {
+    // All providers involved in the request group must collectively contain
+    // ALL traits in this list
+    repeated Trait require = 1;
+    // No provider involved in the request group may contain ANY of the traits
+    // in this list
+    repeated Trait forbid = 2;
+    // At least one provider involved in the request group must contain AT
+    // LEAST ONE of the traits in this list
+    repeated Trait any = 3;
+}
+
+message ResourceConstraint {
+    ResourceClass resource_class = 1;
+    uint64 amount = 2;
+}

@@ -2,7 +2,9 @@ syntax = "proto3";
 
 package runm;
 
+import "claim.proto";
 import "consumer.proto";
+import "constraint.proto";
 import "distance.proto";
 import "error.proto";
 import "inventory.proto";
@@ -132,6 +134,10 @@ service RunmResource {
 
     // List provider-group-distance records for a provider group
     rpc provider_group_distances_list(ProviderGroupDistancesListRequest) returns (stream ProviderGroupDistance) {}
+
+    // List potential resource claims against providers that match a given set
+    // of resource and trait constraints
+    rpc claim_list(ClaimListRequest) returns (stream Claim) {}
 }
 
 // RPC Request payload messages
@@ -542,4 +548,41 @@ message ProviderGroupDistancesSetResponse {
 message ProviderGroupDistancesListRequest {
     Session session = 1;
     ProviderGroup provider_group = 2;
+}
+
+// A consumer requests some amount of resources and some matching constraints
+// (required or forbidden traits, group relationships, metadata selectors,
+// etc). This request is called a ClaimListRequest. A ClaimListRequest may be
+// transactionally fulfilled by a ClaimExecute RPC API call. The service will
+// respond to a ClaimListRequest with a stream of Claim messages that may be
+// used (via ClaimExecute()) to attempt to reserve/claim resources on a set of
+// providers for the consumer.
+message ClaimListRequestGroupConstraints {
+    repeated ResourceConstraint resources = 1;
+    repeated TraitConstraint traits = 2;
+    repeated ProviderGroupConstraint provider_groups = 3;
+}
+
+message ClaimListRequestGroupOptions {
+    // Indicates that the constraints must be met by a single provider, not
+    // multiple providers
+    bool single_provider = 1;
+}
+
+message ClaimListRequestGroup {
+    ClaimListRequestGroupOptions options = 1;
+    ClaimListRequestGroupConstraints constraints = 2;
+}
+
+message ClaimListRequest {
+    Consumer consumer = 1;
+    // The time that the intended allocation of resources will begin. Setting
+    // to 0-value or anything less than the current time means "claim now".
+    // Resources may be reserved by setting claim_start_time and
+    // claim_release_time to a discrete temporal interval.
+    int64 claim_start_time = 2;
+    // The time that the intended allocation of resources will expire/release.
+    // Setting to INT64_MAX means the resource claim is permanent.
+    int64 claim_release_time = 3;
+    repeated ClaimListRequestGroup request_groups = 50;
 }

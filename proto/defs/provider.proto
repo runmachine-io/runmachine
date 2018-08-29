@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package runm;
 
+import "distance.proto";
 import "trait.proto";
 
 // A collection of related providers
@@ -10,6 +11,12 @@ message ProviderGroup {
     string display_name = 2;
     string slug = 3;
     uint32 generation = 100;
+}
+
+// Represents the relative distance between one provider group and another
+message ProviderGroupDistance {
+    ProviderGroup other = 1;
+    Distance distance = 2;
 }
 
 // A provider exposes inventory of resources to be claimed by consumers of

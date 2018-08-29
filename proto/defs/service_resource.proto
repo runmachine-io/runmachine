@@ -123,6 +123,15 @@ service RunmResource {
 
     // Add or remove providers from a provider group
     rpc provider_group_members_set(ProviderGroupMembersSetRequest) returns (ProviderGroupMembersSetResponse) {}
+
+    // List providers belonging to a provider group
+    rpc provider_group_members_list(ProviderGroupMembersListRequest) returns (stream Provider) {}
+
+    // Add or remove distances between othe provider groups from a provider group
+    rpc provider_group_distances_set(ProviderGroupDistancesSetRequest) returns (ProviderGroupDistancesSetResponse) {}
+
+    // List provider-group-distance records for a provider group
+    rpc provider_group_distances_list(ProviderGroupDistancesListRequest) returns (stream ProviderGroupDistance) {}
 }
 
 // RPC Request payload messages
@@ -504,11 +513,33 @@ message ProviderGroupMembersSetRequest {
 
 message ProviderGroupMembersSetResponse {
     repeated Error errors = 1;
-    uint64 num_added = 2;
-    uint64 num_removed = 3;
+    ProviderGroup provider_group = 2;
+    uint64 num_added = 3;
+    uint64 num_removed = 4;
 }
 
 message ProviderGroupMembersListRequest {
+    Session session = 1;
+    ProviderGroup provider_group = 2;
+}
+
+message ProviderGroupDistancesSetRequest {
+    Session session = 1;
+    ProviderGroup provider_group = 2;
+    repeated ProviderGroupDistance add = 3;
+    repeated ProviderGroupDistance remove = 4;
+    repeated ProviderGroupDistance modify = 5;
+}
+
+message ProviderGroupDistancesSetResponse {
+    repeated Error errors = 1;
+    ProviderGroup provider_group = 2;
+    uint64 num_added = 3;
+    uint64 num_removed = 4;
+    uint64 num_modified = 5;
+}
+
+message ProviderGroupDistancesListRequest {
     Session session = 1;
     ProviderGroup provider_group = 2;
 }

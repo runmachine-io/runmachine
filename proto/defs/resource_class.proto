@@ -2,11 +2,13 @@ syntax = "proto3";
 
 package runm;
 
+import "wrappers.proto";
+
 // A class of consumable resource provided by one or more providers in the
 // system.
 message ResourceClass {
     string code = 1;
     string display_name = 2;
-    string description = 3;
+    StringValue description = 3;
     uint32 generation = 100;
 }

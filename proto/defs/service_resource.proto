@@ -10,6 +10,7 @@ import "provider.proto";
 import "resource_class.proto";
 import "search.proto";
 import "session.proto";
+import "trait.proto";
 import "user.proto";
 import "wrappers.proto";
 
@@ -28,6 +29,18 @@ service RunmResource {
 
     // Returns information about multiple resource classs
     rpc resource_class_list(ResourceClassListRequest) returns (stream ResourceClass) {}
+
+    // Returns information about a specific trait
+    rpc trait_get(TraitGetRequest) returns (Trait) {}
+
+    // Deletes one or more traits
+    rpc trait_delete(TraitDeleteRequest) returns (TraitDeleteResponse) {}
+
+    // Set information about a specific trait
+    rpc trait_set(TraitSetRequest) returns (TraitSetResponse) {}
+
+    // Returns information about multiple traits
+    rpc trait_list(TraitListRequest) returns (stream Trait) {}
 
     // Returns information about a specific consumer type
     rpc consumer_type_get(ConsumerTypeGetRequest) returns (ConsumerType) {}
@@ -144,6 +157,48 @@ message ResourceClassDeleteRequest {
 }
 
 message ResourceClassDeleteResponse {
+    repeated Error errors = 1;
+    uint64 num_deleted = 2;
+}
+
+message TraitGetRequest {
+    Session session = 1;
+    string search = 2;
+}
+
+message TraitSetFields {
+    StringValue code = 1;
+    StringValue display_name = 2;
+    StringValue description = 3;
+}
+
+message TraitSetRequest {
+    Session session = 1;
+    Trait trait = 2;
+    TraitSetFields changed = 3;
+}
+
+message TraitSetResponse {
+    repeated Error errors = 1;
+    Trait trait = 2;
+}
+
+message TraitListFilters {
+    repeated string identifiers = 1;
+}
+
+message TraitListRequest {
+    Session session = 1;
+    TraitListFilters filters = 2;
+    SearchOptions options = 3;
+}
+
+message TraitDeleteRequest {
+    Session session = 1;
+    repeated Trait traits = 2;
+}
+
+message TraitDeleteResponse {
     repeated Error errors = 1;
     uint64 num_deleted = 2;
 }

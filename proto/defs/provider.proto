@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package runm;
 
+import "trait.proto";
+
 // A collection of related providers
 message ProviderGroup {
     string uuid = 1;
@@ -18,5 +20,6 @@ message Provider {
     string display_name = 2;
     string slug = 3;
     repeated ProviderGroup groups = 50;
+    repeated Trait traits = 51;
     uint32 generation = 100;
 }

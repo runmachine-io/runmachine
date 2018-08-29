@@ -102,6 +102,9 @@ service RunmResource {
     // Returns information about multiple providers
     rpc provider_list(ProviderListRequest) returns (stream Provider) {}
 
+    // Add or remove traits from a provider
+    rpc provider_traits_set(ProviderTraitsSetRequest) returns (ProviderTraitsSetResponse) {}
+
     // Returns information about a specific provider group
     rpc provider_group_get(ProviderGroupGetRequest) returns (ProviderGroup) {}
 
@@ -415,6 +418,19 @@ message ProviderDeleteRequest {
 message ProviderDeleteResponse {
     repeated Error errors = 1;
     uint64 num_deleted = 2;
+}
+
+message ProviderTraitsSetRequest {
+    Session session = 1;
+    Provider provider = 2;
+    repeated string add = 3;
+    repeated string remove = 4;
+}
+
+message ProviderTraitsSetResponse {
+    repeated Error errors = 1;
+    uint64 num_added = 2;
+    uint64 num_removed = 3;
 }
 
 message ProviderGroupGetRequest {

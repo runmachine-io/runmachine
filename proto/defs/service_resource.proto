@@ -387,6 +387,7 @@ message ProviderGetRequest {
 
 message ProviderSetFields {
     StringValue display_name = 1;
+    Provider parent = 2;
 }
 
 message ProviderSetRequest {

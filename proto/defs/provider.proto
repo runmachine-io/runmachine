@@ -19,7 +19,9 @@ message Provider {
     string uuid = 1;
     string display_name = 2;
     string slug = 3;
-    repeated ProviderGroup groups = 50;
-    repeated Trait traits = 51;
+    Provider parent = 50;
+    Provider root = 51;
+    repeated ProviderGroup groups = 52;
+    repeated Trait traits = 53;
     uint32 generation = 100;
 }

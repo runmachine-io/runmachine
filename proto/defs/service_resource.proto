@@ -110,6 +110,9 @@ service RunmResource {
     // Add or remove traits from a provider
     rpc provider_traits_set(ProviderTraitsSetRequest) returns (ProviderTraitsSetResponse) {}
 
+    // Returns traits for a provider
+    rpc provider_traits_list(ProviderTraitsListRequest) returns (stream Trait) {}
+
     // Add, remove and modify inventories for a provider
     rpc provider_inventories_set(ProviderInventoriesSetRequest) returns (ProviderInventoriesSetResponse) {}
 
@@ -468,6 +471,18 @@ message ProviderTraitsSetResponse {
     Provider provider = 2;
     uint64 num_added = 3;
     uint64 num_removed = 4;
+}
+
+message ProviderTraitsListFilters {
+    // TODO(jaypipes): Maybe in the future there would be some sort of
+    // prefixing to winnow traits by?
+}
+
+message ProviderTraitsListRequest {
+    Session session = 1;
+    Provider provider = 2;
+    ProviderTraitsListFilters filters = 3;
+    SearchOptions options = 4;
 }
 
 message ProviderInventoriesSetRequest {

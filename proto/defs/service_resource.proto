@@ -138,6 +138,11 @@ service RunmResource {
     // List potential resource claims against providers that match a given set
     // of resource and trait constraints
     rpc claim_list(ClaimListRequest) returns (stream Claim) {}
+
+    // Attempts to execute the supplied claim, resulting in the atomic
+    // consumption of a set of resources on a set of one or more resource
+    // providers
+    rpc claim_execute(ClaimExecuteRequest) returns (ClaimExecuteResponse) {}
 }
 
 // RPC Request payload messages
@@ -592,4 +597,14 @@ message ClaimListRequest {
     // Setting to INT64_MAX means the resource claim is permanent.
     int64 claim_release_time = 3;
     repeated ClaimListRequestGroup request_groups = 50;
+}
+
+message ClaimExecuteRequest {
+    Session session = 1;
+    Claim claim = 2;
+}
+
+message ClaimExecuteResponse {
+    repeated Error errors = 1;
+    Claim claim = 2;
 }

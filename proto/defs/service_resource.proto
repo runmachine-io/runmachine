@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package runm;
 
+import "allocation.proto";
 import "claim.proto";
 import "consumer.proto";
 import "constraint.proto";
@@ -112,8 +113,11 @@ service RunmResource {
     // Add, remove and modify inventories for a provider
     rpc provider_inventories_set(ProviderInventoriesSetRequest) returns (ProviderInventoriesSetResponse) {}
 
-    // Returns inventory information about one or more providers
+    // Returns inventory information for a provider
     rpc provider_inventories_list(ProviderInventoriesListRequest) returns (stream Inventory) {}
+
+    // Returns allocation information for a provider
+    rpc provider_allocations_list(ProviderAllocationsListRequest) returns (stream Allocation) {}
 
     // Returns information about a specific provider group
     rpc provider_group_get(ProviderGroupGetRequest) returns (ProviderGroup) {}
@@ -483,14 +487,27 @@ message ProviderInventoriesSetResponse {
 }
 
 message ProviderInventoriesListFilters {
-    repeated string project_identifiers = 1;
-    repeated string resource_class_identifiers = 2;
+    repeated string resource_class_identifiers = 1;
 }
 
 message ProviderInventoriesListRequest {
     Session session = 1;
-    ProviderInventoriesListFilters filters = 2;
-    SearchOptions options = 3;
+    Provider provider = 2;
+    ProviderInventoriesListFilters filters = 3;
+    SearchOptions options = 4;
+}
+
+message ProviderAllocationsListFilters {
+    repeated string resource_class_identifiers = 1;
+    int64 claim_time = 2;
+    int64 release_time = 3;
+}
+
+message ProviderAllocationsListRequest {
+    Session session = 1;
+    Provider provider = 2;
+    ProviderAllocationsListFilters filters = 3;
+    SearchOptions options = 4;
 }
 
 message ProviderGroupGetRequest {
@@ -630,8 +647,8 @@ message ClaimExecuteResponse {
 message UsageListFilters {
     repeated string user_identifiers = 1;
     repeated string project_identifiers = 2;
-    int64 start_time = 3;
-    int64 end_time = 4;
+    int64 claim_time = 3;
+    int64 release_time = 4;
 }
 
 message UsageListRequest {

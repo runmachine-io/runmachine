@@ -561,6 +561,7 @@ message ClaimListRequestGroupConstraints {
     repeated ResourceConstraint resources = 1;
     repeated TraitConstraint traits = 2;
     repeated ProviderGroupConstraint provider_groups = 3;
+    repeated ProviderMetadataConstraint provider_metadata = 4;
 }
 
 message ClaimListRequestGroupOptions {

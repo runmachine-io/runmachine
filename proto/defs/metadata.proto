@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package runm;
+
+message MetadataItem {
+    string key = 1;
+    string value = 2;
+}
+
+message Metadata {
+    repeated MetadataItem items = 1;
+}

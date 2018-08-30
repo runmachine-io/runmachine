@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package runm;
 
+import "metadata.proto";
 import "provider.proto";
 import "resource_class.proto";
 import "trait.proto";
@@ -33,4 +34,27 @@ message TraitConstraint {
 message ResourceConstraint {
     ResourceClass resource_class = 1;
     uint64 amount = 2;
+}
+
+message ProviderMetadataConstraint {
+    // All providers involved in the request group must collectively have ALL
+    // of the key/value pairs in this list
+    repeated Metadata require_items = 1;
+    // All providers involved in the request group must collectively have ALL
+    // of the keys in this list. Doesn't matter what the value of the metadata
+    // item is
+    repeated string require_keys = 2;
+    // No provider involved in the request group may have ANY of the key/value
+    // pairs in this list
+    repeated Metadata forbid_items = 3;
+    // No provider involved in the request group may have ANY of the keys in
+    // this list. Doesn't matter what the value of the metadata item is
+    repeated string forbid_keys = 4;
+    // At least one provider involved in the request group must have AT LEAST
+    // ONE of the key/value pairs in this list
+    repeated Metadata any_items = 5;
+    // At least one provider involved in the request group must have AT LEAST
+    // ONE of the keys in this list. Doesn't matter what the value of the
+    // metadata item is
+    repeated string any_keys = 6;
 }

@@ -14,6 +14,7 @@ import "resource_class.proto";
 import "search.proto";
 import "session.proto";
 import "trait.proto";
+import "usage.proto";
 import "user.proto";
 import "wrappers.proto";
 
@@ -143,6 +144,9 @@ service RunmResource {
     // consumption of a set of resources on a set of one or more resource
     // providers
     rpc claim_execute(ClaimExecuteRequest) returns (ClaimExecuteResponse) {}
+
+    // List usage records for a user or project and optional timeframe
+    rpc usage_list(ClaimListRequest) returns (stream Usage) {}
 }
 
 // RPC Request payload messages
@@ -607,4 +611,17 @@ message ClaimExecuteRequest {
 message ClaimExecuteResponse {
     repeated Error errors = 1;
     Claim claim = 2;
+}
+
+message UsageListFilters {
+    repeated string user_identifiers = 1;
+    repeated string project_identifiers = 2;
+    int64 start_time = 3;
+    int64 end_time = 4;
+}
+
+message UsageListRequest {
+    Session session = 1;
+    UsageListFilters filters = 2;
+    SearchOptions options = 3;
 }

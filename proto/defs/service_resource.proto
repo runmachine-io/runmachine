@@ -112,6 +112,9 @@ service RunmResource {
     // Add, remove and modify inventories for a provider
     rpc provider_inventories_set(ProviderInventoriesSetRequest) returns (ProviderInventoriesSetResponse) {}
 
+    // Returns inventory information about one or more providers
+    rpc provider_inventories_list(ProviderInventoriesListRequest) returns (stream Inventory) {}
+
     // Returns information about a specific provider group
     rpc provider_group_get(ProviderGroupGetRequest) returns (ProviderGroup) {}
 
@@ -477,6 +480,17 @@ message ProviderInventoriesSetResponse {
     uint64 num_added = 3;
     uint64 num_removed = 4;
     uint64 num_modified = 5;
+}
+
+message ProviderInventoriesListFilters {
+    repeated string project_identifiers = 1;
+    repeated string resource_class_identifiers = 2;
+}
+
+message ProviderInventoriesListRequest {
+    Session session = 1;
+    ProviderInventoriesListFilters filters = 2;
+    SearchOptions options = 3;
 }
 
 message ProviderGroupGetRequest {

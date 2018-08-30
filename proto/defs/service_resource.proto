@@ -440,13 +440,40 @@ message ProviderSetResponse {
 }
 
 message ProviderListFilters {
+    // Return providers with any of the following UUID or slug identifiers
     repeated string identifiers = 1;
+
+    // Constraints that may be used to query/filter the returned providers. See
+    // the documentation in constraint.proto for more information on how these
+    // work
+    repeated ResourceConstraint resources = 2;
+    repeated TraitConstraint traits = 3;
+    repeated ProviderGroupConstraint provider_groups = 4;
+    repeated MetadataConstraint provider_metadata = 5;
 }
 
 message ProviderListRequest {
     Session session = 1;
     ProviderListFilters filters = 2;
     SearchOptions options = 3;
+    // When grabbing provider information, fetch the provider's traits. This
+    // option is always true if there are any TraitContraints in the filters
+    bool fetch_traits = 50;
+    // When grabbing provider information, fetch the provider's group
+    // associations. This option is always true if there are any
+    // ProviderGroupContraints in the filters
+    bool fetch_provider_groups = 51;
+    // When grabbing provider information, fetch the provider's metadata. This
+    // option is always truye if there are any MetadataConstraints in the
+    // filters
+    bool fetch_metadata = 52;
+    // When grabbing provider information, fetch the provider's inventory
+    // records. This option is always truye if there are any
+    // ResourceConstraints in the filters
+    bool fetch_inventories = 53;
+    // When grabbing provider information, fetch the provider's allocation
+    // records.
+    bool fetch_allocations = 54;
 }
 
 message ProviderDeleteRequest {
@@ -616,7 +643,7 @@ message ClaimListRequestGroupConstraints {
     repeated ResourceConstraint resources = 1;
     repeated TraitConstraint traits = 2;
     repeated ProviderGroupConstraint provider_groups = 3;
-    repeated ProviderMetadataConstraint provider_metadata = 4;
+    repeated MetadataConstraint provider_metadata = 4;
 }
 
 message ClaimListRequestGroupOptions {

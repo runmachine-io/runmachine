@@ -36,7 +36,7 @@ message ResourceConstraint {
     uint64 amount = 2;
 }
 
-message ProviderMetadataConstraint {
+message MetadataConstraint {
     // All providers involved in the request group must collectively have ALL
     // of the key/value pairs in this list
     repeated Metadata require_items = 1;

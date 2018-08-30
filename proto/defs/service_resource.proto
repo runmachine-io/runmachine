@@ -567,11 +567,17 @@ message ClaimListRequestGroupOptions {
     // Indicates that the constraints must be met by a single provider, not
     // multiple providers
     bool single_provider = 1;
+    // Indicates that the providers satisfying this request group must NOT be
+    // found in ANY of these request groups
+    repeated ClaimListRequestGroup isolate_from = 2;
 }
 
 message ClaimListRequestGroup {
-    ClaimListRequestGroupOptions options = 1;
-    ClaimListRequestGroupConstraints constraints = 2;
+    // A simple optional tag/description for this group. e.g. "basic compute
+    // resources" or "isolated intranet bandwidth resources"
+    StringValue name = 1;
+    ClaimListRequestGroupOptions options = 2;
+    ClaimListRequestGroupConstraints constraints = 3;
 }
 
 message ClaimListRequest {

@@ -127,6 +127,75 @@ def create_traits(ctx):
     _insert_records(tbl, recs)
 
 
+def create_distances(ctx):
+    ctx.status("creating distance types")
+    dt_tbl = resource_models.get_table('distance_types')
+    d_tbl = resource_models.get_table('distances')
+
+    recs = [
+        dict(
+            code="network",
+            description="Relative network distances",
+            generation=1,
+        ),
+        dict(
+            code="storage",
+            description="Relative storage distances",
+            generation=1,
+        ),
+    ]
+    _insert_records(dt_tbl, recs)
+
+    ctx.status("creating distances")
+
+    sess = resource_models.get_session()
+    sel = sa.select([dt_tbl.c.id]).where(dt_tbl.c.code == "network")
+    net_dt_id = sess.execute(sel).fetchone()[0]
+
+    sel = sa.select([dt_tbl.c.id]).where(dt_tbl.c.code == "storage")
+    storage_dt_id = sess.execute(sel).fetchone()[0]
+
+    recs = [
+        dict(
+            type_id=net_dt_id,
+            code="local",
+            position=0,
+            description="Virtually no network latency",
+        ),
+        dict(
+            type_id=net_dt_id,
+            code="datacenter",
+            position=1,
+            description="latency between leaf switch-connected nodes in a DC",
+        ),
+        dict(
+            type_id=net_dt_id,
+            code="remote",
+            position=2,
+            description="WAN latency",
+        ),
+        dict(
+            type_id=storage_dt_id,
+            code="local",
+            position=0,
+            description="Block storage local to host running machine",
+        ),
+        dict(
+            type_id=storage_dt_id,
+            code="row",
+            position=1,
+            description="NAS server shared by row of compute",
+        ),
+        dict(
+            type_id=storage_dt_id,
+            code="remote",
+            position=2,
+            description="External cloud block storage with WAN latency",
+        ),
+    ]
+    _insert_records(d_tbl, recs)
+
+
 def setup_opts(parser):
     parser.add_argument('--reset', action='store_true',
                         default=True, help="Reset the database entirely.")
@@ -138,6 +207,7 @@ def main(ctx):
         create_resource_classes(ctx)
         create_consumer_types(ctx)
         create_traits(ctx)
+        create_distances(ctx)
 
 
 if __name__ == '__main__':

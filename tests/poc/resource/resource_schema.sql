@@ -30,7 +30,6 @@ CREATE TABLE distances (
 , code VARCHAR(200) NOT NULL
 , description TEXT CHARACTER SET utf8 COLLATE utf8_bin NULL
 , position INT NOT NULL
-, generation INT NOT NULL
 , UNIQUE INDEX uix_type_code (type_id, code)
 ) CHARACTER SET latin1 COLLATE latin1_bin;
 

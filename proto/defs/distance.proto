@@ -20,5 +20,4 @@ message Distance {
     string display_name = 2;
     uint32 position = 3;
     DistanceType type = 50;
-    uint32 generation = 100;
 }

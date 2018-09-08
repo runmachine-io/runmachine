@@ -52,10 +52,20 @@ def create_resource_classes(ctx):
     sess = resource_models.get_session()
 
     rcs = [
-        dict(code='VCPU', description='virtual CPU'),
-        dict(code='MEMORY_BYTES', description='Bytes of RAM'),
-        dict(code='BLOCK_STORAGE_BYTES', description='Bytes of block storage'),
-        dict(code='VGPU', description='virtual GPU context'),
+        dict(
+            code="runm.cpu.dedicated",
+            description="A logical CPU processor associated with a "
+                        "single dedicated host CPU processor"
+        ),
+        dict(
+            code="runm.cpu.shared",
+            description="A logical CPU processor that may be executed on "
+                        "a host CPU processor along with other shared logical "
+                        "CPUs"
+        ),
+        dict(code='runm.memory', description='Bytes of RAM'),
+        dict(code='runm.block_storage', description='Bytes of block storage'),
+        dict(code='runm.gpu.virtual', description='virtual GPU context'),
     ]
 
     for rec in rcs:
@@ -73,7 +83,7 @@ def setup_opts(parser):
 def main(ctx):
     if ctx.args.reset:
         reset_db(ctx)
-    create_resource_classes(ctx)
+        create_resource_classes(ctx)
 
 
 if __name__ == '__main__':

@@ -98,6 +98,35 @@ def create_consumer_types(ctx):
     _insert_records(tbl, recs)
 
 
+def create_traits(ctx):
+    ctx.status("creating traits")
+    tbl = resource_models.get_table('traits')
+
+    recs = [
+        dict(
+            code="hw.cpu.x86.avx",
+            description="Intel x86 CPU instruction set extensions for AVX",
+        ),
+        dict(
+            code="hw.cpu.x86.avx2",
+            description="Intel x86 CPU instruction set extensions for AVX2",
+        ),
+        dict(
+            code="hw.cpu.x86.vmx",
+            description="Intel x86 CPU instruction set extensions for VMX",
+        ),
+        dict(
+            code="storage.disk.hdd",
+            description="Block storage is on traditional spinning rust",
+        ),
+        dict(
+            code="storage.disk.ssd",
+            description="Block storage is on a solid-state drive",
+        ),
+    ]
+    _insert_records(tbl, recs)
+
+
 def setup_opts(parser):
     parser.add_argument('--reset', action='store_true',
                         default=True, help="Reset the database entirely.")
@@ -108,6 +137,7 @@ def main(ctx):
         reset_db(ctx)
         create_resource_classes(ctx)
         create_consumer_types(ctx)
+        create_traits(ctx)
 
 
 if __name__ == '__main__':

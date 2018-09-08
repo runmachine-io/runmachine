@@ -35,6 +35,18 @@ class RunContext(object):
         sys.stderr.flush()
 
 
+def _insert_records(tbl, recs):
+    try:
+        sess = resource_models.get_session()
+        for rec in recs:
+            ins = tbl.insert().values(**rec)
+            sess.execute(ins)
+        sess.commit()
+        ctx.status_ok()
+    except Exception as err:
+        ctx.status_fail(err)
+
+
 def reset_db(ctx):
     ctx.status("resetting resource PoC database")
     db_user = os.environ.get('RUNM_TEST_RESOURCE_DB_USER', 'root')
@@ -48,10 +60,9 @@ def reset_db(ctx):
 
 def create_resource_classes(ctx):
     ctx.status("creating resource classes")
-    rc_tbl = resource_models.get_table('resource_classes')
-    sess = resource_models.get_session()
+    tbl = resource_models.get_table('resource_classes')
 
-    rcs = [
+    recs = [
         dict(
             code="runm.cpu.dedicated",
             description="A logical CPU processor associated with a "
@@ -67,12 +78,24 @@ def create_resource_classes(ctx):
         dict(code='runm.block_storage', description='Bytes of block storage'),
         dict(code='runm.gpu.virtual', description='virtual GPU context'),
     ]
+    _insert_records(tbl, recs)
 
-    for rec in rcs:
-        ins = rc_tbl.insert().values(**rec)
-        sess.execute(ins)
-    sess.commit()
-    ctx.status_ok()
+
+def create_consumer_types(ctx):
+    ctx.status("creating consumer types")
+    tbl = resource_models.get_table('consumer_types')
+
+    recs = [
+        dict(
+            code="runm.machine",
+            description="A virtual or baremetal machine",
+        ),
+        dict(
+            code="runm.volume",
+            description="A persistent volume",
+        ),
+    ]
+    _insert_records(tbl, recs)
 
 
 def setup_opts(parser):
@@ -84,6 +107,7 @@ def main(ctx):
     if ctx.args.reset:
         reset_db(ctx)
         create_resource_classes(ctx)
+        create_consumer_types(ctx)
 
 
 if __name__ == '__main__':

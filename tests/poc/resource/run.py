@@ -8,12 +8,17 @@ import sys
 
 import sqlalchemy as sa
 
+import inventory_profile
 import resource_models
 
 _LOG_FORMAT = "%(level)s %(message)s"
 _RESOURCE_SCHEMA_FILE = os.path.join(
     os.path.abspath(os.path.dirname(__file__)), 'resource_schema.sql',
 )
+_INVENTORY_PROFILES_DIR = os.path.join(
+    os.path.abspath(os.path.dirname(__file__)), 'inventory-profiles',
+)
+_DEFAULT_INVENTORY_PROFILE = '1k-shared-compute'
 
 
 class RunContext(object):
@@ -196,9 +201,26 @@ def create_distances(ctx):
     _insert_records(d_tbl, recs)
 
 
+def load_inventory(ctx):
+    fp = os.path.join(_INVENTORY_PROFILES_DIR, args.inventory_profile)
+    iprof = inventory_profile.InventoryProfile(fp)
+    for pg in iprof.iter_provider_groups():
+        print pg
+
+
 def setup_opts(parser):
+    inventory_profiles = []
+    for fn in os.listdir(_INVENTORY_PROFILES_DIR):
+        fp = os.path.join(_INVENTORY_PROFILES_DIR, fn)
+        if os.path.isfile(fp) and fn.endswith('.yaml'):
+            inventory_profiles.append(fn[0:len(fn) - 5])
+
     parser.add_argument('--reset', action='store_true',
                         default=True, help="Reset the database entirely.")
+    parser.add_argument('--inventory-profile',
+                        choices=inventory_profiles,
+                        default=_DEFAULT_INVENTORY_PROFILE,
+                        help="Inventory profile to use.")
 
 
 def main(ctx):
@@ -208,6 +230,8 @@ def main(ctx):
         create_consumer_types(ctx)
         create_traits(ctx)
         create_distances(ctx)
+
+    load_inventory(ctx)
 
 
 if __name__ == '__main__':

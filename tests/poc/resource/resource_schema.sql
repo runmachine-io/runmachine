@@ -46,6 +46,14 @@ CREATE TABLE providers (
 , INDEX ix_parent_provider_id (parent_provider_id)
 ) CHARACTER SET latin1 COLLATE latin1_bin;
 
+CREATE TABLE provider_capabilities (
+  id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY
+, provider_id INT NOT NULL
+, capability_id INT NOT NULL
+, UNIQUE INDEX uix_provider_capability (provider_id, capability_id)
+, INDEX ix_capability (capability_id)
+) CHARACTER SET latin1 COLLATE latin1_bin;
+
 CREATE TABLE inventories (
   id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY
 , provider_id BIGINT NOT NULL

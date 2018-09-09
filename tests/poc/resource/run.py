@@ -24,6 +24,7 @@ _DEFAULT_INVENTORY_PROFILE = '1k-shared-compute'
 class RunContext(object):
     def __init__(self, args):
         self.args = args
+        self.inventory_profile = None
 
     def status(self, msg):
         sys.stdout.write(msg + " ... ")
@@ -41,15 +42,11 @@ class RunContext(object):
 
 
 def _insert_records(tbl, recs):
-    try:
-        sess = resource_models.get_session()
-        for rec in recs:
-            ins = tbl.insert().values(**rec)
-            sess.execute(ins)
-        sess.commit()
-        ctx.status_ok()
-    except Exception as err:
-        ctx.status_fail(err)
+    sess = resource_models.get_session()
+    for rec in recs:
+        ins = tbl.insert().values(**rec)
+        sess.execute(ins)
+    sess.commit()
 
 
 def reset_db(ctx):
@@ -83,7 +80,11 @@ def create_resource_classes(ctx):
         dict(code='runm.block_storage', description='Bytes of block storage'),
         dict(code='runm.gpu.virtual', description='virtual GPU context'),
     ]
-    _insert_records(tbl, recs)
+    try:
+        _insert_records(tbl, recs)
+        ctx.status_ok()
+    except Exception as err:
+        ctx.status_fail(err)
 
 
 def create_consumer_types(ctx):
@@ -100,7 +101,11 @@ def create_consumer_types(ctx):
             description="A persistent volume",
         ),
     ]
-    _insert_records(tbl, recs)
+    try:
+        _insert_records(tbl, recs)
+        ctx.status_ok()
+    except Exception as err:
+        ctx.status_fail(err)
 
 
 def create_capabilities(ctx):
@@ -129,7 +134,11 @@ def create_capabilities(ctx):
             description="Block storage is on a solid-state drive",
         ),
     ]
-    _insert_records(tbl, recs)
+    try:
+        _insert_records(tbl, recs)
+        ctx.status_ok()
+    except Exception as err:
+        ctx.status_fail(err)
 
 
 def create_distances(ctx):
@@ -149,7 +158,11 @@ def create_distances(ctx):
             generation=1,
         ),
     ]
-    _insert_records(dt_tbl, recs)
+    try:
+        _insert_records(dt_tbl, recs)
+        ctx.status_ok()
+    except Exception as err:
+        ctx.status_fail(err)
 
     ctx.status("creating distances")
 
@@ -198,14 +211,39 @@ def create_distances(ctx):
             description="External cloud block storage with WAN latency",
         ),
     ]
-    _insert_records(d_tbl, recs)
+    try:
+        _insert_records(d_tbl, recs)
+        ctx.status_ok()
+    except Exception as err:
+        ctx.status_fail(err)
 
 
-def load_inventory(ctx):
-    fp = os.path.join(_INVENTORY_PROFILES_DIR, args.inventory_profile)
-    iprof = inventory_profile.InventoryProfile(fp)
-    for pg in iprof.iter_provider_groups():
-        print pg
+def create_provider_groups(ctx):
+    ctx.status("creating provider groups")
+    obj_tbl = resource_models.get_table('object_names')
+    pg_tbl = resource_models.get_table('provider_groups')
+
+    obj_recs = []
+    pg_recs = []
+
+    for pg in ctx.inventory_profile.iter_provider_groups:
+        obj_rec = dict(
+            object_type='provider_group',
+            uuid=pg.uuid,
+            name=pg.name,
+        )
+        obj_recs.append(obj_rec)
+        pg_rec = dict(
+            uuid=pg.uuid,
+        )
+        pg_recs.append(pg_rec)
+
+    try:
+        _insert_records(obj_tbl, obj_recs)
+        _insert_records(pg_tbl, pg_recs)
+        ctx.status_ok()
+    except Exception as err:
+        ctx.status_fail(err)
 
 
 def setup_opts(parser):
@@ -231,7 +269,9 @@ def main(ctx):
         create_capabilities(ctx)
         create_distances(ctx)
 
-    load_inventory(ctx)
+    fp = os.path.join(_INVENTORY_PROFILES_DIR, args.inventory_profile)
+    ctx.inventory_profile = inventory_profile.InventoryProfile(fp)
+    create_provider_groups(ctx)
 
 
 if __name__ == '__main__':

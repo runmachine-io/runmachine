@@ -19,9 +19,11 @@ class ProviderGroup(object):
 
 class Provider(object):
 
-    def __init__(self, name):
+    def __init__(self, name, group_names):
         self.name = name
         self.uuid = str(uuid.uuid4()).replace('-', '')
+        # Collection of provider groups this provider is in
+        self.group_names = []
 
     def __repr__(self):
         return "Provider(name=%s,uuid=%s)" % (self.name, self.uuid)
@@ -64,6 +66,7 @@ class InventoryProfile(object):
     def count_nodes_per_rack(self):
         return int(self.compute.get('node_per_rack', 0))
 
+    @property
     def iter_provider_groups(self):
         """Yields instructions for creating a provider group and its distance
         information.
@@ -89,7 +92,7 @@ class InventoryProfile(object):
                         )
                     yield ProviderGroup(pg_name)
 
-
+    @property
     def iter_providers(self):
         """Yields instructions for creating a provider, its inventory, traits
         and group associations.
@@ -102,10 +105,15 @@ class InventoryProfile(object):
             for row_id in range(self.count_rows_per_site):
                 for rack_id in range(self.count_racks_per_row):
                     for node_id in range(self.count_nodes_per_rack):
+                        group_names = [
+                            site_name,
+                            "%s-row%s" % (site_name, row_id),
+                            "%s-row%s-rack%s" % (site_name, row_id, rack_id),
+                        ]
                         provider_name = "%s-row%s-rack%s-node%s" % (
                             site_name,
                             row_id,
                             rack_id,
                             node_id,
                         )
-                        yield Provider(provider_name)
+                        yield Provider(provider_name, group_names)

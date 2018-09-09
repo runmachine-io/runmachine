@@ -2,6 +2,17 @@ DROP SCHEMA IF EXISTS test_resources;
 CREATE SCHEMA test_resources;
 USE test_resources;
 
+-- This is just to mimic the runm-metadata service, which would be responsible
+-- for translating name -> uuid lookups.
+CREATE TABLE object_names (
+  id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY
+, uuid CHAR(32) NOT NULL
+, object_type CHAR(20) NOT NULL
+, name VARCHAR(200) CHARACTER SET utf8 COLLATE utf8_bin NOT NULL
+, UNIQUE INDEX uix_uuid (uuid)
+, UNIQUE INDEX uix_object_type_name (object_type, name)
+) CHARACTER SET latin1 COLLATE latin1_bin;
+
 CREATE TABLE resource_classes (
   id INT NOT NULL AUTO_INCREMENT PRIMARY KEY
 , code VARCHAR(200) NOT NULL
@@ -71,9 +82,7 @@ CREATE TABLE inventories (
 CREATE TABLE provider_groups (
   id INT NOT NULL AUTO_INCREMENT PRIMARY KEY
 , uuid CHAR(32) NOT NULL
-, region_uuid CHAR(32) NOT NULL
 , UNIQUE INDEX uix_uuid (uuid)
-, INDEX ix_region_uuid (region_uuid)
 ) CHARACTER SET latin1 COLLATE latin1_bin;
 
 CREATE TABLE provider_group_members (

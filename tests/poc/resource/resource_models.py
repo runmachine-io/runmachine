@@ -6,6 +6,7 @@ import sqlalchemy as sa
 from sqlalchemy.orm import sessionmaker
 
 _TABLE_NAMES = (
+    'object_names',
     'resource_classes',
     'capabilities',
     'distance_types',

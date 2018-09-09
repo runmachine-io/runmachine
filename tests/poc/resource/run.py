@@ -103,9 +103,9 @@ def create_consumer_types(ctx):
     _insert_records(tbl, recs)
 
 
-def create_traits(ctx):
-    ctx.status("creating traits")
-    tbl = resource_models.get_table('traits')
+def create_capabilities(ctx):
+    ctx.status("creating capabilities")
+    tbl = resource_models.get_table('capabilities')
 
     recs = [
         dict(
@@ -228,7 +228,7 @@ def main(ctx):
         reset_db(ctx)
         create_resource_classes(ctx)
         create_consumer_types(ctx)
-        create_traits(ctx)
+        create_capabilities(ctx)
         create_distances(ctx)
 
     load_inventory(ctx)

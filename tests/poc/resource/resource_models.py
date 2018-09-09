@@ -7,7 +7,7 @@ from sqlalchemy.orm import sessionmaker
 
 _TABLE_NAMES = (
     'resource_classes',
-    'traits',
+    'capabilities',
     'distance_types',
     'consumer_types',
     'distances',

@@ -9,7 +9,7 @@ CREATE TABLE resource_classes (
 , UNIQUE INDEX uix_code (code)
 ) CHARACTER SET latin1 COLLATE latin1_bin;
 
-CREATE TABLE traits (
+CREATE TABLE capabilities (
   id INT NOT NULL AUTO_INCREMENT PRIMARY KEY
 , code VARCHAR(200) NOT NULL
 , description TEXT CHARACTER SET utf8 COLLATE utf8_bin NULL

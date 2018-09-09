@@ -5,7 +5,7 @@ package runm;
 import "wrappers.proto";
 
 // A binary capability tag to decorate providers
-message Trait {
+message Capability {
     string code = 1;
     StringValue description = 2;
     uint32 generation = 100;

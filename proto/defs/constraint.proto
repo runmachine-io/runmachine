@@ -5,7 +5,7 @@ package runm;
 import "metadata.proto";
 import "provider.proto";
 import "resource_class.proto";
-import "trait.proto";
+import "capability.proto";
 
 message ProviderGroupConstraint {
     // All providers involved in the request group must collectively be
@@ -19,16 +19,16 @@ message ProviderGroupConstraint {
     repeated ProviderGroup any = 3;
 }
 
-message TraitConstraint {
+message CapabilityConstraint {
     // All providers involved in the request group must collectively contain
-    // ALL traits in this list
-    repeated Trait require = 1;
-    // No provider involved in the request group may contain ANY of the traits
+    // ALL capabilities in this list
+    repeated Capability require = 1;
+    // No provider involved in the request group may contain ANY of the capabilities
     // in this list
-    repeated Trait forbid = 2;
+    repeated Capability forbid = 2;
     // At least one provider involved in the request group must contain AT
-    // LEAST ONE of the traits in this list
-    repeated Trait any = 3;
+    // LEAST ONE of the capabilities in this list
+    repeated Capability any = 3;
 }
 
 message ResourceConstraint {

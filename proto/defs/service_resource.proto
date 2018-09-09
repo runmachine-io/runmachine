@@ -14,7 +14,7 @@ import "provider.proto";
 import "resource_class.proto";
 import "search.proto";
 import "session.proto";
-import "trait.proto";
+import "capability.proto";
 import "usage.proto";
 import "user.proto";
 import "wrappers.proto";
@@ -35,17 +35,17 @@ service RunmResource {
     // Returns information about multiple resource classs
     rpc resource_class_list(ResourceClassListRequest) returns (stream ResourceClass) {}
 
-    // Returns information about a specific trait
-    rpc trait_get(TraitGetRequest) returns (Trait) {}
+    // Returns information about a specific capability
+    rpc capability_get(CapabilityGetRequest) returns (Capability) {}
 
-    // Deletes one or more traits
-    rpc trait_delete(TraitDeleteRequest) returns (TraitDeleteResponse) {}
+    // Deletes one or more capabilities
+    rpc capability_delete(CapabilityDeleteRequest) returns (CapabilityDeleteResponse) {}
 
-    // Set information about a specific trait
-    rpc trait_set(TraitSetRequest) returns (TraitSetResponse) {}
+    // Set information about a specific capability
+    rpc capability_set(CapabilitySetRequest) returns (CapabilitySetResponse) {}
 
-    // Returns information about multiple traits
-    rpc trait_list(TraitListRequest) returns (stream Trait) {}
+    // Returns information about multiple capabilities
+    rpc capability_list(CapabilityListRequest) returns (stream Capability) {}
 
     // Returns information about a specific consumer type
     rpc consumer_type_get(ConsumerTypeGetRequest) returns (ConsumerType) {}
@@ -107,11 +107,11 @@ service RunmResource {
     // Returns information about multiple providers
     rpc provider_list(ProviderListRequest) returns (stream Provider) {}
 
-    // Add or remove traits from a provider
-    rpc provider_traits_set(ProviderTraitsSetRequest) returns (ProviderTraitsSetResponse) {}
+    // Add or remove capabilities from a provider
+    rpc provider_capabilities_set(ProviderCapabilitysSetRequest) returns (ProviderCapabilitysSetResponse) {}
 
-    // Returns traits for a provider
-    rpc provider_traits_list(ProviderTraitsListRequest) returns (stream Trait) {}
+    // Returns capabilities for a provider
+    rpc provider_capabilities_list(ProviderCapabilitysListRequest) returns (stream Capability) {}
 
     // Add, remove and modify inventories for a provider
     rpc provider_inventories_set(ProviderInventoriesSetRequest) returns (ProviderInventoriesSetResponse) {}
@@ -147,7 +147,7 @@ service RunmResource {
     rpc provider_group_distances_list(ProviderGroupDistancesListRequest) returns (stream ProviderGroupDistance) {}
 
     // List potential resource claims against providers that match a given set
-    // of resource and trait constraints
+    // of resource and capability constraints
     rpc claim_list(ClaimListRequest) returns (stream Claim) {}
 
     // Attempts to execute the supplied claim, resulting in the atomic
@@ -202,44 +202,44 @@ message ResourceClassDeleteResponse {
     uint64 num_deleted = 2;
 }
 
-message TraitGetRequest {
+message CapabilityGetRequest {
     Session session = 1;
     string search = 2;
 }
 
-message TraitSetFields {
+message CapabilitySetFields {
     StringValue code = 1;
     StringValue display_name = 2;
     StringValue description = 3;
 }
 
-message TraitSetRequest {
+message CapabilitySetRequest {
     Session session = 1;
-    Trait trait = 2;
-    TraitSetFields changed = 3;
+    Capability capability = 2;
+    CapabilitySetFields changed = 3;
 }
 
-message TraitSetResponse {
+message CapabilitySetResponse {
     repeated Error errors = 1;
-    Trait trait = 2;
+    Capability capability = 2;
 }
 
-message TraitListFilters {
+message CapabilityListFilters {
     repeated string identifiers = 1;
 }
 
-message TraitListRequest {
+message CapabilityListRequest {
     Session session = 1;
-    TraitListFilters filters = 2;
+    CapabilityListFilters filters = 2;
     SearchOptions options = 3;
 }
 
-message TraitDeleteRequest {
+message CapabilityDeleteRequest {
     Session session = 1;
-    repeated Trait traits = 2;
+    repeated Capability capabilities = 2;
 }
 
-message TraitDeleteResponse {
+message CapabilityDeleteResponse {
     repeated Error errors = 1;
     uint64 num_deleted = 2;
 }
@@ -447,7 +447,7 @@ message ProviderListFilters {
     // the documentation in constraint.proto for more information on how these
     // work
     repeated ResourceConstraint resources = 2;
-    repeated TraitConstraint traits = 3;
+    repeated CapabilityConstraint capabilities = 3;
     repeated ProviderGroupConstraint provider_groups = 4;
     repeated MetadataConstraint provider_metadata = 5;
 }
@@ -456,9 +456,9 @@ message ProviderListRequest {
     Session session = 1;
     ProviderListFilters filters = 2;
     SearchOptions options = 3;
-    // When grabbing provider information, fetch the provider's traits. This
-    // option is always true if there are any TraitContraints in the filters
-    bool fetch_traits = 50;
+    // When grabbing provider information, fetch the provider's capabilities. This
+    // option is always true if there are any CapabilityContraints in the filters
+    bool fetch_capabilities = 50;
     // When grabbing provider information, fetch the provider's group
     // associations. This option is always true if there are any
     // ProviderGroupContraints in the filters
@@ -486,29 +486,29 @@ message ProviderDeleteResponse {
     uint64 num_deleted = 2;
 }
 
-message ProviderTraitsSetRequest {
+message ProviderCapabilitysSetRequest {
     Session session = 1;
     Provider provider = 2;
     repeated string add = 3;
     repeated string remove = 4;
 }
 
-message ProviderTraitsSetResponse {
+message ProviderCapabilitysSetResponse {
     repeated Error errors = 1;
     Provider provider = 2;
     uint64 num_added = 3;
     uint64 num_removed = 4;
 }
 
-message ProviderTraitsListFilters {
+message ProviderCapabilitysListFilters {
     // TODO(jaypipes): Maybe in the future there would be some sort of
-    // prefixing to winnow traits by?
+    // prefixing to winnow capabilities by?
 }
 
-message ProviderTraitsListRequest {
+message ProviderCapabilitysListRequest {
     Session session = 1;
     Provider provider = 2;
-    ProviderTraitsListFilters filters = 3;
+    ProviderCapabilitysListFilters filters = 3;
     SearchOptions options = 4;
 }
 
@@ -633,7 +633,7 @@ message ProviderGroupDistancesListRequest {
 }
 
 // A consumer requests some amount of resources and some matching constraints
-// (required or forbidden traits, group relationships, metadata selectors,
+// (required or forbidden capabilities, group relationships, metadata selectors,
 // etc). This request is called a ClaimListRequest. A ClaimListRequest may be
 // transactionally fulfilled by a ClaimExecute RPC API call. The service will
 // respond to a ClaimListRequest with a stream of Claim messages that may be
@@ -641,7 +641,7 @@ message ProviderGroupDistancesListRequest {
 // providers for the consumer.
 message ClaimListRequestGroupConstraints {
     repeated ResourceConstraint resources = 1;
-    repeated TraitConstraint traits = 2;
+    repeated CapabilityConstraint capabilities = 2;
     repeated ProviderGroupConstraint provider_groups = 3;
     repeated MetadataConstraint provider_metadata = 4;
 }

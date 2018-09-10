@@ -48,13 +48,18 @@ CREATE TABLE providers (
   id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY
 , uuid CHAR(32) NOT NULL
 , generation INT UNSIGNED NOT NULL
-, root_provider_id INT NOT NULL
-, parent_provider_id INT NULL
+, parent_provider_id BIGINT NULL
+, UNIQUE INDEX uix_uuid (uuid)
+, INDEX ix_parent_provider_id (parent_provider_id)
+) CHARACTER SET latin1 COLLATE latin1_bin;
+
+CREATE TABLE provider_trees (
+  id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY
+, root_provider_id BIGINT NOT NULL
 , nested_left INT NOT NULL
 , nested_right INT NOT NULL
-, UNIQUE INDEX uix_uuid (uuid)
+, generation INT NOT NULL
 , UNIQUE INDEX uix_nested_sets (root_provider_id, nested_left, nested_right)
-, INDEX ix_parent_provider_id (parent_provider_id)
 ) CHARACTER SET latin1 COLLATE latin1_bin;
 
 CREATE TABLE provider_capabilities (
@@ -87,9 +92,9 @@ CREATE TABLE provider_groups (
 
 CREATE TABLE provider_group_members (
   provider_group_id INT NOT NULL
-, root_provider_id BIGINT NOT NULL
-, PRIMARY KEY (provider_group_id, root_provider_id)
-, INDEX (root_provider_id)
+, provider_id BIGINT NOT NULL
+, PRIMARY KEY (provider_group_id, provider_id)
+, INDEX (provider_id)
 );
 
 CREATE TABLE provider_group_distances (

@@ -226,7 +226,7 @@ def create_provider_groups(ctx):
     obj_recs = []
     pg_recs = []
 
-    for pg in ctx.inventory_profile.iter_provider_groups:
+    for pg in ctx.inventory_profile.provider_groups.values():
         obj_rec = dict(
             object_type='provider_group',
             uuid=pg.uuid,
@@ -243,6 +243,76 @@ def create_provider_groups(ctx):
         _insert_records(pg_tbl, pg_recs)
         ctx.status_ok()
     except Exception as err:
+        ctx.status_fail(err)
+
+
+def create_providers(ctx):
+    ctx.status("creating providers")
+    obj_tbl = resource_models.get_table('object_names')
+    pg_tbl = resource_models.get_table('provider_groups')
+    pg_members_tbl = resource_models.get_table('provider_group_members')
+    p_tbl = resource_models.get_table('providers')
+    tree_tbl = resource_models.get_table('provider_trees')
+
+    # in-process cache of provider group name -> internal provider group ID
+    pg_ids = {}
+
+    sess = resource_models.get_session()
+    for pg in ctx.inventory_profile.provider_groups.values():
+        if pg.uuid in pg_ids:
+            pg_id = pg_ids[pg.uuid]
+        else:
+            # Not yet in cache... look up the provider group by name
+            sel = sa.select([pg_tbl.c.id]).where(pg_tbl.c.uuid == pg.uuid)
+            res = sess.execute(sel).fetchone()
+            pg_ids[pg.uuid] = res[0]
+
+    try:
+        for p in ctx.inventory_profile.iter_providers:
+            # Create the object lookup record
+            obj_rec = dict(
+                object_type='provider',
+                uuid=p.uuid,
+                name=p.name,
+            )
+            ins = obj_tbl.insert().values(**obj_rec)
+            sess.execute(ins)
+
+            # Create the base provider record
+            p_rec = dict(
+                uuid=p.uuid,
+                generation=1,
+            )
+            ins = p_tbl.insert().values(**p_rec)
+            res = sess.execute(ins)
+            p_id = res.inserted_primary_key[0]
+
+            # Now that we've added the base records, go ahead and flesh out
+            # the provider group members and provider tree records, both of
+            # which require some lookups into the provider_groups and
+            # providers tables to get internal IDs.
+            tree_rec = dict(
+                root_provider_id=p_id,
+                nested_left=1,
+                nested_right=2,
+                generation=1,
+            )
+            ins = tree_tbl.insert().values(**tree_rec)
+            res = sess.execute(ins)
+
+            for pg in p.groups:
+                pg_id = pg_ids[pg.uuid]
+                pg_member_rec = dict(
+                    provider_group_id=pg_id,
+                    provider_id=p_id,
+                )
+                ins = pg_members_tbl.insert().values(**pg_member_rec)
+                res = sess.execute(ins)
+
+        sess.commit()
+        ctx.status_ok()
+    except Exception as err:
+        sess.rollback()
         ctx.status_fail(err)
 
 
@@ -272,6 +342,7 @@ def main(ctx):
     fp = os.path.join(_INVENTORY_PROFILES_DIR, args.inventory_profile)
     ctx.inventory_profile = inventory_profile.InventoryProfile(fp)
     create_provider_groups(ctx)
+    create_providers(ctx)
 
 
 if __name__ == '__main__':

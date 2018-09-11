@@ -41,23 +41,25 @@ class Profile(object):
         return "Profile(name=%s)" % self.name
 
 
-class InventoryProfile(object):
+class DeploymentConfig(object):
     def __init__(self, fp):
-        """Loads the profile from a supplied filepath to a YAML file."""
+        """Loads the deployment configuration from a supplied filepath to a
+        YAML file.
+        """
         if not fp.endswith('.yaml'):
             fp = fp + '.yaml'
         if not os.path.exists(fp):
-            raise RuntimeError("Unable to load inventory profile %s. "
+            raise RuntimeError("Unable to load deployment configuration %s. "
                                "File does not exist." % fp)
 
         with open(fp, 'rb') as f:
             try:
-                profile_dict = yaml.load(f)
+                config_dict = yaml.load(f)
             except yaml.YAMLError as err:
-                raise RuntimeError("Unable to load inventory profile %s. "
-                                   "Problem parsing file: %s." % (fp, err))
-        self.layout = profile_dict['layout']
-        self.profiles = profile_dict['profiles']
+                raise RuntimeError("Unable to load deployment configuration "
+                                   "%s. Problem parsing file: %s." % (fp, err))
+        self.layout = config_dict['layout']
+        self.profiles = config_dict['profiles']
         # A hashmap of profiles by site name that compute hosts will use for
         # inventory and traits
         self.site_profiles = {}

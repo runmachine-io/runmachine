@@ -8,23 +8,23 @@ import sys
 
 import sqlalchemy as sa
 
-import inventory_profile
+import deployment_config
 import resource_models
 
 _LOG_FORMAT = "%(level)s %(message)s"
 _RESOURCE_SCHEMA_FILE = os.path.join(
     os.path.abspath(os.path.dirname(__file__)), 'resource_schema.sql',
 )
-_INVENTORY_PROFILES_DIR = os.path.join(
-    os.path.abspath(os.path.dirname(__file__)), 'inventory-profiles',
+_DEPLOYMENT_CONFIGS_DIR = os.path.join(
+    os.path.abspath(os.path.dirname(__file__)), 'deployment-configs',
 )
-_DEFAULT_INVENTORY_PROFILE = '1k-shared-compute'
+_DEFAULT_DEPLOYMENT_CONFIG = '1k-shared-compute'
 
 
 class RunContext(object):
     def __init__(self, args):
         self.args = args
-        self.inventory_profile = None
+        self.deployment_config = None
 
     def status(self, msg):
         sys.stdout.write(msg + " ... ")
@@ -226,7 +226,7 @@ def create_provider_groups(ctx):
     obj_recs = []
     pg_recs = []
 
-    for pg in ctx.inventory_profile.provider_groups.values():
+    for pg in ctx.deployment_config.provider_groups.values():
         obj_rec = dict(
             object_type='provider_group',
             uuid=pg.uuid,
@@ -262,7 +262,7 @@ def create_providers(ctx):
     rc_ids = {}
 
     sess = resource_models.get_session()
-    for pg in ctx.inventory_profile.provider_groups.values():
+    for pg in ctx.deployment_config.provider_groups.values():
         if pg.uuid in pg_ids:
             pg_id = pg_ids[pg.uuid]
         else:
@@ -271,7 +271,7 @@ def create_providers(ctx):
             res = sess.execute(sel).fetchone()
             pg_ids[pg.uuid] = res[0]
 
-    for prof in ctx.inventory_profile.profiles.values():
+    for prof in ctx.deployment_config.profiles.values():
         for rc_name in prof['inventory'].keys():
             if rc_name not in rc_ids:
                 sel = sa.select([rc_tbl.c.id]).where(rc_tbl.c.code == rc_name)
@@ -280,7 +280,7 @@ def create_providers(ctx):
                 rc_ids[rc_name] = rc_id
 
     try:
-        for p in ctx.inventory_profile.iter_providers:
+        for p in ctx.deployment_config.iter_providers:
             # Create the object lookup record
             obj_rec = dict(
                 object_type='provider',
@@ -345,18 +345,18 @@ def create_providers(ctx):
 
 
 def setup_opts(parser):
-    inventory_profiles = []
-    for fn in os.listdir(_INVENTORY_PROFILES_DIR):
-        fp = os.path.join(_INVENTORY_PROFILES_DIR, fn)
+    deployment_configs = []
+    for fn in os.listdir(_DEPLOYMENT_CONFIGS_DIR):
+        fp = os.path.join(_DEPLOYMENT_CONFIGS_DIR, fn)
         if os.path.isfile(fp) and fn.endswith('.yaml'):
-            inventory_profiles.append(fn[0:len(fn) - 5])
+            deployment_configs.append(fn[0:len(fn) - 5])
 
     parser.add_argument('--reset', action='store_true',
                         default=True, help="Reset the database entirely.")
-    parser.add_argument('--inventory-profile',
-                        choices=inventory_profiles,
-                        default=_DEFAULT_INVENTORY_PROFILE,
-                        help="Inventory profile to use.")
+    parser.add_argument('--deployment-config',
+                        choices=deployment_configs,
+                        default=_DEFAULT_DEPLOYMENT_CONFIG,
+                        help="Deployment configuration to use.")
 
 
 def main(ctx):
@@ -367,8 +367,8 @@ def main(ctx):
         create_capabilities(ctx)
         create_distances(ctx)
 
-    fp = os.path.join(_INVENTORY_PROFILES_DIR, args.inventory_profile)
-    ctx.inventory_profile = inventory_profile.InventoryProfile(fp)
+    fp = os.path.join(_DEPLOYMENT_CONFIGS_DIR, args.deployment_config)
+    ctx.deployment_config = deployment_config.DeploymentConfig(fp)
     create_provider_groups(ctx)
     create_providers(ctx)
 

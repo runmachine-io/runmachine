@@ -1,26 +1,29 @@
-compute:
-  sites: 2
+layout:
+  sites:
+    - east
+    - west
   rows_per_site: 2
   racks_per_row: 25
   nodes_per_rack: 20
-site_names:
-  - east
-  - west
-node:
-  inventory:
-    runm.cpu.shared:
-      total: 24
-      reserved: 0
-      allocation_ratio: 16.0
-    runm.memory:
-      # 128G
-      total: 137438953472
-      # 256M
-      reserved: 268435456
-      allocation_ratio: 1.5
-      # 64M
-      min_unit: 67108864
-      # 96G
-      max_unit: 103079215104
-      # 64M
-      step_size: 67108864
+profiles:
+  standard.compute.localdisk:
+    sites:
+      - east
+      - west
+    inventory:
+      runm.cpu.shared:
+        total: 24
+        reserved: 0
+        allocation_ratio: 16.0
+      runm.memory:
+        # 128G
+        total: 137438953472
+        # 256M
+        reserved: 268435456
+        allocation_ratio: 1.5
+        # 64M
+        min_unit: 67108864
+        # 96G
+        max_unit: 103079215104
+        # 64M
+        step_size: 67108864

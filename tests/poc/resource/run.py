@@ -271,12 +271,13 @@ def create_providers(ctx):
             res = sess.execute(sel).fetchone()
             pg_ids[pg.uuid] = res[0]
 
-    for rc_name in ctx.inventory_profile.inventories.keys():
-        if rc_name not in rc_ids:
-            sel = sa.select([rc_tbl.c.id]).where(rc_tbl.c.code == rc_name)
-            res = sess.execute(sel).fetchone()
-            rc_id = res[0]
-            rc_ids[rc_name] = rc_id
+    for prof in ctx.inventory_profile.profiles.values():
+        for rc_name in prof['inventory'].keys():
+            if rc_name not in rc_ids:
+                sel = sa.select([rc_tbl.c.id]).where(rc_tbl.c.code == rc_name)
+                res = sess.execute(sel).fetchone()
+                rc_id = res[0]
+                rc_ids[rc_name] = rc_id
 
     try:
         for p in ctx.inventory_profile.iter_providers:
@@ -321,7 +322,7 @@ def create_providers(ctx):
                 sess.execute(ins)
 
             # OK, now add the inventory records for the provider
-            for rc_name, inv in p.inventory.items():
+            for rc_name, inv in p.profile.inventory.items():
                 rc_id = rc_ids[rc_name]
                 inv_rec = dict(
                     provider_id=p_id,

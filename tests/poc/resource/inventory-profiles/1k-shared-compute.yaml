@@ -6,7 +6,7 @@ compute:
 site_names:
   - east
   - west
-nodes:
+node:
   inventory:
     runm.cpu.shared:
       total: 24

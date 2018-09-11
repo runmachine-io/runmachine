@@ -1,6 +1,7 @@
 # An inventory profile describes the providers, their inventory, traits and
 # aggregate relationships for an entire load scenario
 
+import copy
 import os
 import uuid
 
@@ -19,11 +20,12 @@ class ProviderGroup(object):
 
 class Provider(object):
 
-    def __init__(self, name, groups):
+    def __init__(self, name, groups, inventory):
         self.name = name
         self.uuid = str(uuid.uuid4()).replace('-', '')
         # Collection of provider group objects this provider is in
         self.groups = groups
+        self.inventory = inventory
 
     def __repr__(self):
         return "Provider(name=%s,uuid=%s)" % (self.name, self.uuid)
@@ -51,6 +53,21 @@ class InventoryProfile(object):
 
     def _load_from_dict(self, profile_dict):
         self.compute = profile_dict['compute']
+        self.node = profile_dict['node']
+        self.inventories = {}
+        inventory = self.node['inventory']
+        for rc_name, inv in inventory.items():
+            if 'min_unit' not in inv:
+                inv['min_unit'] = 1
+            if 'max_unit' not in inv:
+                inv['max_unit'] = inv['total']
+            if 'step_size' not in inv:
+                inv['step_size'] = 1
+            if 'allocation_ratio' not in inv:
+                inv['allocation_ratio'] = 1.0
+            if 'reserved' not in inv:
+                inv['reserved'] = 0
+            self.inventories[rc_name] = inv
         self.site_names = profile_dict.get('site_names')
 
     def _load_provider_groups(self):
@@ -122,4 +139,5 @@ class InventoryProfile(object):
                             self.provider_groups[pg_name]
                             for pg_name in pg_names
                         ]
-                        yield Provider(provider_name, groups)
+                        inventory = copy.deepcopy(self.inventories)
+                        yield Provider(provider_name, groups, inventory)

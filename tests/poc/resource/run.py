@@ -249,13 +249,17 @@ def create_provider_groups(ctx):
 def create_providers(ctx):
     ctx.status("creating providers")
     obj_tbl = resource_models.get_table('object_names')
+    rc_tbl = resource_models.get_table('resource_classes')
     pg_tbl = resource_models.get_table('provider_groups')
     pg_members_tbl = resource_models.get_table('provider_group_members')
     p_tbl = resource_models.get_table('providers')
     tree_tbl = resource_models.get_table('provider_trees')
+    inv_tbl = resource_models.get_table('inventories')
 
-    # in-process cache of provider group name -> internal provider group ID
+    # in-process cache of provider group name -> internal ID
     pg_ids = {}
+    # in-process cache of resource class name -> internal ID
+    rc_ids = {}
 
     sess = resource_models.get_session()
     for pg in ctx.inventory_profile.provider_groups.values():
@@ -266,6 +270,13 @@ def create_providers(ctx):
             sel = sa.select([pg_tbl.c.id]).where(pg_tbl.c.uuid == pg.uuid)
             res = sess.execute(sel).fetchone()
             pg_ids[pg.uuid] = res[0]
+
+    for rc_name in ctx.inventory_profile.inventories.keys():
+        if rc_name not in rc_ids:
+            sel = sa.select([rc_tbl.c.id]).where(rc_tbl.c.code == rc_name)
+            res = sess.execute(sel).fetchone()
+            rc_id = res[0]
+            rc_ids[rc_name] = rc_id
 
     try:
         for p in ctx.inventory_profile.iter_providers:
@@ -298,7 +309,7 @@ def create_providers(ctx):
                 generation=1,
             )
             ins = tree_tbl.insert().values(**tree_rec)
-            res = sess.execute(ins)
+            sess.execute(ins)
 
             for pg in p.groups:
                 pg_id = pg_ids[pg.uuid]
@@ -307,7 +318,23 @@ def create_providers(ctx):
                     provider_id=p_id,
                 )
                 ins = pg_members_tbl.insert().values(**pg_member_rec)
-                res = sess.execute(ins)
+                sess.execute(ins)
+
+            # OK, now add the inventory records for the provider
+            for rc_name, inv in p.inventory.items():
+                rc_id = rc_ids[rc_name]
+                inv_rec = dict(
+                    provider_id=p_id,
+                    resource_class_id=rc_id,
+                    total=inv['total'],
+                    reserved=inv['reserved'],
+                    min_unit=inv['min_unit'],
+                    max_unit=inv['max_unit'],
+                    step_size=inv['step_size'],
+                    allocation_ratio=inv['allocation_ratio'],
+                )
+                ins = inv_tbl.insert().values(**inv_rec)
+                sess.execute(ins)
 
         sess.commit()
         ctx.status_ok()

@@ -250,16 +250,20 @@ def create_providers(ctx):
     ctx.status("creating providers")
     obj_tbl = resource_models.get_table('object_names')
     rc_tbl = resource_models.get_table('resource_classes')
+    cap_tbl = resource_models.get_table('capabilities')
     pg_tbl = resource_models.get_table('provider_groups')
     pg_members_tbl = resource_models.get_table('provider_group_members')
     p_tbl = resource_models.get_table('providers')
+    p_caps_tbl = resource_models.get_table('provider_capabilities')
     tree_tbl = resource_models.get_table('provider_trees')
     inv_tbl = resource_models.get_table('inventories')
 
     # in-process cache of provider group name -> internal ID
     pg_ids = {}
-    # in-process cache of resource class name -> internal ID
+    # in-process cache of resource class code -> internal ID
     rc_ids = {}
+    # in-process cache of capability code -> internal ID
+    cap_ids = {}
 
     sess = resource_models.get_session()
     for pg in ctx.deployment_config.provider_groups.values():
@@ -272,12 +276,19 @@ def create_providers(ctx):
             pg_ids[pg.uuid] = res[0]
 
     for prof in ctx.deployment_config.profiles.values():
-        for rc_name in prof['inventory'].keys():
-            if rc_name not in rc_ids:
-                sel = sa.select([rc_tbl.c.id]).where(rc_tbl.c.code == rc_name)
+        for rc_code in prof['inventory'].keys():
+            if rc_code not in rc_ids:
+                sel = sa.select([rc_tbl.c.id]).where(rc_tbl.c.code == rc_code)
                 res = sess.execute(sel).fetchone()
                 rc_id = res[0]
-                rc_ids[rc_name] = rc_id
+                rc_ids[rc_code] = rc_id
+        for cap_code in prof['capabilities']:
+            if cap_code not in cap_ids:
+                sel = sa.select([cap_tbl.c.id]).where(
+                    cap_tbl.c.code == cap_code)
+                res = sess.execute(sel).fetchone()
+                cap_id = res[0]
+                cap_ids[cap_code] = cap_id
 
     try:
         for p in ctx.deployment_config.iter_providers:
@@ -322,8 +333,8 @@ def create_providers(ctx):
                 sess.execute(ins)
 
             # OK, now add the inventory records for the provider
-            for rc_name, inv in p.profile.inventory.items():
-                rc_id = rc_ids[rc_name]
+            for rc_code, inv in p.profile.inventory.items():
+                rc_id = rc_ids[rc_code]
                 inv_rec = dict(
                     provider_id=p_id,
                     resource_class_id=rc_id,
@@ -335,6 +346,15 @@ def create_providers(ctx):
                     allocation_ratio=inv['allocation_ratio'],
                 )
                 ins = inv_tbl.insert().values(**inv_rec)
+                sess.execute(ins)
+
+            for cap_code in p.profile.capabilities:
+                cap_id = cap_ids[cap_code]
+                p_cap_rec = dict(
+                    provider_id=p_id,
+                    capability_id=cap_id,
+                )
+                ins = p_caps_tbl.insert().values(**p_cap_rec)
                 sess.execute(ins)
 
         sess.commit()

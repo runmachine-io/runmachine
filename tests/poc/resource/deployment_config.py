@@ -33,9 +33,10 @@ class Provider(object):
 
 
 class Profile(object):
-    def __init__(self, name, inventory):
+    def __init__(self, name, inventory, capabilities):
         self.name = name
         self.inventory = inventory
+        self.capabilities = capabilities
 
     def __repr__(self):
         return "Profile(name=%s)" % self.name
@@ -84,7 +85,9 @@ class DeploymentConfig(object):
                     if 'reserved' not in inv:
                         inv['reserved'] = 0
                     prof_inv[rc_name] = inv
-                self.site_profiles[site_name] = Profile(prof_name, prof_inv)
+                caps = prof['capabilities']
+                p = Profile(prof_name, prof_inv, caps)
+                self.site_profiles[site_name] = p
 
     def _load_provider_groups(self):
         for site_name in self.layout['sites']:

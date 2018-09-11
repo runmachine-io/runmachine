@@ -10,20 +10,32 @@ profiles:
     sites:
       - east
       - west
+    capabilities:
+      - hw.cpu.x86.avx2
+      - hw.cpu.x86.vmx
+      - storage.disk.hdd
     inventory:
       runm.cpu.shared:
         total: 24
         reserved: 0
         allocation_ratio: 16.0
       runm.memory:
-        # 128G
+        # 128GiB
         total: 137438953472
-        # 256M
+        # 256MiB
         reserved: 268435456
         allocation_ratio: 1.5
-        # 64M
+        # 64MiB
         min_unit: 67108864
-        # 96G
+        # 96GiB
         max_unit: 103079215104
-        # 64M
+        # 64MiB
         step_size: 67108864
+      runm.block_storage:
+        # 1000GB
+        total: 1000000000000
+        allocation_ratio: 1.0
+        # 10GB
+        min_unit: 10000000000
+        # 10GB
+        step_size: 10000000000

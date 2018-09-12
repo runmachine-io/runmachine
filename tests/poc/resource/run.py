@@ -222,27 +222,83 @@ def create_provider_groups(ctx):
     ctx.status("creating provider groups")
     obj_tbl = resource_models.get_table('object_names')
     pg_tbl = resource_models.get_table('provider_groups')
+    pgd_tbl = resource_models.get_table('provider_group_distances')
+    dt_tbl = resource_models.get_table('distance_types')
+    d_tbl = resource_models.get_table('distances')
 
     obj_recs = []
     pg_recs = []
+    pgd_recs = []
 
+    # Hashmap of provider group UUID to internal ID
+    pg_ids = {}
+    # Hashmap of distance type code to internal ID
+    distance_type_ids = {}
+    # Hashmap of (distance_type_code, distance_code) to internal ID
+    distance_ids = {}
+
+    sess = resource_models.get_session()
+
+    # Populate our hashmap of distance type and codes to distance internal IDs
     for pg in ctx.deployment_config.provider_groups.values():
-        obj_rec = dict(
-            object_type='provider_group',
-            uuid=pg.uuid,
-            name=pg.name,
-        )
-        obj_recs.append(obj_rec)
-        pg_rec = dict(
-            uuid=pg.uuid,
-        )
-        pg_recs.append(pg_rec)
+        for pgd in pg.distances:
+            d_key = (pgd.distance_type, pgd.distance_code)
+            if d_key not in distance_ids:
+                if pgd.distance_type not in distance_type_ids:
+                    # Grab the distance type internal ID matching the distance
+                    # type code
+                    sel = sa.select([dt_tbl.c.id]).where(
+                        dt_tbl.c.code == pgd.distance_type)
+                    res = sess.execute(sel).fetchone()
+                    distance_type_ids[pgd.distance_type] = res[0]
+                dt_id = distance_type_ids[pgd.distance_type]
+                # Not yet in cache... look up the provider group by name
+                sel = sa.select([d_tbl.c.id]).where(
+                    sa.and_(d_tbl.c.type_id == dt_id,
+                            d_tbl.c.code == pgd.distance_code))
+                res = sess.execute(sel).fetchone()
+                distance_ids[d_key] = res[0]
 
     try:
-        _insert_records(obj_tbl, obj_recs)
-        _insert_records(pg_tbl, pg_recs)
+        for pg in ctx.deployment_config.provider_groups.values():
+            # Create the object lookup record
+            obj_rec = dict(
+                object_type='provider_group',
+                uuid=pg.uuid,
+                name=pg.name,
+            )
+            ins = obj_tbl.insert().values(**obj_rec)
+            sess.execute(ins)
+
+            # Create the base provider group record
+            pg_rec = dict(
+                uuid=pg.uuid,
+            )
+            ins = pg_tbl.insert().values(**pg_rec)
+            res = sess.execute(ins)
+            pg_id = res.inserted_primary_key[0]
+            pg_ids[pg.uuid] = pg_id
+
+        # Add the distance relationships after all the provider groups have
+        # been added
+        for pg in ctx.deployment_config.provider_groups.values():
+            for pgd in pg.distances:
+                left_pg_id = pg_ids[pg.uuid]
+                right_pg_id = pg_ids[pgd.right_provider_group.uuid]
+                d_key = (pgd.distance_type, pgd.distance_code)
+                d_id = distance_ids[d_key]
+                pgd_rec = dict(
+                    left_provider_group_id=left_pg_id,
+                    right_provider_group_id=right_pg_id,
+                    distance_id=d_id,
+                )
+                ins = pgd_tbl.insert().values(**pgd_rec)
+                sess.execute(ins)
+
+        sess.commit()
         ctx.status_ok()
     except Exception as err:
+        sess.rollback()
         ctx.status_fail(err)
 
 

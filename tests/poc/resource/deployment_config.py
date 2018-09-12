@@ -161,6 +161,9 @@ class DeploymentConfig(object):
         left_site_name, left_row_id, left_rack_id, left_node_id = parts
 
         for right_pg in self.provider_groups.values():
+            if left_pg.name == right_pg.name:
+                # Distance between same objects doesn't make sense
+                continue
             parts = right_pg.name_parts
             right_site_name, right_row_id, right_rack_id, right_node_id = parts
             if right_site_name != left_site_name:

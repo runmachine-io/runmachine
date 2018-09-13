@@ -14,7 +14,7 @@ message ProviderGroup {
 }
 
 // Represents the relative distance between a provider and a provider group
-message ProviderGroupDistance {
+message ProviderDistance {
     ProviderGroup provider_group = 1;
     Distance distance = 2;
 }
@@ -30,6 +30,6 @@ message Provider {
     Provider root = 51;
     repeated ProviderGroup groups = 52;
     repeated Capability capabilities = 53;
-    repeated ProviderGroupDistance distances = 54;
+    repeated ProviderDistance distances = 54;
     uint32 generation = 100;
 }

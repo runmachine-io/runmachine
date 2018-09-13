@@ -17,6 +17,6 @@ message AllocationItem {
 message Allocation {
     Consumer consumer = 1;
     int64 claim_time = 2;
-    int64 releasetime = 3;
+    int64 release_time = 3;
     repeated AllocationItem items = 50;
 }

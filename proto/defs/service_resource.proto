@@ -27,19 +27,23 @@ service RunmResource {
     rpc resource_class_get(ResourceClassGetRequest) returns (ResourceClass) {}
 
     // Deletes one or more resource classes
-    rpc resource_class_delete(ResourceClassDeleteRequest) returns (ResourceClassDeleteResponse) {}
+    rpc resource_class_delete(ResourceClassDeleteRequest) returns (
+        ResourceClassDeleteResponse) {}
 
     // Set information about a specific resource class
-    rpc resource_class_set(ResourceClassSetRequest) returns (ResourceClassSetResponse) {}
+    rpc resource_class_set(ResourceClassSetRequest) returns (
+        ResourceClassSetResponse) {}
 
     // Returns information about multiple resource classs
-    rpc resource_class_list(ResourceClassListRequest) returns (stream ResourceClass) {}
+    rpc resource_class_list(ResourceClassListRequest) returns (
+        stream ResourceClass) {}
 
     // Returns information about a specific capability
     rpc capability_get(CapabilityGetRequest) returns (Capability) {}
 
     // Deletes one or more capabilities
-    rpc capability_delete(CapabilityDeleteRequest) returns (CapabilityDeleteResponse) {}
+    rpc capability_delete(CapabilityDeleteRequest) returns (
+        CapabilityDeleteResponse) {}
 
     // Set information about a specific capability
     rpc capability_set(CapabilitySetRequest) returns (CapabilitySetResponse) {}
@@ -51,19 +55,23 @@ service RunmResource {
     rpc consumer_type_get(ConsumerTypeGetRequest) returns (ConsumerType) {}
 
     // Deletes one or more consumer typees
-    rpc consumer_type_delete(ConsumerTypeDeleteRequest) returns (ConsumerTypeDeleteResponse) {}
+    rpc consumer_type_delete(ConsumerTypeDeleteRequest) returns (
+        ConsumerTypeDeleteResponse) {}
 
     // Set information about a specific consumer type
-    rpc consumer_type_set(ConsumerTypeSetRequest) returns (ConsumerTypeSetResponse) {}
+    rpc consumer_type_set(ConsumerTypeSetRequest) returns (
+        ConsumerTypeSetResponse) {}
 
     // Returns information about multiple consumer types
-    rpc consumer_type_list(ConsumerTypeListRequest) returns (stream ConsumerType) {}
+    rpc consumer_type_list(ConsumerTypeListRequest) returns (
+        stream ConsumerType) {}
 
     // Returns information about a specific consumer type
     rpc consumer_get(ConsumerGetRequest) returns (Consumer) {}
 
     // Deletes one or more consumer typees
-    rpc consumer_delete(ConsumerDeleteRequest) returns (ConsumerDeleteResponse) {}
+    rpc consumer_delete(ConsumerDeleteRequest) returns (
+        ConsumerDeleteResponse) {}
 
     // Set information about a specific consumer type
     rpc consumer_set(ConsumerSetRequest) returns (ConsumerSetResponse) {}
@@ -75,19 +83,23 @@ service RunmResource {
     rpc distance_type_get(DistanceTypeGetRequest) returns (DistanceType) {}
 
     // Deletes one or more distance typees
-    rpc distance_type_delete(DistanceTypeDeleteRequest) returns (DistanceTypeDeleteResponse) {}
+    rpc distance_type_delete(DistanceTypeDeleteRequest) returns (
+        DistanceTypeDeleteResponse) {}
 
     // Set information about a specific distance type
-    rpc distance_type_set(DistanceTypeSetRequest) returns (DistanceTypeSetResponse) {}
+    rpc distance_type_set(DistanceTypeSetRequest) returns (
+        DistanceTypeSetResponse) {}
 
     // Returns information about multiple distance types
-    rpc distance_type_list(DistanceTypeListRequest) returns (stream DistanceType) {}
+    rpc distance_type_list(DistanceTypeListRequest) returns (
+        stream DistanceType) {}
 
     // Returns information about a specific distance
     rpc distance_get(DistanceGetRequest) returns (Distance) {}
 
     // Deletes one or more distancees
-    rpc distance_delete(DistanceDeleteRequest) returns (DistanceDeleteResponse) {}
+    rpc distance_delete(DistanceDeleteRequest) returns (
+        DistanceDeleteResponse) {}
 
     // Set information about a specific distance
     rpc distance_set(DistanceSetRequest) returns (DistanceSetResponse) {}
@@ -99,7 +111,8 @@ service RunmResource {
     rpc provider_get(ProviderGetRequest) returns (Provider) {}
 
     // Deletes one or more providers
-    rpc provider_delete(ProviderDeleteRequest) returns (ProviderDeleteResponse) {}
+    rpc provider_delete(ProviderDeleteRequest) returns (
+        ProviderDeleteResponse) {}
 
     // Set information about a specific provider
     rpc provider_set(ProviderSetRequest) returns (ProviderSetResponse) {}
@@ -108,43 +121,58 @@ service RunmResource {
     rpc provider_list(ProviderListRequest) returns (stream Provider) {}
 
     // Add or remove capabilities from a provider
-    rpc provider_capabilities_set(ProviderCapabilitysSetRequest) returns (ProviderCapabilitysSetResponse) {}
+    rpc provider_capabilities_set(ProviderCapabilitysSetRequest) returns (
+        ProviderCapabilitysSetResponse) {}
 
     // Returns capabilities for a provider
-    rpc provider_capabilities_list(ProviderCapabilitysListRequest) returns (stream Capability) {}
+    rpc provider_capabilities_list(ProviderCapabilitysListRequest) returns (
+        stream Capability) {}
 
     // Add, remove and modify inventories for a provider
-    rpc provider_inventories_set(ProviderInventoriesSetRequest) returns (ProviderInventoriesSetResponse) {}
+    rpc provider_inventories_set(ProviderInventoriesSetRequest) returns (
+        ProviderInventoriesSetResponse) {}
 
     // Returns inventory information for a provider
-    rpc provider_inventories_list(ProviderInventoriesListRequest) returns (stream Inventory) {}
+    rpc provider_inventories_list(ProviderInventoriesListRequest) returns (
+        stream Inventory) {}
 
     // Returns allocation information for a provider
-    rpc provider_allocations_list(ProviderAllocationsListRequest) returns (stream Allocation) {}
+    rpc provider_allocations_list(ProviderAllocationsListRequest) returns (
+        stream Allocation) {}
 
     // Returns information about a specific provider group
     rpc provider_group_get(ProviderGroupGetRequest) returns (ProviderGroup) {}
 
     // Deletes one or more provider groups
-    rpc provider_group_delete(ProviderGroupDeleteRequest) returns (ProviderGroupDeleteResponse) {}
+    rpc provider_group_delete(ProviderGroupDeleteRequest) returns (
+        ProviderGroupDeleteResponse) {}
 
     // Set information about a specific provider group
-    rpc provider_group_set(ProviderGroupSetRequest) returns (ProviderGroupSetResponse) {}
+    rpc provider_group_set(ProviderGroupSetRequest) returns (
+        ProviderGroupSetResponse) {}
 
     // Returns information about multiple provider groups
-    rpc provider_group_list(ProviderGroupListRequest) returns (stream ProviderGroup) {}
+    rpc provider_group_list(ProviderGroupListRequest) returns (
+        stream ProviderGroup) {}
 
     // Add or remove providers from a provider group
-    rpc provider_group_members_set(ProviderGroupMembersSetRequest) returns (ProviderGroupMembersSetResponse) {}
+    rpc provider_group_members_set(ProviderGroupMembersSetRequest) returns (
+        ProviderGroupMembersSetResponse) {}
 
     // List providers belonging to a provider group
-    rpc provider_group_members_list(ProviderGroupMembersListRequest) returns (stream Provider) {}
+    rpc provider_group_members_list(ProviderGroupMembersListRequest) returns (
+        stream Provider) {}
 
-    // Add or remove distances between othe provider groups from a provider group
-    rpc provider_group_distances_set(ProviderGroupDistancesSetRequest) returns (ProviderGroupDistancesSetResponse) {}
+    // Add or remove distances between othe provider groups from a provider
+    // group
+    rpc provider_group_distances_set(
+        ProviderGroupDistancesSetRequest) returns (
+            ProviderGroupDistancesSetResponse) {}
 
     // List provider-group-distance records for a provider group
-    rpc provider_group_distances_list(ProviderGroupDistancesListRequest) returns (stream ProviderGroupDistance) {}
+    rpc provider_group_distances_list(
+        ProviderGroupDistancesListRequest) returns (
+            stream ProviderGroupDistance) {}
 
     // List potential resource claims against providers that match a given set
     // of resource and capability constraints
@@ -450,6 +478,7 @@ message ProviderListFilters {
     repeated CapabilityConstraint capabilities = 3;
     repeated ProviderGroupConstraint provider_groups = 4;
     repeated MetadataConstraint provider_metadata = 5;
+    repeated DistanceConstraint distances = 6;
 }
 
 message ProviderListRequest {
@@ -474,6 +503,9 @@ message ProviderListRequest {
     // When grabbing provider information, fetch the provider's allocation
     // records.
     bool fetch_allocations = 54;
+    // When grabbing provider information, fetch the provider's distance to
+    // provider group records.
+    bool fetch_distances = 55;
 }
 
 message ProviderDeleteRequest {
@@ -644,6 +676,7 @@ message ClaimListRequestGroupConstraints {
     repeated CapabilityConstraint capabilities = 2;
     repeated ProviderGroupConstraint provider_groups = 3;
     repeated MetadataConstraint provider_metadata = 4;
+    repeated DistanceConstraint distances = 5;
 }
 
 message ClaimListRequestGroupOptions {

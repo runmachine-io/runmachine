@@ -157,6 +157,13 @@ def create_distances(ctx):
             description="Relative storage distances",
             generation=1,
         ),
+        dict(
+            code="failure",
+            description="Relative distance representing successively smaller "
+                        "chance of failure affecting workloads running on "
+                        "that provider",
+            generation=1,
+        ),
     ]
     try:
         _insert_records(dt_tbl, recs)
@@ -173,18 +180,22 @@ def create_distances(ctx):
     sel = sa.select([dt_tbl.c.id]).where(dt_tbl.c.code == "storage")
     storage_dt_id = sess.execute(sel).fetchone()[0]
 
+    sel = sa.select([dt_tbl.c.id]).where(dt_tbl.c.code == "failure")
+    failure_dt_id = sess.execute(sel).fetchone()[0]
+
     recs = [
         dict(
             type_id=net_dt_id,
             code="local",
             position=0,
-            description="Virtually no network latency",
+            description="Very little network latency - within rack L2 subnet",
         ),
         dict(
             type_id=net_dt_id,
-            code="datacenter",
+            code="site",
             position=1,
-            description="latency between leaf switch-connected nodes in a DC",
+            description="Slightly higher latency between leaf "
+                        "switch-connected nodes in a DC",
         ),
         dict(
             type_id=net_dt_id,
@@ -210,6 +221,30 @@ def create_distances(ctx):
             position=2,
             description="External cloud block storage with WAN latency",
         ),
+        dict(
+            type_id=failure_dt_id,
+            code="local",
+            position=0,
+            description="Providers are within same rack failure domain",
+        ),
+        dict(
+            type_id=failure_dt_id,
+            code="rack",
+            position=1,
+            description="Providers are in different rack power/failure domain",
+        ),
+        dict(
+            type_id=failure_dt_id,
+            code="row",
+            position=2,
+            description="Providers are in different row power/failure domain",
+        ),
+        dict(
+            type_id=failure_dt_id,
+            code="site",
+            position=3,
+            description="Providers are in different sites",
+        ),
     ]
     try:
         _insert_records(d_tbl, recs)
@@ -222,42 +257,8 @@ def create_provider_groups(ctx):
     ctx.status("creating provider groups")
     obj_tbl = resource_models.get_table('object_names')
     pg_tbl = resource_models.get_table('provider_groups')
-    pgd_tbl = resource_models.get_table('provider_group_distances')
-    dt_tbl = resource_models.get_table('distance_types')
-    d_tbl = resource_models.get_table('distances')
-
-    obj_recs = []
-    pg_recs = []
-    pgd_recs = []
-
-    # Hashmap of provider group UUID to internal ID
-    pg_ids = {}
-    # Hashmap of distance type code to internal ID
-    distance_type_ids = {}
-    # Hashmap of (distance_type_code, distance_code) to internal ID
-    distance_ids = {}
 
     sess = resource_models.get_session()
-
-    # Populate our hashmap of distance type and codes to distance internal IDs
-    for pg in ctx.deployment_config.provider_groups.values():
-        for pgd in pg.distances:
-            d_key = (pgd.distance_type, pgd.distance_code)
-            if d_key not in distance_ids:
-                if pgd.distance_type not in distance_type_ids:
-                    # Grab the distance type internal ID matching the distance
-                    # type code
-                    sel = sa.select([dt_tbl.c.id]).where(
-                        dt_tbl.c.code == pgd.distance_type)
-                    res = sess.execute(sel).fetchone()
-                    distance_type_ids[pgd.distance_type] = res[0]
-                dt_id = distance_type_ids[pgd.distance_type]
-                # Not yet in cache... look up the provider group by name
-                sel = sa.select([d_tbl.c.id]).where(
-                    sa.and_(d_tbl.c.type_id == dt_id,
-                            d_tbl.c.code == pgd.distance_code))
-                res = sess.execute(sel).fetchone()
-                distance_ids[d_key] = res[0]
 
     try:
         for pg in ctx.deployment_config.provider_groups.values():
@@ -275,25 +276,7 @@ def create_provider_groups(ctx):
                 uuid=pg.uuid,
             )
             ins = pg_tbl.insert().values(**pg_rec)
-            res = sess.execute(ins)
-            pg_id = res.inserted_primary_key[0]
-            pg_ids[pg.uuid] = pg_id
-
-        # Add the distance relationships after all the provider groups have
-        # been added
-        for pg in ctx.deployment_config.provider_groups.values():
-            for pgd in pg.distances:
-                left_pg_id = pg_ids[pg.uuid]
-                right_pg_id = pg_ids[pgd.right_provider_group.uuid]
-                d_key = (pgd.distance_type, pgd.distance_code)
-                d_id = distance_ids[d_key]
-                pgd_rec = dict(
-                    left_provider_group_id=left_pg_id,
-                    right_provider_group_id=right_pg_id,
-                    distance_id=d_id,
-                )
-                ins = pgd_tbl.insert().values(**pgd_rec)
-                sess.execute(ins)
+            sess.execute(ins)
 
         sess.commit()
         ctx.status_ok()
@@ -313,6 +296,9 @@ def create_providers(ctx):
     p_caps_tbl = resource_models.get_table('provider_capabilities')
     tree_tbl = resource_models.get_table('provider_trees')
     inv_tbl = resource_models.get_table('inventories')
+    pd_tbl = resource_models.get_table('provider_distances')
+    dt_tbl = resource_models.get_table('distance_types')
+    d_tbl = resource_models.get_table('distances')
 
     # in-process cache of provider group name -> internal ID
     pg_ids = {}
@@ -320,13 +306,17 @@ def create_providers(ctx):
     rc_ids = {}
     # in-process cache of capability code -> internal ID
     cap_ids = {}
+    # Hashmap of distance type code to internal ID
+    distance_type_ids = {}
+    # Hashmap of (distance_type_code, distance_code) to internal ID
+    distance_ids = {}
 
     sess = resource_models.get_session()
     for pg in ctx.deployment_config.provider_groups.values():
         if pg.uuid in pg_ids:
             pg_id = pg_ids[pg.uuid]
         else:
-            # Not yet in cache... look up the provider group by name
+            # Not yet in cache... look up the provider group by UUID
             sel = sa.select([pg_tbl.c.id]).where(pg_tbl.c.uuid == pg.uuid)
             res = sess.execute(sel).fetchone()
             pg_ids[pg.uuid] = res[0]
@@ -346,8 +336,28 @@ def create_providers(ctx):
                 cap_id = res[0]
                 cap_ids[cap_code] = cap_id
 
+    # Populate our hashmap of distance type and codes to distance internal IDs
+    for p in ctx.deployment_config.providers.values():
+        for pd in p.distances:
+            d_key = (pd.distance_type, pd.distance_code)
+            if d_key not in distance_ids:
+                if pd.distance_type not in distance_type_ids:
+                    # Grab the distance type internal ID matching the distance
+                    # type code
+                    sel = sa.select([dt_tbl.c.id]).where(
+                        dt_tbl.c.code == pd.distance_type)
+                    res = sess.execute(sel).fetchone()
+                    distance_type_ids[pd.distance_type] = res[0]
+                dt_id = distance_type_ids[pd.distance_type]
+                # Not yet in cache... look up the provider group by name
+                sel = sa.select([d_tbl.c.id]).where(
+                    sa.and_(d_tbl.c.type_id == dt_id,
+                            d_tbl.c.code == pd.distance_code))
+                res = sess.execute(sel).fetchone()
+                distance_ids[d_key] = res[0]
+
     try:
-        for p in ctx.deployment_config.iter_providers:
+        for p in ctx.deployment_config.providers.values():
             # Create the object lookup record
             obj_rec = dict(
                 object_type='provider',
@@ -379,6 +389,7 @@ def create_providers(ctx):
             ins = tree_tbl.insert().values(**tree_rec)
             sess.execute(ins)
 
+            # Add the provider's group memberships
             for pg in p.groups:
                 pg_id = pg_ids[pg.uuid]
                 pg_member_rec = dict(
@@ -404,6 +415,7 @@ def create_providers(ctx):
                 ins = inv_tbl.insert().values(**inv_rec)
                 sess.execute(ins)
 
+            # Add the provider's capabilities
             for cap_code in p.profile.capabilities:
                 cap_id = cap_ids[cap_code]
                 p_cap_rec = dict(
@@ -411,6 +423,20 @@ def create_providers(ctx):
                     capability_id=cap_id,
                 )
                 ins = p_caps_tbl.insert().values(**p_cap_rec)
+                sess.execute(ins)
+
+            # Add the distance relationships after all the provider groups have
+            # been added
+            for pd in p.distances:
+                pg_id = pg_ids[pd.provider_group.uuid]
+                d_key = (pd.distance_type, pd.distance_code)
+                d_id = distance_ids[d_key]
+                pd_rec = dict(
+                    provider_id=p_id,
+                    provider_group_id=pg_id,
+                    distance_id=d_id,
+                )
+                ins = pd_tbl.insert().values(**pd_rec)
                 sess.execute(ins)
 
         sess.commit()

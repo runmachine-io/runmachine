@@ -97,12 +97,15 @@ CREATE TABLE provider_group_members (
 , INDEX (provider_id)
 );
 
-CREATE TABLE provider_group_distances (
+CREATE TABLE provider_distances (
   id INT NOT NULL AUTO_INCREMENT PRIMARY KEY
-, left_provider_group_id INT NOT NULL
-, right_provider_group_id INT NOT NULL
+, provider_id INT NOT NULL
+, provider_group_id INT NOT NULL
 , distance_id BIGINT NOT NULL
-, UNIQUE INDEX uix_left_right_distance (left_provider_group_id, right_provider_group_id, distance_id)
+, UNIQUE INDEX uix_provider_provider_group_distance (
+    provider_id
+  , provider_group_id
+  , distance_id)
 );
 
 CREATE TABLE consumer_types (
@@ -141,6 +144,12 @@ CREATE TABLE allocation_items (
 , provider_id BIGINT NOT NULL
 , resource_class_id INT NOT NULL
 , used BIGINT UNSIGNED NOT NULL
-, INDEX ix_allocation_provider_resource_class (allocation_id, provider_id, resource_class_id)
-, INDEX ix_resource_class_provider_allocation (resource_class_id, provider_id, allocation_id)
+, INDEX ix_allocation_provider_resource_class (
+    allocation_id
+  , provider_id
+  , resource_class_id)
+, INDEX ix_resource_class_provider_allocation (
+    resource_class_id
+  , provider_id
+  , allocation_id)
 ) CHARACTER SET latin1 COLLATE latin1_bin;

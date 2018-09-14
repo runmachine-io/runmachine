@@ -5,6 +5,7 @@ import argparse
 import os
 import sys
 
+import claim
 import load
 import deployment_config
 

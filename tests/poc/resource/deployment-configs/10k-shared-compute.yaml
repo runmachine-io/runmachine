@@ -1,0 +1,45 @@
+layout:
+  sites:
+    - east
+    - west
+    - north
+    - south
+  rows_per_site: 5
+  racks_per_row: 25
+  nodes_per_rack: 20
+profiles:
+  standard.compute.localdisk:
+    sites:
+      - east
+      - west
+      - north
+      - south
+    capabilities:
+      - hw.cpu.x86.avx2
+      - hw.cpu.x86.vmx
+      - storage.disk.hdd
+    inventory:
+      runm.cpu.shared:
+        total: 24
+        reserved: 0
+        allocation_ratio: 16.0
+      runm.memory:
+        # 128GiB
+        total: 137438953472
+        # 256MiB
+        reserved: 268435456
+        allocation_ratio: 1.5
+        # 64MiB
+        min_unit: 67108864
+        # 96GiB
+        max_unit: 103079215104
+        # 64MiB
+        step_size: 67108864
+      runm.block_storage:
+        # 1000GB
+        total: 1000000000000
+        allocation_ratio: 1.0
+        # 10GB
+        min_unit: 10000000000
+        # 10GB
+        step_size: 10000000000

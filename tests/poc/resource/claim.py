@@ -50,5 +50,51 @@ class ClaimRequestGroup(object):
 
 
 class ClaimRequest(object):
-    def __init__(self, groups):
+    def __init__(self, consumer, groups, claim_time=None, release_time=None):
+        self.consumer = consumer
         self.groups = groups
+        self.claim_time = claim_time
+        self.release_time = release_time
+
+
+class Claim(object):
+    def __init__(self, allocation, alloc_item_group_map):
+        self.allocation = allocation
+        self.allocation_item_to_request_groups = alloc_item_group_map
+
+    def __repr__(self):
+        return "Claim(allocation=%s)" % self.allocation
+
+
+class Allocation(object):
+    def __init__(self, consumer, claim_time, release_time, items):
+        self.consumer = consumer
+        self.claim_time = claim_time
+        self.release_time = release_time
+        self.items = items
+
+    def __repr__(self):
+        return "Allocation(consumer=%s,claim_time=%s,release_time=%s,items=%s)" % (
+            self.consumer,
+            self.claim_time,
+            self.release_time,
+            self.items,
+        )
+
+
+def process_claim_request(ctx, claim_request):
+    """Given a claim request object, ask the resource database to construct
+    Claim objects that meet the request's constraints.
+
+    :param ctx: the RunContext object
+    :param claim_request: the ClaimRequest object
+    """
+    items = []
+    alloc = Allocation(
+        claim_request.consumer, claim_request.claim_time,
+        claim_request.release_time, items,
+    )
+    item_to_group_map = {}
+    return [
+        Claim(alloc, item_to_group_map),
+    ]

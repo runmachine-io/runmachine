@@ -36,6 +36,22 @@ class RunContext(object):
         sys.stderr.flush()
 
 
+def find_claims(ctx):
+    consumer = "instance0"
+    resource_constraints = [
+        claim.ResourceConstraint("runm.cpu.shared", 2),
+        claim.ResourceConstraint("runm.memory", 128*1000*1000),
+    ]
+    crg0 = claim.ClaimRequestGroup(resource_constraints)
+    request_groups = [
+        crg0,
+    ]
+    cr = claim.ClaimRequest(consumer, request_groups)
+    claims = claim.process_claim_request(ctx, cr)
+    for c in claims:
+        print c
+
+
 def setup_opts(parser):
     deployment_configs = []
     for fn in os.listdir(_DEPLOYMENT_CONFIGS_DIR):
@@ -43,8 +59,8 @@ def setup_opts(parser):
         if os.path.isfile(fp) and fn.endswith('.yaml'):
             deployment_configs.append(fn[0:len(fn) - 5])
 
-    parser.add_argument('--reset', action='store_true',
-                        default=True, help="Reset the database entirely.")
+    parser.add_argument('--no-reset', action='store_true',
+                        default=True, help="Do NOT reset the database.")
     parser.add_argument('--deployment-config',
                         choices=deployment_configs,
                         default=_DEFAULT_DEPLOYMENT_CONFIG,
@@ -54,7 +70,7 @@ def setup_opts(parser):
 def main(ctx):
     fp = os.path.join(_DEPLOYMENT_CONFIGS_DIR, args.deployment_config)
     ctx.deployment_config = deployment_config.DeploymentConfig(fp)
-    if ctx.args.reset:
+    if not ctx.args.no_reset:
         load.reset_db(ctx)
         load.create_resource_classes(ctx)
         load.create_consumer_types(ctx)
@@ -62,6 +78,7 @@ def main(ctx):
         load.create_distances(ctx)
         load.create_provider_groups(ctx)
         load.create_providers(ctx)
+    find_claims(ctx)
 
 
 if __name__ == '__main__':

@@ -416,3 +416,13 @@ def create_providers(ctx):
     except Exception as err:
         sess.rollback()
         ctx.status_fail(err)
+
+
+def load(ctx):
+    reset_db(ctx)
+    create_resource_classes(ctx)
+    create_consumer_types(ctx)
+    create_capabilities(ctx)
+    create_distances(ctx)
+    create_provider_groups(ctx)
+    create_providers(ctx)

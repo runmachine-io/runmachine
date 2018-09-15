@@ -78,13 +78,7 @@ def main(ctx):
         fp = os.path.join(_DEPLOYMENT_CONFIGS_DIR, args.deployment_config)
         ctx.deployment_config = deployment_config.DeploymentConfig(fp)
         ctx.status_ok()
-        load.reset_db(ctx)
-        load.create_resource_classes(ctx)
-        load.create_consumer_types(ctx)
-        load.create_capabilities(ctx)
-        load.create_distances(ctx)
-        load.create_provider_groups(ctx)
-        load.create_providers(ctx)
+        load.load(ctx)
     find_claims(ctx)
 
 

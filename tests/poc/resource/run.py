@@ -64,8 +64,8 @@ def setup_opts(parser):
         if os.path.isfile(fp) and fn.endswith('.yaml'):
             deployment_configs.append(fn[0:len(fn) - 5])
 
-    parser.add_argument('--no-reset', action='store_false',
-                        default=True, help="Do NOT reset the database.")
+    parser.add_argument('--reset', action='store_true',
+                        default=False, help="Do NOT reset the database.")
     parser.add_argument('--deployment-config',
                         choices=deployment_configs,
                         default=_DEFAULT_DEPLOYMENT_CONFIG,
@@ -73,9 +73,9 @@ def setup_opts(parser):
 
 
 def main(ctx):
-    fp = os.path.join(_DEPLOYMENT_CONFIGS_DIR, args.deployment_config)
-    ctx.deployment_config = deployment_config.DeploymentConfig(fp)
-    if not ctx.args.no_reset:
+    if ctx.args.reset:
+        fp = os.path.join(_DEPLOYMENT_CONFIGS_DIR, args.deployment_config)
+        ctx.deployment_config = deployment_config.DeploymentConfig(fp)
         load.reset_db(ctx)
         load.create_resource_classes(ctx)
         load.create_consumer_types(ctx)

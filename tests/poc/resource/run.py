@@ -2,8 +2,10 @@
 # scenarios
 
 import argparse
+import datetime
 import os
 import sys
+import time
 
 import claim
 import load
@@ -42,11 +44,14 @@ def find_claims(ctx):
         claim.ResourceConstraint("runm.cpu.shared", 2),
         claim.ResourceConstraint("runm.memory", 128*1000*1000),
     ]
-    crg0 = claim.ClaimRequestGroup(resource_constraints)
+    crg0 = claim.ClaimRequestGroup(resource_constraints=resource_constraints)
     request_groups = [
         crg0,
     ]
-    cr = claim.ClaimRequest(consumer, request_groups)
+    claim_time = datetime.datetime.utcnow()
+    claim_time = int(time.mktime(claim_time.timetuple()))
+    release_time = sys.maxint
+    cr = claim.ClaimRequest(consumer, request_groups, claim_time, release_time)
     claims = claim.process_claim_request(ctx, cr)
     for c in claims:
         print c
@@ -59,7 +64,7 @@ def setup_opts(parser):
         if os.path.isfile(fp) and fn.endswith('.yaml'):
             deployment_configs.append(fn[0:len(fn) - 5])
 
-    parser.add_argument('--no-reset', action='store_true',
+    parser.add_argument('--no-reset', action='store_false',
                         default=True, help="Do NOT reset the database.")
     parser.add_argument('--deployment-config',
                         choices=deployment_configs,

@@ -43,6 +43,7 @@ def find_claims(ctx):
     resource_constraints = [
         claim.ResourceConstraint("runm.cpu.shared", 2),
         claim.ResourceConstraint("runm.memory", 128*1000*1000),
+        claim.ResourceConstraint("runm.block_storage", 10*1000*1000*1000),
     ]
     crg0 = claim.ClaimRequestGroup(resource_constraints=resource_constraints)
     request_groups = [
@@ -65,7 +66,7 @@ def setup_opts(parser):
             deployment_configs.append(fn[0:len(fn) - 5])
 
     parser.add_argument('--reset', action='store_true',
-                        default=False, help="Do NOT reset the database.")
+                        default=False, help="Reset and reload the database.")
     parser.add_argument('--deployment-config',
                         choices=deployment_configs,
                         default=_DEFAULT_DEPLOYMENT_CONFIG,

@@ -12,6 +12,7 @@ _TABLE_NAMES = (
     'distance_types',
     'consumer_types',
     'distances',
+    'partitions',
     'providers',
     'provider_trees',
     'provider_capabilities',

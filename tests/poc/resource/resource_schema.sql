@@ -13,6 +13,12 @@ CREATE TABLE object_names (
 , UNIQUE INDEX uix_object_type_name (object_type, name)
 ) CHARACTER SET latin1 COLLATE latin1_bin;
 
+CREATE TABLE partitions (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY
+, uuid CHAR(32) NOT NULL
+, UNIQUE INDEX uix_uuid (uuid)
+) CHARACTER SET latin1 COLLATE latin1_bin;
+
 CREATE TABLE resource_classes (
   id INT NOT NULL AUTO_INCREMENT PRIMARY KEY
 , code VARCHAR(200) NOT NULL
@@ -48,8 +54,10 @@ CREATE TABLE providers (
   id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY
 , uuid CHAR(32) NOT NULL
 , generation INT UNSIGNED NOT NULL
+, partition_id INT NOT NULL
 , parent_provider_id BIGINT NULL
 , UNIQUE INDEX uix_uuid (uuid)
+, INDEX ix_partition (partition_id)
 , INDEX ix_parent_provider_id (parent_provider_id)
 ) CHARACTER SET latin1 COLLATE latin1_bin;
 

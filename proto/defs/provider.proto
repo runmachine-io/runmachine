@@ -2,8 +2,9 @@ syntax = "proto3";
 
 package runm;
 
-import "distance.proto";
 import "capability.proto";
+import "distance.proto";
+import "partition.proto";
 
 // A collection of related providers
 message ProviderGroup {
@@ -26,10 +27,11 @@ message Provider {
     string uuid = 1;
     string display_name = 2;
     string slug = 3;
-    Provider parent = 50;
-    Provider root = 51;
-    repeated ProviderGroup groups = 52;
-    repeated Capability capabilities = 53;
-    repeated ProviderDistance distances = 54;
+    Partition partition = 50;
+    Provider parent = 51;
+    Provider root = 52;
+    repeated ProviderGroup groups = 53;
+    repeated Capability capabilities = 54;
+    repeated ProviderDistance distances = 55;
     uint32 generation = 100;
 }

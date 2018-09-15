@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package runm;
+
+// A partition is a division of the entire global view that runmachine has.
+// Providers are in one and only one partition. Administrators may list
+// inventory and usage across multiple partitions whereas normal project users
+// generally will have results filtered to a specific partition that they are
+// working with or have access to.
+message Partition {
+    string uuid = 1;
+    string display_name = 2;
+    string slug = 3;
+}

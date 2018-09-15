@@ -225,6 +225,44 @@ def create_distances(ctx):
         ctx.status_fail(err)
 
 
+def create_partitions(ctx):
+    ctx.status("creating partitions")
+    obj_tbl = resource_models.get_table('object_names')
+    part_tbl = resource_models.get_table('partitions')
+
+    sess = resource_models.get_session()
+
+    created = set()
+
+    try:
+        for p in ctx.deployment_config.providers.values():
+            part_uuid = p.partition.uuid
+            if part_uuid in created:
+                continue
+            # Create the object lookup record
+            obj_rec = dict(
+                object_type='partition',
+                uuid=part_uuid,
+                name=p.partition.name,
+            )
+            ins = obj_tbl.insert().values(**obj_rec)
+            sess.execute(ins)
+
+            # Create the base provider group record
+            part_rec = dict(
+                uuid=part_uuid,
+            )
+            ins = part_tbl.insert().values(**part_rec)
+            sess.execute(ins)
+            created.add(part_uuid)
+
+        sess.commit()
+        ctx.status_ok()
+    except Exception as err:
+        sess.rollback()
+        ctx.status_fail(err)
+
+
 def create_provider_groups(ctx):
     ctx.status("creating provider groups")
     obj_tbl = resource_models.get_table('object_names')
@@ -258,10 +296,10 @@ def create_provider_groups(ctx):
 
 
 def create_providers(ctx):
-    ctx.status("creating providers")
     obj_tbl = resource_models.get_table('object_names')
     rc_tbl = resource_models.get_table('resource_classes')
     cap_tbl = resource_models.get_table('capabilities')
+    part_tbl = resource_models.get_table('partitions')
     pg_tbl = resource_models.get_table('provider_groups')
     pg_members_tbl = resource_models.get_table('provider_group_members')
     p_tbl = resource_models.get_table('providers')
@@ -272,6 +310,8 @@ def create_providers(ctx):
     dt_tbl = resource_models.get_table('distance_types')
     d_tbl = resource_models.get_table('distances')
 
+    # in-process cache of partition name -> internal ID
+    part_ids = {}
     # in-process cache of provider group name -> internal ID
     pg_ids = {}
     # in-process cache of resource class code -> internal ID
@@ -284,6 +324,7 @@ def create_providers(ctx):
     distance_ids = {}
 
     sess = resource_models.get_session()
+    ctx.status("caching provider group internal IDs")
     for pg in ctx.deployment_config.provider_groups.values():
         if pg.uuid in pg_ids:
             pg_id = pg_ids[pg.uuid]
@@ -292,7 +333,9 @@ def create_providers(ctx):
             sel = sa.select([pg_tbl.c.id]).where(pg_tbl.c.uuid == pg.uuid)
             res = sess.execute(sel).fetchone()
             pg_ids[pg.uuid] = res[0]
+    ctx.status_ok()
 
+    ctx.status("caching resource class and capability internal IDs")
     for prof in ctx.deployment_config.profiles.values():
         for rc_code in prof['inventory'].keys():
             if rc_code not in rc_ids:
@@ -307,9 +350,19 @@ def create_providers(ctx):
                 res = sess.execute(sel).fetchone()
                 cap_id = res[0]
                 cap_ids[cap_code] = cap_id
+    ctx.status_ok()
 
-    # Populate our hashmap of distance type and codes to distance internal IDs
+    ctx.status("caching partition, distance type and distance internal IDs")
     for p in ctx.deployment_config.providers.values():
+        # Populate our hashmap of partition name to internal ID
+        part_uuid = p.partition.uuid
+        if part_uuid not in part_ids:
+            # Grab the partition internal ID matching the partition UUID
+            sel = sa.select([part_tbl.c.id]).where(
+                part_tbl.c.uuid == part_uuid)
+            res = sess.execute(sel).fetchone()
+            part_ids[part_uuid] = res[0]
+        # Populate our hashmap of distance type and codes to internal IDs
         for pd in p.distances:
             d_key = (pd.distance_type, pd.distance_code)
             if d_key not in distance_ids:
@@ -327,7 +380,9 @@ def create_providers(ctx):
                             d_tbl.c.code == pd.distance_code))
                 res = sess.execute(sel).fetchone()
                 distance_ids[d_key] = res[0]
+    ctx.status_ok()
 
+    ctx.status("creating providers")
     try:
         for p in ctx.deployment_config.providers.values():
             # Create the object lookup record
@@ -340,8 +395,10 @@ def create_providers(ctx):
             sess.execute(ins)
 
             # Create the base provider record
+            part_id = part_ids[p.partition.uuid]
             p_rec = dict(
                 uuid=p.uuid,
+                partition_id=part_id,
                 generation=1,
             )
             ins = p_tbl.insert().values(**p_rec)
@@ -424,5 +481,6 @@ def load(ctx):
     create_consumer_types(ctx)
     create_capabilities(ctx)
     create_distances(ctx)
+    create_partitions(ctx)
     create_provider_groups(ctx)
     create_providers(ctx)

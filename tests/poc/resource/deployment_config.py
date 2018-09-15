@@ -53,9 +53,19 @@ class ProviderGroup(object):
         return "ProviderGroup(name=%s,uuid=%s)" % (self.name, self.uuid)
 
 
-class Provider(object):
-    def __init__(self, name, groups, profile):
+class Partition(object):
+    def __init__(self, name):
         self.name = name
+        self.uuid = str(uuid.uuid4()).replace('-', '')
+
+    def __repr__(self):
+        return "Partition(name=%s,uuid=%s)" % (self.name, self.uuid)
+
+
+class Provider(object):
+    def __init__(self, name, partition, groups, profile):
+        self.name = name
+        self.partition = partition
         self.uuid = str(uuid.uuid4()).replace('-', '')
         # Collection of provider group objects this provider is in
         self.groups = groups
@@ -113,6 +123,9 @@ class DeploymentConfig(object):
                                    "%s. Problem parsing file: %s." % (fp, err))
         self.layout = config_dict['layout']
         self.profiles = config_dict['profiles']
+        # A hashmap of partition name to partition object
+        self.partitions = {}
+        self._load_partitions()
         # A hashmap of profiles by site name that compute hosts will use for
         # inventory and traits
         self.site_profiles = {}
@@ -123,6 +136,10 @@ class DeploymentConfig(object):
         # A hashmap of provider name to provider object
         self.providers = {}
         self._load_providers()
+
+    def _load_partitions(self):
+        # For now, just have a single hard-coded partition
+        self.partitions['part0'] = Partition('part0')
 
     def _load_site_profiles(self):
         for prof_name, prof in self.profiles.items():
@@ -248,6 +265,9 @@ class DeploymentConfig(object):
         """Yields instructions for creating a provider, its inventory, traits
         and group associations.
         """
+        # TODO(jaypipes): Support more than a single partition in the
+        # deployment config layout section
+        partition = self.partitions['part0']
         for site_name in self.layout['sites']:
             for row_id in range(self.count_rows_per_site):
                 for rack_id in range(self.count_racks_per_row):
@@ -272,6 +292,6 @@ class DeploymentConfig(object):
                         # OK, now we construct the distance matrix. For now,
                         # we're just going to hard-code the network latency
                         # distances between sites, rows and racks
-                        p = Provider(provider_name, groups, profile)
+                        p = Provider(provider_name, partition, groups, profile)
                         self._calculate_distances(p)
                         self.providers[p.name] = p

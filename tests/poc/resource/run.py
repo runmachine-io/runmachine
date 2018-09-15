@@ -74,8 +74,10 @@ def setup_opts(parser):
 
 def main(ctx):
     if ctx.args.reset:
+        ctx.status("loading deployment config")
         fp = os.path.join(_DEPLOYMENT_CONFIGS_DIR, args.deployment_config)
         ctx.deployment_config = deployment_config.DeploymentConfig(fp)
+        ctx.status_ok()
         load.reset_db(ctx)
         load.create_resource_classes(ctx)
         load.create_consumer_types(ctx)

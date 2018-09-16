@@ -3,95 +3,10 @@
 
 import copy
 import os
-import uuid
 
 import yaml
 
-
-class ProviderGroupDistance(object):
-    def __init__(self, provider_group, distance_type, distance_code):
-        self.provider_group = provider_group
-        self.distance_type = distance_type
-        self.distance_code = distance_code
-
-
-class ProviderGroup(object):
-    def __init__(self, name):
-        self.name = name
-        self.uuid = str(uuid.uuid4()).replace('-', '')
-        self.distances = []
-
-    @property
-    def name_parts(self):
-        name_parts = self.name.split('-')
-        site_name = name_parts[0]
-        row_id = None
-        rack_id = None
-        if len(name_parts) == 3:
-            row_id = name_parts[1][len('row'):]
-            rack_id = name_parts[2][len('rack'):]
-        elif len(name_parts) == 2:
-            row_id = name_parts[1][len('row'):]
-        return site_name, row_id, rack_id
-
-    @property
-    def is_site(self):
-        name_parts = self.name.split('-')
-        return len(name_parts) == 1
-
-    @property
-    def is_row(self):
-        name_parts = self.name.split('-')
-        return len(name_parts) == 2
-
-    @property
-    def is_rack(self):
-        name_parts = self.name.split('-')
-        return len(name_parts) == 3
-
-    def __repr__(self):
-        return "ProviderGroup(name=%s,uuid=%s)" % (self.name, self.uuid)
-
-
-class Partition(object):
-    def __init__(self, name):
-        self.name = name
-        self.uuid = str(uuid.uuid4()).replace('-', '')
-
-    def __repr__(self):
-        return "Partition(name=%s,uuid=%s)" % (self.name, self.uuid)
-
-
-class Provider(object):
-    def __init__(self, name, partition, groups, profile):
-        self.name = name
-        self.partition = partition
-        self.uuid = str(uuid.uuid4()).replace('-', '')
-        # Collection of provider group objects this provider is in
-        self.groups = groups
-        self.profile = profile
-
-    @property
-    def name_parts(self):
-        name_parts = self.name.split('-')
-        site_name = name_parts[0]
-        row_id = None
-        rack_id = None
-        node_id = None
-        if len(name_parts) == 4:
-            row_id = name_parts[1][len('row'):]
-            rack_id = name_parts[2][len('rack'):]
-            node_id = name_parts[3][len('node'):]
-        elif len(name_parts) == 3:
-            row_id = name_parts[1][len('row'):]
-            rack_id = name_parts[2][len('rack'):]
-        elif len(name_parts) == 2:
-            row_id = name_parts[1][len('row'):]
-        return site_name, row_id, rack_id, node_id
-
-    def __repr__(self):
-        return "Provider(name=%s,uuid=%s,profile=%s)" % (
-            self.name, self.uuid, self.profie.name)
+import resource_models
 
 
 class Profile(object):
@@ -139,7 +54,7 @@ class DeploymentConfig(object):
 
     def _load_partitions(self):
         # For now, just have a single hard-coded partition
-        self.partitions['part0'] = Partition('part0')
+        self.partitions['part0'] = resource_models.Partition('part0')
 
     def _load_site_profiles(self):
         for prof_name, prof in self.profiles.items():
@@ -163,7 +78,7 @@ class DeploymentConfig(object):
 
     def _load_provider_groups(self):
         for site_name in self.layout['sites']:
-            pg = ProviderGroup(site_name)
+            pg = resource_models.ProviderGroup(site_name)
             self.provider_groups[pg.name] = pg
 
             for row_id in range(self.count_rows_per_site):
@@ -171,7 +86,7 @@ class DeploymentConfig(object):
                         site_name,
                         row_id,
                     )
-                pg = ProviderGroup(pg_name)
+                pg = resource_models.ProviderGroup(pg_name)
                 self.provider_groups[pg.name] = pg
                 for rack_id in range(self.count_racks_per_row):
                     pg_name = "%s-row%s-rack%s" % (
@@ -179,7 +94,7 @@ class DeploymentConfig(object):
                             row_id,
                             rack_id,
                         )
-                    pg = ProviderGroup(pg_name)
+                    pg = resource_models.ProviderGroup(pg_name)
                     self.provider_groups[pg.name] = pg
 
     def _calculate_distances(self, p):
@@ -198,10 +113,10 @@ class DeploymentConfig(object):
                 # site, not any provider group representing smaller subgroups
                 # (such as a row or rack) that is IN that other site....
                 if pg.is_site:
-                    d = ProviderGroupDistance(
+                    d = resource_models.ProviderGroupDistance(
                         pg, "network", "remote")
                     distances.append(d)
-                    d = ProviderGroupDistance(
+                    d = resource_models.ProviderGroupDistance(
                         pg, "failure", "site")
                     distances.append(d)
             else:
@@ -215,11 +130,11 @@ class DeploymentConfig(object):
                         if p_rack_id == pg_rack_id:
                             # Provider is in the same rack as the provider
                             # group so is in a "local" failure domain
-                            d = ProviderGroupDistance(
+                            d = resource_models.ProviderGroupDistance(
                                 pg, "failure", "local")
                             distances.append(d)
                             # And is in a "local" distance for network latency
-                            d = ProviderGroupDistance(
+                            d = resource_models.ProviderGroupDistance(
                                 pg, "network", "local")
                             distances.append(d)
                 elif pg.is_row:
@@ -228,7 +143,7 @@ class DeploymentConfig(object):
                     # perspective, so we add distance records representing
                     # "site-local" latency between the provider and the *row*
                     # provider group
-                    d = ProviderGroupDistance(
+                    d = resource_models.ProviderGroupDistance(
                         pg, "network", "site")
                     distances.append(d)
                     # For failure domain, it *does* matter whether the provider
@@ -239,11 +154,11 @@ class DeploymentConfig(object):
                         # Provider is in the same row as the row provider group
                         # so is in a different "rack" failure domain from other
                         # nodes in the row that are not also in the same rack
-                        d = ProviderGroupDistance(
+                        d = resource_models.ProviderGroupDistance(
                             pg, "failure", "rack")
                         distances.append(d)
                     else:
-                        d = ProviderGroupDistance(
+                        d = resource_models.ProviderGroupDistance(
                             pg, "failure", "row")
                         distances.append(d)
 
@@ -292,6 +207,7 @@ class DeploymentConfig(object):
                         # OK, now we construct the distance matrix. For now,
                         # we're just going to hard-code the network latency
                         # distances between sites, rows and racks
-                        p = Provider(provider_name, partition, groups, profile)
+                        p = resource_models.Provider(
+                            provider_name, partition, groups, profile)
                         self._calculate_distances(p)
                         self.providers[p.name] = p

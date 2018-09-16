@@ -67,48 +67,6 @@ class Claim(object):
         return "Claim(allocation=%s)" % self.allocation
 
 
-class Provider(object):
-    def __init__(self, id, uuid):
-        self.id = id
-        self.uuid = uuid
-
-    def __repr__(self):
-        return "Provider(id=%d,uuid=%s)" % (
-            self.id,
-            self.uuid,
-        )
-
-
-class AllocationItem(object):
-    def __init__(self, provider, resource_class, used):
-        self.provider = provider
-        self.resource_class = resource_class
-        self.used = used
-
-    def __repr__(self):
-        return "\n\t\tAllocationItem(provider=%s,resource_class=%s,used=%d)" % (
-            self.provider,
-            self.resource_class,
-            self.used,
-        )
-
-
-class Allocation(object):
-    def __init__(self, consumer, claim_time, release_time, items):
-        self.consumer = consumer
-        self.claim_time = claim_time
-        self.release_time = release_time
-        self.items = items
-
-    def __repr__(self):
-        return "\n\tAllocation(consumer=%s,claim_time=%s,release_time=%s,items=%s)" % (
-            self.consumer,
-            self.claim_time,
-            self.release_time,
-            self.items,
-        )
-
-
 def process_claim_request(ctx, claim_request):
     """Given a claim request object, ask the resource database to construct
     Claim objects that meet the request's constraints.
@@ -125,13 +83,13 @@ def process_claim_request(ctx, claim_request):
             ctx, claim_request.claim_time, claim_request.release_time,
             rc_constraint)
         rc_providers[rc_constraint.resource_class] = providers
-        alloc_item = AllocationItem(
+        alloc_item = resource_models.AllocationItem(
             resource_class=rc_constraint.resource_class,
             provider=providers[0],
             used=rc_constraint.amount,
         )
         alloc_items.append(alloc_item)
-    alloc = Allocation(
+    alloc = resource_models.Allocation(
         claim_request.consumer, claim_request.claim_time,
         claim_request.release_time, alloc_items,
     )
@@ -213,4 +171,6 @@ def _find_providers_with_resource(ctx, claim_time, release_time,
             >= (resource_constraint.amount + func.coalesce(usage_subq.c.total_used, 0)))
     ).limit(50)
     sess = resource_models.get_session()
-    return [Provider(r[0], r[1]) for r in sess.execute(sel)]
+    return [
+        resource_models.Provider(id=r[0], uuid=r[1]) for r in sess.execute(sel)
+    ]

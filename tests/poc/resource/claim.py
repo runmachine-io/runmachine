@@ -75,6 +75,9 @@ def process_claim_request(ctx, claim_request):
     :param claim_request: the ClaimRequest object
     """
     alloc_items = []
+    # A hashmap of resource class code to list of providers having capacity for
+    # an amount of that resource
+    rc_providers = {}
     # The set of provider internal ID, that have been matched for previous
     # iterations of constraints
     matched_provs = set()
@@ -98,11 +101,17 @@ def process_claim_request(ctx, claim_request):
                 return []
         else:
             matched_provs = rc_provider_ids
+        rc_providers.update({p.id: p for p in providers})
+
+    # Now add an allocation item for the first provider that is in the
+    # matched_provs set for each resource class in the constraint
+    chosen = iter(matched_provs).next()
+    for rc_constraint in claim_request.groups[0].resource_constraints:
         # Add the first provider supplying this resource class to our
         # allocation
         alloc_item = resource_models.AllocationItem(
             resource_class=rc_constraint.resource_class,
-            provider=providers[0],
+            provider=chosen,
             used=rc_constraint.amount,
         )
         alloc_items.append(alloc_item)

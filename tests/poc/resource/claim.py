@@ -105,7 +105,8 @@ def process_claim_request(ctx, claim_request):
 
     # Now add an allocation item for the first provider that is in the
     # matched_provs set for each resource class in the constraint
-    chosen = iter(matched_provs).next()
+    chosen_id = iter(matched_provs).next()
+    chosen = rc_providers[chosen_id]
     for rc_constraint in claim_request.groups[0].resource_constraints:
         # Add the first provider supplying this resource class to our
         # allocation

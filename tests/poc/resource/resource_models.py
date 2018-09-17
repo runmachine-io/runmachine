@@ -140,11 +140,14 @@ class Provider(object):
         return site_name, row_id, rack_id, node_id
 
     def __repr__(self):
+        name_str = ""
+        if self.name:
+            name_str = ",name=" + self.name
         profile_str = ""
         if self.profile:
             profile_str = ",profile=%s" % self.profile
-        return "Provider(name=%s,uuid=%s%s)" % (
-            self.name, self.uuid, profile_str)
+        return "Provider(uuid=%s%s%s)" % (
+            self.uuid, name_str, profile_str)
 
 
 class Consumer(object):

@@ -147,6 +147,31 @@ class Provider(object):
             self.name, self.uuid, profile_str)
 
 
+class Consumer(object):
+    def __init__(self, name, uuid=None, project=None, user=None):
+        self.name = name
+        self.uuid = uuid or str(uuidlib.uuid4()).replace('-', '')
+        self.project = project
+        self.user = user
+
+    def __repr__(self):
+        uuid_str = ""
+        if self.uuid:
+            uuid_str = ",uuid=" + self.uuid
+        project_str = ""
+        if self.project:
+            project_str = ",project=" + self.project
+        user_str = ""
+        if self.user:
+            user_str = ",user=" + self.user
+        return "Consumer(name=%s%s%s%s)" % (
+            self.name,
+            uuid_str,
+            project_str,
+            user_str,
+        )
+
+
 class AllocationItem(object):
     def __init__(self, provider, resource_class, used):
         self.provider = provider

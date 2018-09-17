@@ -10,6 +10,7 @@ import time
 import claim
 import load
 import deployment_config
+import resource_models
 
 _LOG_FORMAT = "%(level)s %(message)s"
 _DEPLOYMENT_CONFIGS_DIR = os.path.join(
@@ -39,7 +40,7 @@ class RunContext(object):
 
 
 def find_claims(ctx):
-    consumer = "instance0"
+    consumer = resource_models.Consumer(name="instance0")
     resource_constraints = [
         claim.ResourceConstraint("runm.cpu.shared", 2),
         claim.ResourceConstraint("runm.memory", 128*1000*1000),

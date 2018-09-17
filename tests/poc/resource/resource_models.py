@@ -1,7 +1,7 @@
 # Base model objects for resource database
 
 import os
-import uuid
+import uuid as uuidlib
 
 import sqlalchemy as sa
 from sqlalchemy.orm import sessionmaker
@@ -67,7 +67,7 @@ class ProviderGroupDistance(object):
 class ProviderGroup(object):
     def __init__(self, name, uuid=None):
         self.name = name
-        self.uuid = uuid or str(uuid.uuid4()).replace('-', '')
+        self.uuid = uuid or str(uuidlib.uuid4()).replace('-', '')
         self.distances = []
 
     @property
@@ -103,9 +103,9 @@ class ProviderGroup(object):
 
 
 class Partition(object):
-    def __init__(self, name):
+    def __init__(self, name, uuid=None):
         self.name = name
-        self.uuid = str(uuid.uuid4()).replace('-', '')
+        self.uuid = uuid or str(uuidlib.uuid4()).replace('-', '')
 
     def __repr__(self):
         return "Partition(name=%s,uuid=%s)" % (self.name, self.uuid)
@@ -116,7 +116,7 @@ class Provider(object):
         self.id = id
         self.name = name
         self.partition = partition
-        self.uuid = uuid or str(uuid.uuid4()).replace('-', '')
+        self.uuid = uuid or str(uuidlib.uuid4()).replace('-', '')
         # Collection of provider group objects this provider is in
         self.groups = groups
         self.profile = profile

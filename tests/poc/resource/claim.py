@@ -75,37 +75,13 @@ def process_claim_request(ctx, claim_request):
     :param claim_request: the ClaimRequest object
     """
     alloc_items = []
-    # A hashmap of resource class code to list of providers having capacity for
-    # an amount of that resource
-    rc_providers = {}
-    # The set of provider internal ID, that have been matched for previous
-    # iterations of constraints
-    matched_provs = set()
-    for rc_constraint in claim_request.groups[0].resource_constraints:
-        providers = _find_providers_with_resource(
-            ctx, claim_request.claim_time, claim_request.release_time,
-            rc_constraint)
-        if not providers:
-            print "Failed to find provider with capacity for %d %s" % (
-                rc_constraint.amount, rc_constraint.resource_class
-            )
-            return []
-
-        print "Found %d providers with capacity for %d %s" % (
-            len(providers), rc_constraint.amount, rc_constraint.resource_class
-        )
-        rc_provider_ids = set(p.id for p in providers)
-        if matched_provs:
-            matched_provs &= rc_provider_ids
-            if not matched_provs:
-                return []
-        else:
-            matched_provs = rc_provider_ids
-        rc_providers.update({p.id: p for p in providers})
+    rc_providers = _process_resource_constraints(
+        ctx, claim_request.claim_time, claim_request.release_time,
+        claim_request.groups[0])
 
     # Now add an allocation item for the first provider that is in the
     # matched_provs set for each resource class in the constraint
-    chosen_id = iter(matched_provs).next()
+    chosen_id = iter(rc_providers).next()
     chosen = rc_providers[chosen_id]
     for rc_constraint in claim_request.groups[0].resource_constraints:
         # Add the first provider supplying this resource class to our
@@ -124,6 +100,41 @@ def process_claim_request(ctx, claim_request):
     return [
         Claim(alloc, item_to_group_map),
     ]
+
+
+def _process_resource_constraints(ctx, claim_time, release_time,
+        claim_request_group):
+    """Returns a dict, keyed by internal provider ID, of providers that have
+    capacity for ALL resources listed in the supplied claim request group.
+    """
+    # A hashmap of resource class code to list of providers having capacity for
+    # an amount of that resource
+    rc_providers = {}
+    # The set of provider internal ID, that have been matched for previous
+    # iterations of constraints
+    matched_provs = set()
+    for rc_constraint in claim_request_group.resource_constraints:
+        providers = _find_providers_with_resource(
+            ctx, claim_time, release_time, rc_constraint)
+        if not providers:
+            print "Failed to find provider with capacity for %d %s" % (
+                rc_constraint.amount, rc_constraint.resource_class
+            )
+            return []
+
+        print "Found %d providers with capacity for %d %s" % (
+            len(providers), rc_constraint.amount, rc_constraint.resource_class
+        )
+        rc_provider_ids = set(p.id for p in providers)
+        if matched_provs:
+            matched_provs &= rc_provider_ids
+            if not matched_provs:
+                return []
+        else:
+            matched_provs = rc_provider_ids
+        rc_providers.update({p.id: p for p in providers})
+
+    return {k: v for k, v in rc_providers.items() if k in matched_provs}
 
 
 def _rc_id_from_code(ctx, resource_class):

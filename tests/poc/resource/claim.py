@@ -75,14 +75,31 @@ def process_claim_request(ctx, claim_request):
     :param claim_request: the ClaimRequest object
     """
     alloc_items = []
-    # A hashmap of resource class code to list of providers having capacity for
-    # an amount of that resource
-    rc_providers = {}
+    # The set of provider internal ID, that have been matched for previous
+    # iterations of constraints
+    matched_provs = set()
     for rc_constraint in claim_request.groups[0].resource_constraints:
         providers = _find_providers_with_resource(
             ctx, claim_request.claim_time, claim_request.release_time,
             rc_constraint)
-        rc_providers[rc_constraint.resource_class] = providers
+        if not providers:
+            print "Failed to find provider with capacity for %d %s" % (
+                rc_constraint.amount, rc_constraint.resource_class
+            )
+            return []
+
+        print "Found %d providers with capacity for %d %s" % (
+            len(providers), rc_constraint.amount, rc_constraint.resource_class
+        )
+        rc_provider_ids = set(p.id for p in providers)
+        if matched_provs:
+            matched_provs &= rc_provider_ids
+            if not matched_provs:
+                return []
+        else:
+            matched_provs = rc_provider_ids
+        # Add the first provider supplying this resource class to our
+        # allocation
         alloc_item = resource_models.AllocationItem(
             resource_class=rc_constraint.resource_class,
             provider=providers[0],

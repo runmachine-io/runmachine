@@ -9,6 +9,7 @@ import "constraint.proto";
 import "distance.proto";
 import "error.proto";
 import "inventory.proto";
+import "partition.proto";
 import "project.proto";
 import "provider.proto";
 import "resource_class.proto";
@@ -451,6 +452,7 @@ message ProviderGetRequest {
 message ProviderSetFields {
     StringValue display_name = 1;
     Provider parent = 2;
+    Partition partition = 3;
 }
 
 message ProviderSetRequest {
@@ -468,14 +470,17 @@ message ProviderListFilters {
     // Return providers with any of the following UUID or slug identifiers
     repeated string identifiers = 1;
 
+    // Return providers in any of the following partitions
+    repeated Partition partitions = 2;
+
     // Constraints that may be used to query/filter the returned providers. See
     // the documentation in constraint.proto for more information on how these
     // work
-    repeated ResourceConstraint resources = 2;
-    repeated CapabilityConstraint capabilities = 3;
-    repeated ProviderGroupConstraint provider_groups = 4;
-    repeated MetadataConstraint provider_metadata = 5;
-    repeated DistanceConstraint distances = 6;
+    repeated ResourceConstraint resources = 50;
+    repeated CapabilityConstraint capabilities = 51;
+    repeated ProviderGroupConstraint provider_groups = 52;
+    repeated MetadataConstraint provider_metadata = 53;
+    repeated DistanceConstraint distances = 54;
 }
 
 message ProviderListRequest {

@@ -41,12 +41,18 @@ class RunContext(object):
 
 def find_claims(ctx):
     consumer = resource_models.Consumer(name="instance0")
+    cap_constraints = [
+        claim.CapabilityConstraint(require_caps=["hw.cpu.x86.avx2"])
+    ]
     resource_constraints = [
         claim.ResourceConstraint("runm.cpu.shared", 2),
         claim.ResourceConstraint("runm.memory", 128*1000*1000),
         claim.ResourceConstraint("runm.block_storage", 10*1000*1000*1000),
     ]
-    crg0 = claim.ClaimRequestGroup(resource_constraints=resource_constraints)
+    crg0 = claim.ClaimRequestGroup(
+        resource_constraints=resource_constraints,
+        capability_constraints=cap_constraints,
+    )
     request_groups = [
         crg0,
     ]

@@ -75,9 +75,34 @@ def process_claim_request(ctx, claim_request):
     :param claim_request: the ClaimRequest object
     """
     alloc_items = []
+    item_to_group_map = {}
+    item_index = 0
+    for group_index in range(len(claim_request.groups)):
+        group_alloc_items = _process_claim_request_group(
+            ctx, claim_request, group_index)
+        for _ in range(len(group_alloc_items)):
+            item_to_group_map[item_index] = group_index
+            item_index += 1
+        alloc_items.extend(group_alloc_items)
+    alloc = resource_models.Allocation(
+        claim_request.consumer, claim_request.claim_time,
+        claim_request.release_time, alloc_items,
+    )
+    return [
+        Claim(alloc, item_to_group_map),
+    ]
+
+
+def _process_claim_request_group(ctx, claim_request, group_idx):
+    """Given an index to a single claim request group, returns a list of
+    AllocationItem objects that would be satisfied by the request group after
+    determining the providers matching the request group's constraints.
+    """
     rc_providers = _process_resource_constraints(
         ctx, claim_request.claim_time, claim_request.release_time,
         claim_request.groups[0])
+
+    alloc_items = []
 
     # Now add an allocation item for the first provider that is in the
     # matched_provs set for each resource class in the constraint
@@ -92,14 +117,7 @@ def process_claim_request(ctx, claim_request):
             used=rc_constraint.amount,
         )
         alloc_items.append(alloc_item)
-    alloc = resource_models.Allocation(
-        claim_request.consumer, claim_request.claim_time,
-        claim_request.release_time, alloc_items,
-    )
-    item_to_group_map = {}
-    return [
-        Claim(alloc, item_to_group_map),
-    ]
+    return alloc_items
 
 
 def _process_resource_constraints(ctx, claim_time, release_time,

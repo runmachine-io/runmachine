@@ -2,6 +2,9 @@ syntax = "proto3";
 
 package runm;
 
+import "permission.proto";
+import "wrappers.proto";
+
 message MetadataItem {
     string key = 1;
     string value = 2;
@@ -9,4 +12,49 @@ message MetadataItem {
 
 message Metadata {
     repeated MetadataItem items = 1;
+}
+
+// Indicates whether a particular metadata item may be changed or read by a
+// class of user
+message MetadataAccessPermission {
+    StringValue project = 1;
+    StringValue role = 2;
+    AccessPermission permission = 3;
+}
+
+// Administrators are able to create small JSONSchema documents that allow the
+// restriction of data type and format for a particular metadata key. The only
+// restriction is that a metadata schema may not allow the value of the
+// metadata item value to be an object or list. In other words, the value of
+// the metadata item must be a scalar value.
+//
+// For example, let's say an administrator wants to allow users to associate an
+// "application type" to images that may be used to launch machines. There are
+// three possible values for the application type, corresponding to internal IT
+// classifications of various company software:
+//
+// * tool
+// * product
+// * vendor
+//
+// The administrator would create a JSONSchema document for describing the
+// above constraints that looked like this:
+//
+// {
+//   "type": "string",
+//   "enum": ["tool", "product", "vendor"]
+// }
+//
+// The adminstrator would then save a MetadataSchema message with an
+// object_type of "image", a key of "application_code", a version of 1, and a
+// schema of the above serialized JSONSchema document.
+//
+// Once saved to the metadata service, the "application_type" metadata item
+// values would be validated against the above schema before being stored.
+message MetadataSchema {
+    string object_type = 1;
+    string key = 2;
+    uint32 version = 3;
+    string schema = 4;
+    repeated MetadataAccessPermission access_permissions = 50;
 }

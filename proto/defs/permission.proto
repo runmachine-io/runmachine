@@ -25,3 +25,11 @@ enum Permission {
 message PermissionSet {
     repeated Permission permissions = 1;
 }
+
+// A special type of permission attached to things like metadata items
+enum AccessPermission {
+    NONE = 0;
+    READ = 1;
+    WRITE = 2;
+    READ_WRITE = 3;
+}

@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package runm;
+
+import "wrappers.proto";
+
+// An object type is a simple classification for various types of things known
+// to the runm system
+message ObjectType {
+    string code = 1;
+    StringValue description = 2;
+    uint32 generation = 100;
+}

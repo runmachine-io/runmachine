@@ -3,7 +3,15 @@ CREATE SCHEMA test_resources;
 USE test_resources;
 
 -- This is just to mimic the runm-metadata service, which would be responsible
--- for translating name -> uuid lookups.
+-- for translating name -> uuid lookups. Note that the runm-metadata service
+-- would not likely be using a SQL database but rather a KV store or similar
+CREATE TABLE object_types (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY
+, code VARCHAR(200) NOT NULL
+, description TEXT CHARACTER SET utf8 COLLATE utf8_bin NULL
+, UNIQUE INDEX uix_code (code)
+) CHARACTER SET latin1 COLLATE latin1_bin;
+
 CREATE TABLE object_names (
   id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY
 , uuid CHAR(32) NOT NULL

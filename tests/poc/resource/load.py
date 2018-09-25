@@ -32,6 +32,41 @@ def reset_db(ctx):
     ctx.status_ok()
 
 
+def create_object_types(ctx):
+    ctx.status("creating object types")
+    tbl = resource_models.get_table('object_types')
+
+    recs = [
+        dict(
+            code="runm.partition",
+            description="A division of resources. A deployment unit for runm",
+        ),
+        dict(
+            code="runm.provider",
+            description="A provider of some resources, e.g. a compute node or "
+                        "an SR-IOV NIC",
+        ),
+        dict(
+            code="runm.provider_group",
+            description="A group of providers",
+        ),
+        dict(
+            code="runm.image",
+            description="A bootable bunch of bits",
+        ),
+        dict(
+            code="runm.machine",
+            description="Created by a user, a machine consumes compute "
+                        "resources from one of more providers",
+        ),
+    ]
+    try:
+        _insert_records(tbl, recs)
+        ctx.status_ok()
+    except Exception as err:
+        ctx.status_fail(err)
+
+
 def create_resource_classes(ctx):
     ctx.status("creating resource classes")
     tbl = resource_models.get_table('resource_classes')
@@ -241,7 +276,7 @@ def create_partitions(ctx):
                 continue
             # Create the object lookup record
             obj_rec = dict(
-                object_type='partition',
+                object_type='runm.partition',
                 uuid=part_uuid,
                 name=p.partition.name,
             )
@@ -274,7 +309,7 @@ def create_provider_groups(ctx):
         for pg in ctx.deployment_config.provider_groups.values():
             # Create the object lookup record
             obj_rec = dict(
-                object_type='provider_group',
+                object_type='runm.provider_group',
                 uuid=pg.uuid,
                 name=pg.name,
             )
@@ -387,7 +422,7 @@ def create_providers(ctx):
         for p in ctx.deployment_config.providers.values():
             # Create the object lookup record
             obj_rec = dict(
-                object_type='provider',
+                object_type='runm.provider',
                 uuid=p.uuid,
                 name=p.name,
             )
@@ -477,6 +512,7 @@ def create_providers(ctx):
 
 def load(ctx):
     reset_db(ctx)
+    create_object_types(ctx)
     create_resource_classes(ctx)
     create_consumer_types(ctx)
     create_capabilities(ctx)

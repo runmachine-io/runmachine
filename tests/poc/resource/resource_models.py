@@ -7,6 +7,7 @@ import sqlalchemy as sa
 from sqlalchemy.orm import sessionmaker
 
 _TABLE_NAMES = (
+    'object_types',
     'object_names',
     'resource_classes',
     'capabilities',

@@ -15,7 +15,7 @@ CREATE TABLE object_types (
 CREATE TABLE object_names (
   id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY
 , uuid CHAR(32) NOT NULL
-, object_type CHAR(20) NOT NULL
+, object_type INT NOT NULL
 , name VARCHAR(200) CHARACTER SET utf8 COLLATE utf8_bin NOT NULL
 , UNIQUE INDEX uix_uuid (uuid)
 , UNIQUE INDEX uix_object_type_name (object_type, name)

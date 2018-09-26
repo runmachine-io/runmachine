@@ -11,6 +11,7 @@ import resource_models
 _RESOURCE_SCHEMA_FILE = os.path.join(
     os.path.abspath(os.path.dirname(__file__)), 'resource_schema.sql',
 )
+_OBJECT_TYPE_MAP = None
 
 
 def _insert_records(tbl, recs):
@@ -65,6 +66,20 @@ def create_object_types(ctx):
         ctx.status_ok()
     except Exception as err:
         ctx.status_fail(err)
+
+
+def get_object_type_map():
+    """Returns a dict, keyed by object type string code, of internal object
+    type ID.
+    """
+    global _OBJECT_TYPE_MAP
+    if _OBJECT_TYPE_MAP is not None:
+        return _OBJECT_TYPE_MAP
+    tbl = resource_models.get_table('object_types')
+    sel = sa.select([tbl.c.id, tbl.c.code])
+    sess = resource_models.get_session()
+    _OBJECT_TYPE_MAP = {r[1]: r[0] for r in sess.execute(sel)}
+    return _OBJECT_TYPE_MAP
 
 
 def create_resource_classes(ctx):
@@ -264,6 +279,7 @@ def create_partitions(ctx):
     ctx.status("creating partitions")
     obj_tbl = resource_models.get_table('object_names')
     part_tbl = resource_models.get_table('partitions')
+    object_type_id = get_object_type_map()['runm.partition']
 
     sess = resource_models.get_session()
 
@@ -276,7 +292,7 @@ def create_partitions(ctx):
                 continue
             # Create the object lookup record
             obj_rec = dict(
-                object_type='runm.partition',
+                object_type=object_type_id,
                 uuid=part_uuid,
                 name=p.partition.name,
             )
@@ -302,6 +318,7 @@ def create_provider_groups(ctx):
     ctx.status("creating provider groups")
     obj_tbl = resource_models.get_table('object_names')
     pg_tbl = resource_models.get_table('provider_groups')
+    object_type_id = get_object_type_map()['runm.provider_group']
 
     sess = resource_models.get_session()
 
@@ -309,7 +326,7 @@ def create_provider_groups(ctx):
         for pg in ctx.deployment_config.provider_groups.values():
             # Create the object lookup record
             obj_rec = dict(
-                object_type='runm.provider_group',
+                object_type=object_type_id,
                 uuid=pg.uuid,
                 name=pg.name,
             )
@@ -417,12 +434,13 @@ def create_providers(ctx):
                 distance_ids[d_key] = res[0]
     ctx.status_ok()
 
+    object_type_id = get_object_type_map()['runm.provider']
     ctx.status("creating providers")
     try:
         for p in ctx.deployment_config.providers.values():
             # Create the object lookup record
             obj_rec = dict(
-                object_type='runm.provider',
+                object_type=object_type_id,
                 uuid=p.uuid,
                 name=p.name,
             )

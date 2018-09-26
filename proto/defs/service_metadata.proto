@@ -1,0 +1,77 @@
+syntax = "proto3";
+
+package runm;
+
+import "object_type.proto";
+import "error.proto";
+import "search.proto";
+import "session.proto";
+import "wrappers.proto";
+
+// The runm-metadata gRPC service is a lookup service for a number of very
+// common operations:
+//
+// * object type + name to UUID lookup
+// * object type + slug to UUID lookup
+// * UUID to object type + slug or name
+//
+// In addition to the simple hashmap lookups, runm-metadata serves as a
+// specialized key/value store for various objects in the runm system
+service RunmMetadata {
+    // Returns information about a specific object type
+    rpc object_type_get(ObjectTypeGetRequest) returns (ObjectType) {}
+
+    // Deletes one or more object typees
+    rpc object_type_delete(ObjectTypeDeleteRequest) returns (
+        ObjectTypeDeleteResponse) {}
+
+    // Set information about a specific object type
+    rpc object_type_set(ObjectTypeSetRequest) returns (
+        ObjectTypeSetResponse) {}
+
+    // Returns information about multiple object types
+    rpc object_type_list(ObjectTypeListRequest) returns (
+        stream ObjectType) {}
+}
+
+// RPC Request payload messages
+message ObjectTypeGetRequest {
+    Session session = 1;
+    string search = 2;
+}
+
+message ObjectTypeSetFields {
+    StringValue code = 1;
+    StringValue description = 2;
+}
+
+message ObjectTypeSetRequest {
+    Session session = 1;
+    ObjectType object_type = 2;
+    ObjectTypeSetFields changed = 3;
+}
+
+message ObjectTypeSetResponse {
+    repeated Error errors = 1;
+    ObjectType object_type = 2;
+}
+
+message ObjectTypeListFilters {
+    repeated string identifiers = 1;
+}
+
+message ObjectTypeListRequest {
+    Session session = 1;
+    ObjectTypeListFilters filters = 2;
+    SearchOptions options = 3;
+}
+
+message ObjectTypeDeleteRequest {
+    Session session = 1;
+    repeated ObjectType object_typees = 2;
+}
+
+message ObjectTypeDeleteResponse {
+    repeated Error errors = 1;
+    uint64 num_deleted = 2;
+}

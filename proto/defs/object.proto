@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package runm;
+
+import "object_type.proto";
+import "partition.proto";
+
+// An externally-referenceable object in the runm system. All objects in the
+// system have a type, a partition identifier, an external name and a UUID
+// identifier.
+//
+// The runm-metadata service keeps track of the mapping of external names to
+// UUIDs for all objects it knows about. Therefore, other services in the runm
+// deployment -- such as runm-resource -- only need to store the UUID
+// identifier for various concrete objects it manages.
+//
+// For example, the runm-resource service manages *providers*. The
+// runm-resource database stores provider records, with each record having a
+// uuid field indicating the external record identifier for the provider.
+// However, adminstrators and users probably don't want to refer to a
+// particular compute host with a UUID. Instead, the user prefers to refer to
+// the compute host using a common hostname. The runm-metadata service is
+// responsible for mapping those external names and object types (in this case,
+// the object type would be "runm.provider") to the external UUID identifier.
+message Object {
+    Partition partition = 1;
+    ObjectType object_type = 2;
+    string uuid = 3;
+    string name = 4;
+}

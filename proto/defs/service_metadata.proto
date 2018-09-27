@@ -2,8 +2,10 @@ syntax = "proto3";
 
 package runm;
 
-import "object_type.proto";
 import "error.proto";
+import "object.proto";
+import "object_type.proto";
+import "partition.proto";
 import "search.proto";
 import "session.proto";
 import "wrappers.proto";
@@ -11,9 +13,8 @@ import "wrappers.proto";
 // The runm-metadata gRPC service is a lookup service for a number of very
 // common operations:
 //
-// * object type + name to UUID lookup
-// * object type + slug to UUID lookup
-// * UUID to object type + slug or name
+// * object type + name/slug to UUID lookup
+// * UUID to object type + name/slug
 //
 // In addition to the simple hashmap lookups, runm-metadata serves as a
 // specialized key/value store for various objects in the runm system
@@ -32,6 +33,21 @@ service RunmMetadata {
     // Returns information about multiple object types
     rpc object_type_list(ObjectTypeListRequest) returns (
         stream ObjectType) {}
+
+    // Returns information about a specific object
+    rpc object_get(ObjectGetRequest) returns (Object) {}
+
+    // Deletes one or more objectes
+    rpc object_delete(ObjectDeleteRequest) returns (
+        ObjectDeleteResponse) {}
+
+    // Set information about a specific object
+    rpc object_set(ObjectSetRequest) returns (
+        ObjectSetResponse) {}
+
+    // Returns information about multiple objects
+    rpc object_list(ObjectListRequest) returns (
+        stream Object) {}
 }
 
 // RPC Request payload messages
@@ -72,6 +88,48 @@ message ObjectTypeDeleteRequest {
 }
 
 message ObjectTypeDeleteResponse {
+    repeated Error errors = 1;
+    uint64 num_deleted = 2;
+}
+
+message ObjectGetRequest {
+    Session session = 1;
+    string search = 2;
+}
+
+message ObjectSetFields {
+    ObjectType object_type = 1;
+    Partition partition = 2;
+    StringValue name = 3;
+}
+
+message ObjectSetRequest {
+    Session session = 1;
+    Object object = 2;
+    ObjectSetFields changed = 3;
+}
+
+message ObjectSetResponse {
+    repeated Error errors = 1;
+    Object object = 2;
+}
+
+message ObjectListFilters {
+    repeated string identifiers = 1;
+}
+
+message ObjectListRequest {
+    Session session = 1;
+    ObjectListFilters filters = 2;
+    SearchOptions options = 3;
+}
+
+message ObjectDeleteRequest {
+    Session session = 1;
+    repeated Object objectes = 2;
+}
+
+message ObjectDeleteResponse {
     repeated Error errors = 1;
     uint64 num_deleted = 2;
 }

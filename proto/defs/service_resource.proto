@@ -122,11 +122,11 @@ service RunmResource {
     rpc provider_list(ProviderListRequest) returns (stream Provider) {}
 
     // Add or remove capabilities from a provider
-    rpc provider_capabilities_set(ProviderCapabilitysSetRequest) returns (
-        ProviderCapabilitysSetResponse) {}
+    rpc provider_capabilities_set(ProviderCapabilitiesSetRequest) returns (
+        ProviderCapabilitiesSetResponse) {}
 
     // Returns capabilities for a provider
-    rpc provider_capabilities_list(ProviderCapabilitysListRequest) returns (
+    rpc provider_capabilities_list(ProviderCapabilitiesListRequest) returns (
         stream Capability) {}
 
     // Add, remove and modify inventories for a provider
@@ -520,29 +520,29 @@ message ProviderDeleteResponse {
     uint64 num_deleted = 2;
 }
 
-message ProviderCapabilitysSetRequest {
+message ProviderCapabilitiesSetRequest {
     Session session = 1;
     Provider provider = 2;
     repeated string add = 3;
     repeated string remove = 4;
 }
 
-message ProviderCapabilitysSetResponse {
+message ProviderCapabilitiesSetResponse {
     repeated Error errors = 1;
     Provider provider = 2;
     uint64 num_added = 3;
     uint64 num_removed = 4;
 }
 
-message ProviderCapabilitysListFilters {
+message ProviderCapabilitiesListFilters {
     // TODO(jaypipes): Maybe in the future there would be some sort of
     // prefixing to winnow capabilities by?
 }
 
-message ProviderCapabilitysListRequest {
+message ProviderCapabilitiesListRequest {
     Session session = 1;
     Provider provider = 2;
-    ProviderCapabilitysListFilters filters = 3;
+    ProviderCapabilitiesListFilters filters = 3;
     SearchOptions options = 4;
 }
 

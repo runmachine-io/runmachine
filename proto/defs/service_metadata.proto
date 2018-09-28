@@ -68,6 +68,10 @@ service RunmMetadata {
     // Add, remove or modify metadata from an object
     rpc object_metadata_set(ObjectMetadataSetRequest) returns (
         ObjectMetadataSetResponse) {}
+
+    // Returns metadata items for an object
+    rpc object_metadata_item_list(ObjectMetadataItemListRequest) returns (
+        stream MetadataItem) {}
 }
 
 // RPC Request payload messages
@@ -218,4 +222,20 @@ message ObjectMetadataSetResponse {
     uint64 num_added = 3;
     uint64 num_removed = 4;
     uint64 num_modified = 5;
+}
+
+message ObjectMetadataItemListFilters {
+    // Used when searching for items with one or more keys, regardless of value
+    repeated string keys = 1;
+    // Used when searching for items with one or more values, regardless of key
+    repeated string values = 2;
+    // Used when searching for specific key/value pairs
+    repeated MetadataItem items = 3;
+}
+
+message ObjectMetadataItemListRequest {
+    Session session = 1;
+    Object object = 2;
+    ObjectMetadataItemListFilters filters = 3;
+    SearchOptions options = 4;
 }

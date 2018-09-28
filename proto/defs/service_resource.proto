@@ -672,7 +672,7 @@ message ProviderGroupGetRequest {
 }
 
 message ProviderGroupSetFields {
-    StringValue display_name = 1;
+    StringValue name = 1;
 }
 
 message ProviderGroupSetRequest {

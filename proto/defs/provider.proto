@@ -10,8 +10,7 @@ import "provider_type.proto";
 // A collection of related providers
 message ProviderGroup {
     string uuid = 1;
-    string display_name = 2;
-    string slug = 3;
+    string name = 2;
     uint32 generation = 100;
 }
 

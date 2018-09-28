@@ -3,6 +3,7 @@ syntax = "proto3";
 package runm;
 
 import "error.proto";
+import "metadata.proto";
 import "object.proto";
 import "object_type.proto";
 import "partition.proto";
@@ -17,7 +18,9 @@ import "wrappers.proto";
 // * UUID to object type + name/slug
 //
 // In addition to the simple hashmap lookups, runm-metadata serves as a
-// specialized key/value store for various objects in the runm system
+// specialized key/value store for various objects in the runm system. An
+// administrator may create metadata schema items which dictate the required
+// format or type of a metadata item's values.
 service RunmMetadata {
     // Returns information about a specific object type
     rpc object_type_get(ObjectTypeGetRequest) returns (ObjectType) {}
@@ -48,6 +51,22 @@ service RunmMetadata {
     // Returns information about multiple objects
     rpc object_list(ObjectListRequest) returns (
         stream Object) {}
+
+    // Returns information about a specific metadata schema
+    rpc metadata_schema_get(MetadataSchemaGetRequest) returns (
+        MetadataSchema) {}
+
+    // Deletes one or more metadata schemas
+    rpc metadata_schema_delete(MetadataSchemaDeleteRequest) returns (
+        MetadataSchemaDeleteResponse) {}
+
+    // Set information about a specific metadata schema
+    rpc metadata_schema_set(MetadataSchemaSetRequest) returns (
+        MetadataSchemaSetResponse) {}
+
+    // Returns information about multiple metadata schemas
+    rpc metadata_schema_list(MetadataSchemaListRequest) returns (
+        stream MetadataSchema) {}
 }
 
 // RPC Request payload messages
@@ -84,7 +103,7 @@ message ObjectTypeListRequest {
 
 message ObjectTypeDeleteRequest {
     Session session = 1;
-    repeated ObjectType object_typees = 2;
+    repeated ObjectType object_types = 2;
 }
 
 message ObjectTypeDeleteResponse {
@@ -98,8 +117,8 @@ message ObjectGetRequest {
 }
 
 message ObjectSetFields {
-    ObjectType object_type = 1;
-    Partition partition = 2;
+    Partition partition = 1;
+    ObjectType object_type = 2;
     StringValue name = 3;
 }
 
@@ -126,10 +145,55 @@ message ObjectListRequest {
 
 message ObjectDeleteRequest {
     Session session = 1;
-    repeated Object objectes = 2;
+    repeated Object object = 2;
 }
 
 message ObjectDeleteResponse {
+    repeated Error errors = 1;
+    uint64 num_deleted = 2;
+}
+
+message MetadataSchemaGetRequest {
+    Session session = 1;
+    string search = 2;
+}
+
+message MetadataSchemaSetFields {
+    Partition partition = 1;
+    ObjectType object_type = 2;
+    StringValue key = 3;
+    StringValue schema = 4;
+}
+
+message MetadataSchemaSetRequest {
+    Session session = 1;
+    MetadataSchema metadata_schema = 2;
+    MetadataSchemaSetFields changed = 3;
+}
+
+message MetadataSchemaSetResponse {
+    repeated Error errors = 1;
+    MetadataSchema metadata_schema = 2;
+}
+
+message MetadataSchemaListFilters {
+    repeated Partition partitions = 1;
+    repeated ObjectType object_types = 2;
+    repeated string keys = 3;
+}
+
+message MetadataSchemaListRequest {
+    Session session = 1;
+    MetadataSchemaListFilters filters = 2;
+    SearchOptions options = 3;
+}
+
+message MetadataSchemaDeleteRequest {
+    Session session = 1;
+    repeated MetadataSchema metadata_schema = 2;
+}
+
+message MetadataSchemaDeleteResponse {
     repeated Error errors = 1;
     uint64 num_deleted = 2;
 }

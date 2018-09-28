@@ -2,8 +2,9 @@ syntax = "proto3";
 
 package runm;
 
-import "permission.proto";
 import "object_type.proto";
+import "partition.proto";
+import "permission.proto";
 import "wrappers.proto";
 
 message MetadataItem {
@@ -53,9 +54,10 @@ message MetadataAccessPermission {
 // Once saved to the metadata service, the "application_type" metadata item
 // values would be validated against the above schema before being stored.
 message MetadataSchema {
-    ObjectType object_type = 1;
-    string key = 2;
-    uint32 version = 3;
-    string schema = 4;
+    Partition partition = 1;
+    ObjectType object_type = 2;
+    string key = 3;
+    uint32 version = 4;
+    string schema = 5;
     repeated MetadataAccessPermission access_permissions = 50;
 }

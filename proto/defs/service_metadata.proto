@@ -34,21 +34,6 @@ service RunmMetadata {
     rpc object_type_list(ObjectTypeListRequest) returns (
         stream ObjectType) {}
 
-    // Returns information about a specific object
-    rpc object_get(ObjectGetRequest) returns (Object) {}
-
-    // Deletes one or more objectes
-    rpc object_delete(ObjectDeleteRequest) returns (
-        ObjectDeleteResponse) {}
-
-    // Set information about a specific object
-    rpc object_set(ObjectSetRequest) returns (
-        ObjectSetResponse) {}
-
-    // Returns information about multiple objects
-    rpc object_list(ObjectListRequest) returns (
-        stream Object) {}
-
     // Returns information about a specific metadata schema
     rpc metadata_schema_get(MetadataSchemaGetRequest) returns (
         MetadataSchema) {}
@@ -64,6 +49,25 @@ service RunmMetadata {
     // Returns information about multiple metadata schemas
     rpc metadata_schema_list(MetadataSchemaListRequest) returns (
         stream MetadataSchema) {}
+
+    // Returns information about a specific object
+    rpc object_get(ObjectGetRequest) returns (Object) {}
+
+    // Deletes one or more objectes
+    rpc object_delete(ObjectDeleteRequest) returns (
+        ObjectDeleteResponse) {}
+
+    // Set information about a specific object
+    rpc object_set(ObjectSetRequest) returns (
+        ObjectSetResponse) {}
+
+    // Returns information about multiple objects
+    rpc object_list(ObjectListRequest) returns (
+        stream Object) {}
+
+    // Add, remove or modify metadata from an object
+    rpc object_metadata_set(ObjectMetadataSetRequest) returns (
+        ObjectMetadataSetResponse) {}
 }
 
 // RPC Request payload messages
@@ -198,4 +202,20 @@ message MetadataSchemaDeleteRequest {
 message MetadataSchemaDeleteResponse {
     repeated Error errors = 1;
     uint64 num_deleted = 2;
+}
+
+message ObjectMetadataSetRequest {
+    Session session = 1;
+    Object object = 2;
+    repeated MetadataItem add = 3;
+    repeated MetadataItem remove = 4;
+    repeated MetadataItem modify = 5;
+}
+
+message ObjectMetadataSetResponse {
+    repeated Error errors = 1;
+    Object object = 2;
+    uint64 num_added = 3;
+    uint64 num_removed = 4;
+    uint64 num_modified = 5;
 }

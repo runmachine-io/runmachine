@@ -210,8 +210,7 @@ message ResourceClassGetRequest {
 
 message ResourceClassSetFields {
     StringValue code = 1;
-    StringValue display_name = 2;
-    StringValue description = 3;
+    StringValue description = 2;
 }
 
 message ResourceClassSetRequest {
@@ -252,8 +251,7 @@ message CapabilityGetRequest {
 
 message CapabilitySetFields {
     StringValue code = 1;
-    StringValue display_name = 2;
-    StringValue description = 3;
+    StringValue description = 2;
 }
 
 message CapabilitySetRequest {
@@ -381,8 +379,7 @@ message DistanceTypeGetRequest {
 
 message DistanceTypeSetFields {
     StringValue code = 1;
-    StringValue display_name = 2;
-    StringValue description = 3;
+    StringValue description = 2;
 }
 
 message DistanceTypeSetRequest {
@@ -423,7 +420,7 @@ message DistanceGetRequest {
 
 message DistanceSetFields {
     StringValue code = 1;
-    StringValue display_name = 2;
+    StringValue description = 2;
     UInt32Value position = 3;
     DistanceType type = 50;
 }

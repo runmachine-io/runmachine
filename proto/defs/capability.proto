@@ -8,5 +8,4 @@ import "wrappers.proto";
 message Capability {
     string code = 1;
     StringValue description = 2;
-    uint32 generation = 100;
 }

@@ -8,7 +8,5 @@ import "wrappers.proto";
 // system.
 message ResourceClass {
     string code = 1;
-    string display_name = 2;
-    StringValue description = 3;
-    uint32 generation = 100;
+    StringValue description = 2;
 }

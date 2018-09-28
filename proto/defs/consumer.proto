@@ -2,26 +2,18 @@ syntax = "proto3";
 
 package runm;
 
+import "consumer_type.proto";
 import "project.proto";
 import "user.proto";
-
-// A type of consumer of resources in the system.
-message ConsumerType {
-    string code = 1;
-    string display_name = 2;
-    string description = 3;
-    uint32 generation = 100;
-}
 
 // A consumer is the object that claims and is allocated resources from one or
 // more providers. Consumers are typically machines but may also be abstract
 // concepts such as system processes or application workers that take some
 // amount of resources.
 message Consumer {
-    string uuid = 1;
-    string display_name = 2;
-    string slug = 3;
-    ConsumerType type = 50;
+    ConsumerType type = 1;
+    string uuid = 2;
+    string name = 3;
     Project project = 51;
     User user = 52;
     uint32 generation = 100;

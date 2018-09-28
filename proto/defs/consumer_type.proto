@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package runm;
+
+import "wrappers.proto";
+
+// A type of consumer of resources in the system -- e.g. a machine or a
+// persistent volume
+message ConsumerType {
+    string code = 1;
+    StringValue description = 2;
+}

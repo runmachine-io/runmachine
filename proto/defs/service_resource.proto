@@ -3,9 +3,11 @@ syntax = "proto3";
 package runm;
 
 import "allocation.proto";
+import "capability.proto";
 import "claim.proto";
-import "consumer.proto";
 import "constraint.proto";
+import "consumer.proto";
+import "consumer_type.proto";
 import "distance.proto";
 import "error.proto";
 import "inventory.proto";
@@ -16,7 +18,6 @@ import "provider_type.proto";
 import "resource_class.proto";
 import "search.proto";
 import "session.proto";
-import "capability.proto";
 import "usage.proto";
 import "user.proto";
 import "wrappers.proto";
@@ -292,7 +293,7 @@ message ConsumerGetRequest {
 }
 
 message ConsumerSetFields {
-    StringValue display_name = 1;
+    StringValue name = 1;
     ConsumerType type = 50;
     Project project = 51;
     User user = 52;
@@ -339,8 +340,7 @@ message ConsumerTypeGetRequest {
 
 message ConsumerTypeSetFields {
     StringValue code = 1;
-    StringValue display_name = 2;
-    StringValue description = 3;
+    StringValue description = 2;
 }
 
 message ConsumerTypeSetRequest {
@@ -467,8 +467,7 @@ message ProviderTypeGetRequest {
 
 message ProviderTypeSetFields {
     StringValue code = 1;
-    StringValue display_name = 2;
-    StringValue description = 3;
+    StringValue description = 2;
 }
 
 message ProviderTypeSetRequest {

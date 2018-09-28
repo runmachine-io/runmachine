@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package runm;
+
+import "wrappers.proto";
+
+// A type of provider -- e.g. a compute node, a NIC or a shared storage pool
+message ProviderType {
+    string code = 1;
+    StringValue description = 2;
+}

@@ -12,6 +12,7 @@ _RESOURCE_SCHEMA_FILE = os.path.join(
     os.path.abspath(os.path.dirname(__file__)), 'resource_schema.sql',
 )
 _OBJECT_TYPE_MAP = None
+_PROVIDER_TYPE_MAP = None
 
 
 def _insert_records(tbl, recs):
@@ -107,6 +108,46 @@ def create_resource_classes(ctx):
         ctx.status_ok()
     except Exception as err:
         ctx.status_fail(err)
+
+
+def create_provider_types(ctx):
+    ctx.status("creating provider types")
+    tbl = resource_models.get_table('provider_types')
+
+    recs = [
+        dict(
+            code="runm.compute",
+            description="A provider of compute resources like CPU, memory, "
+                        "etc",
+        ),
+        dict(
+            code="runm.storage",
+            description="A provider of generic disk resources",
+        ),
+        dict(
+            code="runm.nic",
+            description="A provider of network interface resources",
+        ),
+    ]
+    try:
+        _insert_records(tbl, recs)
+        ctx.status_ok()
+    except Exception as err:
+        ctx.status_fail(err)
+
+
+def get_provider_type_map():
+    """Returns a dict, keyed by provider type string code, of internal provider
+    type ID.
+    """
+    global _PROVIDER_TYPE_MAP
+    if _PROVIDER_TYPE_MAP is not None:
+        return _PROVIDER_TYPE_MAP
+    tbl = resource_models.get_table('provider_types')
+    sel = sa.select([tbl.c.id, tbl.c.code])
+    sess = resource_models.get_session()
+    _PROVIDER_TYPE_MAP = {r[1]: r[0] for r in sess.execute(sel)}
+    return _PROVIDER_TYPE_MAP
 
 
 def create_consumer_types(ctx):
@@ -435,6 +476,7 @@ def create_providers(ctx):
     ctx.status_ok()
 
     object_type_id = get_object_type_map()['runm.provider']
+    compute_prov_type_id = get_provider_type_map()['runm.compute']
     ctx.status("creating providers")
     try:
         for p in ctx.deployment_config.providers.values():
@@ -451,6 +493,7 @@ def create_providers(ctx):
             part_id = part_ids[p.partition.uuid]
             p_rec = dict(
                 uuid=p.uuid,
+                type_id=compute_prov_type_id,
                 partition_id=part_id,
                 generation=1,
             )
@@ -531,6 +574,7 @@ def create_providers(ctx):
 def load(ctx):
     reset_db(ctx)
     create_object_types(ctx)
+    create_provider_types(ctx)
     create_resource_classes(ctx)
     create_consumer_types(ctx)
     create_capabilities(ctx)

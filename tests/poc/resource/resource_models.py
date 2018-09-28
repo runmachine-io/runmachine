@@ -7,24 +7,25 @@ import sqlalchemy as sa
 from sqlalchemy.orm import sessionmaker
 
 _TABLE_NAMES = (
-    'object_types',
-    'object_names',
-    'resource_classes',
+    'allocation_items',
+    'allocations',
     'capabilities',
-    'distance_types',
     'consumer_types',
+    'consumers',
+    'distance_types',
     'distances',
+    'inventories',
+    'object_names',
+    'object_types',
     'partitions',
-    'providers',
-    'provider_trees',
     'provider_capabilities',
     'provider_distances',
-    'consumers',
-    'provider_groups',
     'provider_group_members',
-    'inventories',
-    'allocations',
-    'allocation_items',
+    'provider_groups',
+    'provider_trees',
+    'provider_types',
+    'providers',
+    'resource_classes',
 )
 _TABLES = {}
 

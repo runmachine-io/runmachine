@@ -58,14 +58,22 @@ CREATE TABLE distances (
 , UNIQUE INDEX uix_type_code (type_id, code)
 ) CHARACTER SET latin1 COLLATE latin1_bin;
 
+CREATE TABLE provider_types (
+  id SMALLINT NOT NULL AUTO_INCREMENT PRIMARY KEY
+, code VARCHAR(200) NOT NULL
+, description TEXT CHARACTER SET utf8 COLLATE utf8_bin NULL
+, UNIQUE INDEX uix_code (code)
+) CHARACTER SET latin1 COLLATE latin1_bin;
+
 CREATE TABLE providers (
   id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY
 , uuid CHAR(32) NOT NULL
+, type_id INT NOT NULL
 , generation INT UNSIGNED NOT NULL
 , partition_id INT NOT NULL
 , parent_provider_id BIGINT NULL
 , UNIQUE INDEX uix_uuid (uuid)
-, INDEX ix_partition (partition_id)
+, INDEX ix_partition_id_type_id (partition_id, type_id)
 , INDEX ix_parent_provider_id (parent_provider_id)
 ) CHARACTER SET latin1 COLLATE latin1_bin;
 

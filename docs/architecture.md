@@ -13,13 +13,17 @@ runmachine depends on the following infrastructure services being installed:
 
 ## runmachine services
 
-### `runm-meta`
+### `runm-metadata`
 
-The `runm-meta` service has two primary purposes:
+The `runm-metadata` service has a number of purposes:
 
 1) to translate a string name into a UUID external identifier and vice versa
 2) to store and retrieve tag and key/value information for objects via a UUID
    external identifier
+3) to allow administrators to define simple schema constraints on the values
+   stored in metadata items with particular keys
+4) to allow administrators to define which classes of user and project may read
+   or write metadata items with particular keys
 
 ### `runm-resource`
 
@@ -27,10 +31,10 @@ gRPC service endpoint that is responsible for storing data about the following
 objects in the system:
 
 * resource class
-* trait
+* capability
 * distance type
 * distance
-* consumer type
+* provider type
 * provider
 * provider inventory
 * provider group
@@ -46,7 +50,6 @@ objects in the system:
 gRPC service endpoint that is responsible for storing data about the following
 objects in the system:
 
-* region
 * project
 * user
 * role

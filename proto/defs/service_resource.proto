@@ -12,6 +12,7 @@ import "inventory.proto";
 import "partition.proto";
 import "project.proto";
 import "provider.proto";
+import "provider_type.proto";
 import "resource_class.proto";
 import "search.proto";
 import "session.proto";
@@ -107,6 +108,21 @@ service RunmResource {
 
     // Returns information about multiple distances
     rpc distance_list(DistanceListRequest) returns (stream Distance) {}
+
+    // Returns information about a specific provider type
+    rpc provider_type_get(ProviderTypeGetRequest) returns (ProviderType) {}
+
+    // Deletes one or more provider typees
+    rpc provider_type_delete(ProviderTypeDeleteRequest) returns (
+        ProviderTypeDeleteResponse) {}
+
+    // Set information about a specific provider type
+    rpc provider_type_set(ProviderTypeSetRequest) returns (
+        ProviderTypeSetResponse) {}
+
+    // Returns information about multiple provider types
+    rpc provider_type_list(ProviderTypeListRequest) returns (
+        stream ProviderType) {}
 
     // Returns information about a specific provider
     rpc provider_get(ProviderGetRequest) returns (Provider) {}
@@ -444,15 +460,58 @@ message DistanceDeleteResponse {
     uint64 num_deleted = 2;
 }
 
+message ProviderTypeGetRequest {
+    Session session = 1;
+    string search = 2;
+}
+
+message ProviderTypeSetFields {
+    StringValue code = 1;
+    StringValue display_name = 2;
+    StringValue description = 3;
+}
+
+message ProviderTypeSetRequest {
+    Session session = 1;
+    ProviderType provider_type = 2;
+    ProviderTypeSetFields changed = 3;
+}
+
+message ProviderTypeSetResponse {
+    repeated Error errors = 1;
+    ProviderType provider_type = 2;
+}
+
+message ProviderTypeListFilters {
+    repeated string identifiers = 1;
+}
+
+message ProviderTypeListRequest {
+    Session session = 1;
+    ProviderTypeListFilters filters = 2;
+    SearchOptions options = 3;
+}
+
+message ProviderTypeDeleteRequest {
+    Session session = 1;
+    repeated ProviderType provider_types = 2;
+}
+
+message ProviderTypeDeleteResponse {
+    repeated Error errors = 1;
+    uint64 num_deleted = 2;
+}
+
 message ProviderGetRequest {
     Session session = 1;
     string search = 2;
 }
 
 message ProviderSetFields {
-    StringValue display_name = 1;
-    Provider parent = 2;
-    Partition partition = 3;
+    Partition partition = 1;
+    ProviderType type = 2;
+    StringValue name = 3;
+    Provider parent = 4;
 }
 
 message ProviderSetRequest {

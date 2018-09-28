@@ -5,6 +5,7 @@ package runm;
 import "capability.proto";
 import "distance.proto";
 import "partition.proto";
+import "provider_type.proto";
 
 // A collection of related providers
 message ProviderGroup {
@@ -24,10 +25,10 @@ message ProviderDistance {
 // those resources. Each provider may belong to zero or more provider groups
 // and have capabilities associated with it.
 message Provider {
-    string uuid = 1;
-    string display_name = 2;
-    string slug = 3;
-    Partition partition = 50;
+    Partition partition = 1;
+    ProviderType type = 2;
+    string uuid = 3;
+    string name = 4;
     Provider parent = 51;
     Provider root = 52;
     repeated ProviderGroup groups = 53;

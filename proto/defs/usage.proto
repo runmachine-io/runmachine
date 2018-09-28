@@ -4,8 +4,7 @@ package runm;
 
 import "resource_class.proto";
 
-// A claim is a discrete request to transactionally allocate resources on a set
-// of providers for a given consumer.
+// Represents the sum of a particular class of resources that has been consumed
 message Usage {
     ResourceClass resource_class = 1;
     uint64 used = 2;

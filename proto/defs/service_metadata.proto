@@ -11,13 +11,10 @@ import "search.proto";
 import "session.proto";
 import "wrappers.proto";
 
-// The runm-metadata gRPC service is a lookup service for a number of very
-// common operations:
+// The runm-metadata gRPC service is a lookup service for UUID to external
+// unique names.
 //
-// * object type + name/slug to UUID lookup
-// * UUID to object type + name/slug
-//
-// In addition to the simple hashmap lookups, runm-metadata serves as a
+// In addition to the name and UUID lookups, runm-metadata serves as a
 // specialized key/value store for various objects in the runm system. An
 // administrator may create metadata schema items which dictate the required
 // format or type of a metadata item's values.
@@ -134,7 +131,10 @@ message ObjectSetResponse {
 }
 
 message ObjectListFilters {
-    repeated string identifiers = 1;
+    repeated Partition partitions = 1;
+    repeated ObjectType object_types = 2;
+    repeated string uuids = 3;
+    repeated string names = 4;
 }
 
 message ObjectListRequest {

@@ -141,6 +141,8 @@ message ObjectListRequest {
     Session session = 1;
     ObjectListFilters filters = 2;
     SearchOptions options = 3;
+    // When grabbing object information, fetch the object's metadata
+    bool fetch_metadata = 50;
 }
 
 message ObjectDeleteRequest {

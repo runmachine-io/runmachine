@@ -2,7 +2,6 @@ syntax = "proto3";
 
 package runm;
 
-import "consumer_type.proto";
 import "project.proto";
 import "user.proto";
 import "wrappers.proto";

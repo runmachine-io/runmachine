@@ -5,9 +5,8 @@ import (
 	"log"
 	"os"
 
+	"github.com/jaypipes/envutil"
 	flag "github.com/ogier/pflag"
-
-	"github.com/jaypipes/runmachine/pkg/env"
 )
 
 const (
@@ -60,7 +59,7 @@ func New(cfg *Config) *Logs {
 func ConfigFromOpts() *Config {
 	level := flag.Int(
 		"log-level",
-		env.EnvOrDefaultInt(
+		envutil.WithDefaultInt(
 			"RUNM_LOG_LEVEL", defaultLogLevel,
 		),
 		"The verbosity of logging. 0 (default) = virtually no logging. "+

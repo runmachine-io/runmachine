@@ -21,12 +21,6 @@
   version = "v3.3.9"
 
 [[projects]]
-  name = "github.com/davecgh/go-spew"
-  packages = ["spew"]
-  revision = "8991bc29aa16c548c550c7ff78260e27b9ab7c73"
-  version = "v1.1.1"
-
-[[projects]]
   name = "github.com/gogo/protobuf"
   packages = [
     "gogoproto",
@@ -49,6 +43,12 @@
   version = "v1.2.0"
 
 [[projects]]
+  name = "github.com/jaypipes/envutil"
+  packages = ["."]
+  revision = "57c36c861e35a020adb10c6f5287546c69fa1d28"
+  version = "0.1"
+
+[[projects]]
   name = "github.com/jaypipes/gsr"
   packages = ["."]
   revision = "5b37f237dfc21b2cacd3a62db5cd96c450ca6b26"
@@ -59,18 +59,6 @@
   packages = ["."]
   revision = "32a05c62658bd1d7c7e75cbc8195de5d585fde0f"
   version = "v0.0.1"
-
-[[projects]]
-  name = "github.com/pmezard/go-difflib"
-  packages = ["difflib"]
-  revision = "792786c7400a136282c1664665ae0a8db921c6c2"
-  version = "v1.0.0"
-
-[[projects]]
-  name = "github.com/stretchr/testify"
-  packages = ["assert"]
-  revision = "f35b8ab0b5a2cef36673838d662e249dd9c94686"
-  version = "v1.2.2"
 
 [[projects]]
   branch = "master"
@@ -156,6 +144,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "6e18c10223102fcb20949cebe708395b02dbbb43d7c5e7e08051c73e2b6a09af"
+  inputs-digest = "0a09c7b075af43aaa038cb3aa878fdfaf68a891d3a732c281b99b4ea1bc34b40"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -1,11 +1,11 @@
-package main
+package metadata
 
 import (
 	"path/filepath"
 
 	flag "github.com/ogier/pflag"
 
-	"github.com/jaypipes/runmachine/pkg/env"
+	"github.com/jaypipes/envutil"
 	"github.com/jaypipes/runmachine/pkg/util"
 )
 
@@ -34,42 +34,42 @@ type Config struct {
 func ConfigFromOpts() *Config {
 	optUseTLS := flag.Bool(
 		"use-tls",
-		env.EnvOrDefaultBool(
+		envutil.WithDefaultBool(
 			"RUNM_METADATA_USE_TLS", defaultUseTLS,
 		),
 		"Connection uses TLS if true, else plain TCP",
 	)
 	optCertPath := flag.String(
 		"cert-path",
-		env.EnvOrDefaultStr(
+		envutil.WithDefault(
 			"RUNM_METADATA_CERT_PATH", defaultCertPath,
 		),
 		"Path to the TLS cert file",
 	)
 	optKeyPath := flag.String(
 		"key-path",
-		env.EnvOrDefaultStr(
+		envutil.WithDefault(
 			"RUNM_METADATA_KEY_PATH", defaultKeyPath,
 		),
 		"Path to the TLS key file",
 	)
 	optHost := flag.String(
 		"bind-address",
-		env.EnvOrDefaultStr(
+		envutil.WithDefault(
 			"RUNM_METADATA_BIND_HOST", defaultBindHost,
 		),
 		"The host address the server will listen on",
 	)
 	optPort := flag.Int(
 		"bind-port",
-		env.EnvOrDefaultInt(
+		envutil.WithDefaultInt(
 			"RUNM_METADATA_BIND_PORT", defaultBindPort,
 		),
 		"The port the server will listen on",
 	)
 	optServiceName := flag.String(
 		"service-name",
-		env.EnvOrDefaultStr(
+		envutil.WithDefault(
 			"RUNM_METADATA_SERVICE_NAME", defaultServiceName,
 		),
 		"Name to use when registering with the service registry",
@@ -78,7 +78,6 @@ func ConfigFromOpts() *Config {
 	flag.Parse()
 
 	return &Config{
-		DSN:         *optDSN,
 		UseTLS:      *optUseTLS,
 		CertPath:    *optCertPath,
 		KeyPath:     *optKeyPath,

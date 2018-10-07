@@ -1,4 +1,4 @@
-package main
+package metadata
 
 import (
 	"fmt"
@@ -30,7 +30,7 @@ func NewServer(
 	// Register this runm-metadata service endpoint with the service registry
 	addr := fmt.Sprintf("%s:%d", cfg.BindHost, cfg.BindPort)
 	ep := gsr.Endpoint{
-		Service: &gsr.Service{cfg.ServiceName},
+		Service: &gsr.Service{Name: cfg.ServiceName},
 		Address: addr,
 	}
 	err = registry.Register(&ep)

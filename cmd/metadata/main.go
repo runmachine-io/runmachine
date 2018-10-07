@@ -26,7 +26,7 @@ func main() {
 		log.ERR("failed to create runm-metadata server: %v", err)
 		os.Exit(1)
 	}
-	defer srv.Close()
+	defer md.Close()
 
 	addr := fmt.Sprintf("%s:%d", cfg.BindHost, cfg.BindPort)
 	lis, err := net.Listen("tcp", addr)

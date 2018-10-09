@@ -32,7 +32,7 @@ lint: $(GOMETALINTER)
 
 .PHONY: fmt
 fmt:
-	@echo "Running gofmt on all sources..."
+	@echo "Running gofmt on all sources ..."
 	@gofmt -s -l -w $(SRC)
 
 .PHONY: fmtcheck
@@ -51,3 +51,7 @@ cover:
 		go test -coverprofile=coverage.out -covermode=count $(pkg);\
 		tail -n +2 coverage.out >> coverage-all.out;)
 	go tool cover -html=coverage-all.out -o=coverage-all.html
+
+build: test
+	@echo "building all binaries as Docker images ..."
+	docker build -t runm-metadata . -f cmd/metadata/Dockerfile

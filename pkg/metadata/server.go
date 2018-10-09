@@ -21,6 +21,7 @@ func NewServer(
 	cfg *Config,
 	log *logging.Logs,
 ) (*Server, error) {
+	log.L3("connecting to gsr service registry.")
 	registry, err := gsr.New()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create gsr.Registry object: %v", err)

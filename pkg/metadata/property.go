@@ -6,31 +6,31 @@ import (
 	pb "github.com/jaypipes/runmachine/proto"
 )
 
-func (s *Server) MetadataSchemaDelete(
+func (s *Server) PropertySchemaDelete(
 	ctx context.Context,
-	req *pb.MetadataSchemaDeleteRequest,
-) (*pb.MetadataSchemaDeleteResponse, error) {
+	req *pb.PropertySchemaDeleteRequest,
+) (*pb.PropertySchemaDeleteResponse, error) {
 	return nil, nil
 }
 
-func (s *Server) MetadataSchemaGet(
+func (s *Server) PropertySchemaGet(
 	ctx context.Context,
-	req *pb.MetadataSchemaGetRequest,
-) (*pb.MetadataSchema, error) {
+	req *pb.PropertySchemaGetRequest,
+) (*pb.PropertySchema, error) {
 	return nil, nil
 }
 
-func (s *Server) MetadataSchemaList(
-	req *pb.MetadataSchemaListRequest,
-	stream pb.RunmMetadata_MetadataSchemaListServer,
+func (s *Server) PropertySchemaList(
+	req *pb.PropertySchemaListRequest,
+	stream pb.RunmMetadata_PropertySchemaListServer,
 ) error {
 	return nil
 }
 
-func (s *Server) MetadataSchemaSet(
+func (s *Server) PropertySchemaSet(
 	ctx context.Context,
-	req *pb.MetadataSchemaSetRequest,
-) (*pb.MetadataSchemaSetResponse, error) {
+	req *pb.PropertySchemaSetRequest,
+) (*pb.PropertySchemaSetResponse, error) {
 	return nil, nil
 }
 
@@ -62,17 +62,17 @@ func (s *Server) ObjectSet(
 	return nil, nil
 }
 
-func (s *Server) ObjectMetadataItemList(
-	req *pb.ObjectMetadataItemListRequest,
-	stream pb.RunmMetadata_ObjectMetadataItemListServer,
+func (s *Server) ObjectPropertiesList(
+	req *pb.ObjectPropertiesListRequest,
+	stream pb.RunmMetadata_ObjectPropertiesListServer,
 ) error {
 	return nil
 }
 
-func (s *Server) ObjectMetadataSet(
+func (s *Server) ObjectPropertiesSet(
 	ctx context.Context,
-	req *pb.ObjectMetadataSetRequest,
-) (*pb.ObjectMetadataSetResponse, error) {
+	req *pb.ObjectPropertiesSetRequest,
+) (*pb.ObjectPropertiesSetResponse, error) {
 	return nil, nil
 }
 

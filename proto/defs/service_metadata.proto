@@ -3,7 +3,7 @@ syntax = "proto3";
 package runm;
 
 import "error.proto";
-import "metadata.proto";
+import "property.proto";
 import "object.proto";
 import "object_type.proto";
 import "partition.proto";
@@ -16,8 +16,8 @@ import "wrappers.proto";
 //
 // In addition to the name and UUID lookups, runm-metadata serves as a
 // specialized key/value store for various objects in the runm system. An
-// administrator may create metadata schema items which dictate the required
-// format or type of a metadata item's values.
+// administrator may create property schema items which dictate the required
+// format or type of a property's values.
 service RunmMetadata {
     // Returns information about a specific object type
     rpc object_type_get(ObjectTypeGetRequest) returns (ObjectType) {}
@@ -34,21 +34,21 @@ service RunmMetadata {
     rpc object_type_list(ObjectTypeListRequest) returns (
         stream ObjectType) {}
 
-    // Returns information about a specific metadata schema
-    rpc metadata_schema_get(MetadataSchemaGetRequest) returns (
-        MetadataSchema) {}
+    // Returns information about a specific property schema
+    rpc property_schema_get(PropertySchemaGetRequest) returns (
+        PropertySchema) {}
 
-    // Deletes one or more metadata schemas
-    rpc metadata_schema_delete(MetadataSchemaDeleteRequest) returns (
-        MetadataSchemaDeleteResponse) {}
+    // Deletes one or more property schemas
+    rpc property_schema_delete(PropertySchemaDeleteRequest) returns (
+        PropertySchemaDeleteResponse) {}
 
-    // Set information about a specific metadata schema
-    rpc metadata_schema_set(MetadataSchemaSetRequest) returns (
-        MetadataSchemaSetResponse) {}
+    // Set information about a specific property schema
+    rpc property_schema_set(PropertySchemaSetRequest) returns (
+        PropertySchemaSetResponse) {}
 
-    // Returns information about multiple metadata schemas
-    rpc metadata_schema_list(MetadataSchemaListRequest) returns (
-        stream MetadataSchema) {}
+    // Returns information about multiple property schemas
+    rpc property_schema_list(PropertySchemaListRequest) returns (
+        stream PropertySchema) {}
 
     // Returns information about a specific object
     rpc object_get(ObjectGetRequest) returns (Object) {}
@@ -65,13 +65,13 @@ service RunmMetadata {
     rpc object_list(ObjectListRequest) returns (
         stream Object) {}
 
-    // Add, remove or modify metadata from an object
-    rpc object_metadata_set(ObjectMetadataSetRequest) returns (
-        ObjectMetadataSetResponse) {}
+    // Add, remove or modify properties from an object
+    rpc object_properties_set(ObjectPropertiesSetRequest) returns (
+        ObjectPropertiesSetResponse) {}
 
-    // Returns metadata items for an object
-    rpc object_metadata_item_list(ObjectMetadataItemListRequest) returns (
-        stream MetadataItem) {}
+    // Returns property items for an object
+    rpc object_properties_list(ObjectPropertiesListRequest) returns (
+        stream Property) {}
 }
 
 // RPC Request payload messages
@@ -149,8 +149,8 @@ message ObjectListRequest {
     Session session = 1;
     ObjectListFilters filters = 2;
     SearchOptions options = 3;
-    // When grabbing object information, fetch the object's metadata
-    bool fetch_metadata = 50;
+    // When grabbing object information, fetch the object's properties
+    bool fetch_properties = 50;
 }
 
 message ObjectDeleteRequest {
@@ -163,60 +163,60 @@ message ObjectDeleteResponse {
     uint64 num_deleted = 2;
 }
 
-message MetadataSchemaGetRequest {
+message PropertySchemaGetRequest {
     Session session = 1;
     string search = 2;
 }
 
-message MetadataSchemaSetFields {
+message PropertySchemaSetFields {
     Partition partition = 1;
     ObjectType object_type = 2;
     StringValue key = 3;
     StringValue schema = 4;
 }
 
-message MetadataSchemaSetRequest {
+message PropertySchemaSetRequest {
     Session session = 1;
-    MetadataSchema metadata_schema = 2;
-    MetadataSchemaSetFields changed = 3;
+    PropertySchema property_schema = 2;
+    PropertySchemaSetFields changed = 3;
 }
 
-message MetadataSchemaSetResponse {
+message PropertySchemaSetResponse {
     repeated Error errors = 1;
-    MetadataSchema metadata_schema = 2;
+    PropertySchema property_schema = 2;
 }
 
-message MetadataSchemaListFilters {
+message PropertySchemaListFilters {
     repeated Partition partitions = 1;
     repeated ObjectType object_types = 2;
     repeated string keys = 3;
 }
 
-message MetadataSchemaListRequest {
+message PropertySchemaListRequest {
     Session session = 1;
-    MetadataSchemaListFilters filters = 2;
+    PropertySchemaListFilters filters = 2;
     SearchOptions options = 3;
 }
 
-message MetadataSchemaDeleteRequest {
+message PropertySchemaDeleteRequest {
     Session session = 1;
-    repeated MetadataSchema metadata_schema = 2;
+    repeated PropertySchema property_schema = 2;
 }
 
-message MetadataSchemaDeleteResponse {
+message PropertySchemaDeleteResponse {
     repeated Error errors = 1;
     uint64 num_deleted = 2;
 }
 
-message ObjectMetadataSetRequest {
+message ObjectPropertiesSetRequest {
     Session session = 1;
     Object object = 2;
-    repeated MetadataItem add = 3;
-    repeated MetadataItem remove = 4;
-    repeated MetadataItem modify = 5;
+    repeated Property add = 3;
+    repeated Property remove = 4;
+    repeated Property modify = 5;
 }
 
-message ObjectMetadataSetResponse {
+message ObjectPropertiesSetResponse {
     repeated Error errors = 1;
     Object object = 2;
     uint64 num_added = 3;
@@ -224,18 +224,18 @@ message ObjectMetadataSetResponse {
     uint64 num_modified = 5;
 }
 
-message ObjectMetadataItemListFilters {
+message ObjectPropertiesListFilters {
     // Used when searching for items with one or more keys, regardless of value
     repeated string keys = 1;
     // Used when searching for items with one or more values, regardless of key
     repeated string values = 2;
     // Used when searching for specific key/value pairs
-    repeated MetadataItem items = 3;
+    repeated Property properties = 3;
 }
 
-message ObjectMetadataItemListRequest {
+message ObjectPropertiesListRequest {
     Session session = 1;
     Object object = 2;
-    ObjectMetadataItemListFilters filters = 3;
+    ObjectPropertiesListFilters filters = 3;
     SearchOptions options = 4;
 }

@@ -529,11 +529,11 @@ message ProviderListFilters {
     // Constraints that may be used to query/filter the returned providers. See
     // the documentation in constraint.proto for more information on how these
     // work
-    repeated ResourceConstraint resources = 50;
-    repeated CapabilityConstraint capabilities = 51;
-    repeated ProviderGroupConstraint provider_groups = 52;
-    repeated MetadataConstraint provider_metadata = 53;
-    repeated DistanceConstraint distances = 54;
+    repeated ResourceConstraint resource_constraints = 50;
+    repeated CapabilityConstraint capability_constraints = 51;
+    repeated ProviderGroupConstraint group_constraints = 52;
+    repeated PropertyConstraint property_constraints = 53;
+    repeated DistanceConstraint distance_constraints = 54;
 }
 
 message ProviderListRequest {
@@ -547,10 +547,10 @@ message ProviderListRequest {
     // associations. This option is always true if there are any
     // ProviderGroupContraints in the filters
     bool fetch_provider_groups = 51;
-    // When grabbing provider information, fetch the provider's metadata. This
-    // option is always truye if there are any MetadataConstraints in the
+    // When grabbing provider information, fetch the provider's properties. This
+    // option is always truye if there are any PropertyConstraints in the
     // filters
-    bool fetch_metadata = 52;
+    bool fetch_properties = 52;
     // When grabbing provider information, fetch the provider's inventory
     // records. This option is always truye if there are any
     // ResourceConstraints in the filters
@@ -720,18 +720,18 @@ message ProviderGroupMembersListRequest {
 }
 
 // A consumer requests some amount of resources and some matching constraints
-// (required or forbidden capabilities, group relationships, metadata selectors,
-// etc). This request is called a ClaimListRequest. A ClaimListRequest may be
-// transactionally fulfilled by a ClaimExecute RPC API call. The service will
-// respond to a ClaimListRequest with a stream of Claim messages that may be
-// used (via ClaimExecute()) to attempt to reserve/claim resources on a set of
-// providers for the consumer.
+// (required or forbidden capabilities, group relationships, property
+// selectors, etc). This request is called a ClaimListRequest. A
+// ClaimListRequest may be transactionally fulfilled by a ClaimExecute RPC API
+// call. The service will respond to a ClaimListRequest with a stream of Claim
+// messages that may be used (via ClaimExecute()) to attempt to reserve/claim
+// resources on a set of providers for the consumer.
 message ClaimListRequestGroupConstraints {
-    repeated ResourceConstraint resources = 1;
-    repeated CapabilityConstraint capabilities = 2;
-    repeated ProviderGroupConstraint provider_groups = 3;
-    repeated MetadataConstraint provider_metadata = 4;
-    repeated DistanceConstraint distances = 5;
+    repeated ResourceConstraint resource_constraints = 1;
+    repeated CapabilityConstraint capability_constraints = 2;
+    repeated ProviderGroupConstraint group_constraints = 3;
+    repeated PropertyConstraint property_constraints = 4;
+    repeated DistanceConstraint distance_constraints = 5;
 }
 
 message ClaimListRequestGroupOptions {

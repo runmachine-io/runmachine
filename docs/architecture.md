@@ -21,9 +21,9 @@ The `runm-metadata` service has a number of purposes:
 2) to store and retrieve tag and key/value information for objects via a UUID
    external identifier
 3) to allow administrators to define simple schema constraints on the values
-   stored in metadata items with particular keys
+   stored in items with particular keys
 4) to allow administrators to define which classes of user and project may read
-   or write metadata items with particular keys
+   or write items with particular keys
 
 ### `runm-resource`
 

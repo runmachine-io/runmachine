@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package runm;
 
-import "metadata.proto";
+import "property.proto";
 import "object_type.proto";
 import "partition.proto";
 
@@ -28,5 +28,5 @@ message Object {
     ObjectType object_type = 2;
     string uuid = 3;
     string name = 4;
-    Metadata metadata = 50;
+    repeated Property properties = 50;
 }

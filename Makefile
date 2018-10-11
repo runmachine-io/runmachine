@@ -1,5 +1,6 @@
 PROTO := proto
 VENDOR := vendor
+VERSION := $(shell git describe --tags --always --dirty)
 PROTO_DIR := $(shell pwd)/$(PROTO)
 PROTO_DEFS_DIR := $(shell pwd)/proto/defs
 GO_BIN_DIR := $(GOPATH)/bin
@@ -54,4 +55,4 @@ cover:
 
 build: test
 	@echo "building all binaries as Docker images ..."
-	docker build -t runm-metadata . -f cmd/metadata/Dockerfile
+	docker build -t runm-metadata:$(VERSION) . -f cmd/metadata/Dockerfile

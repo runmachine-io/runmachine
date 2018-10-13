@@ -55,4 +55,5 @@ cover:
 
 build: test
 	@echo "building all binaries as Docker images ..."
-	docker build -t runm-metadata:$(VERSION) . -f cmd/metadata/Dockerfile
+	docker build -t runm-metadata:$(VERSION) . -f cmd/runm-metadata/Dockerfile
+	docker build -t runm:$(VERSION) . -f cmd/runm/Dockerfile

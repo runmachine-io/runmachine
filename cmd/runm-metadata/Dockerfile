@@ -2,7 +2,7 @@
 # example images
 FROM golang:alpine as builder
 COPY . /go/src/github.com/jaypipes/runmachine
-WORKDIR /go/src/github.com/jaypipes/runmachine/cmd/metadata
+WORKDIR /go/src/github.com/jaypipes/runmachine/cmd/runm-metadata
 RUN apk --no-cache add -t git \
     && apk --no-cache add ca-certificates \
     && go get github.com/golang/dep/cmd/dep \

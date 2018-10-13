@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+
+# Given the name of a container, sets a variable with a supplied name to the IP
+# address of that container.
+#
+# Params:
+#
+#   $1: (required) name for the container
+#   $2: (required) name for variable to store the IP address in
+#
+# Usage:
+#
+#   # Get the IP address of the container named "etcd-testing" and store that
+#   # IP address in a variable named "etcd_container_ip"
+#   container_get_ip etcd-testing etcd_container_ip
+#   echo $etcd_container_ip
+container_get_ip() {
+    local __container_name="$1"
+    local __store_result=$2
+    local __sleep_time=0
+    local __found_ip=""
+
+    until [ $__sleep_time -eq 8 ]; do
+        sleep $(( __sleep_time++ ))
+        __found_ip=$(docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$__container_name")
+        if [[ "$__found_ip" != "" ]]; then
+            break
+        fi
+    done
+    eval $__store_result="'$__found_ip'"
+}
+
+# Returns 0 if a container with the given name is running, else 1
+#
+# Params:
+#
+#   $1: (required) name for the container
+#
+# Usage:
+#
+#   if container_is_running "etcd-example"; then
+#     echo "etcd-example container is running."
+#   else
+#     echo "etcd-example container is not running."
+#   fi
+container_is_running() {
+    local __container_name="$1"
+
+    __running=$(docker inspect --format='{{.State.Running}}' "$__container_name" 2>/dev/null )
+    if [ $? -eq 1 ]; then
+        return 1
+    fi
+    if [ $__running == "true" ]; then
+        return 0
+    fi
+    return 1
+}

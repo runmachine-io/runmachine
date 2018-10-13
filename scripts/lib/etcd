@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+
+# Starts a container (in daemon mode) running etcd3
+#
+# Params:
+#
+#   $1: (required) name for the container
+#   $2: (optional) path to directory to use for etcd3 state
+#       Default: A tmpdir is created (/tmp/etcd-XXXXXX)
+#   $3: (optional) bind address that etcd3 will use within the container
+#       Default: 0.0.0.0
+#
+# Usage:
+#
+#   # Start a container called "etcd-example" running etcd3 using
+#   # /opt/etcd-data as the directory to save etcd's state
+#   etcd_start_container "etcd-example" /opt/etcd-data
+etcd_start_container() {
+    local __container_name="$1"
+    if [ $# -lt 2 ]; then
+        local __data_dir=$(mktemp -d -t etcd-XXXXXX)
+    else
+        local __data_dir="$2"
+        if [ ! -d $__data_dir ]; then
+            echo "ERROR: cannot start etcd container. Supplied data_dir $__data_dir does not exist."
+            return 1
+        fi
+    fi
+    local __node_addr="${3:-"0.0.0.0"}"
+
+    if container_is_running $__container_name; then
+        inline_if_verbose "($__container_name already running) "
+        return 0
+    fi
+
+    docker run -d \
+        --rm \
+        -p 2379:2379 \
+        -p 2380:2380 \
+        --volume=${__data_dir}:/etcd-data \
+        --name $__container_name \
+        quay.io/coreos/etcd:latest \
+        /usr/local/bin/etcd \
+        --data-dir=/etcd-data --name node1 \
+        --initial-advertise-peer-urls http://${__node_addr}:2380 \
+        --listen-peer-urls http://${__node_addr}:2380 \
+        --advertise-client-urls http://${__node_addr}:2379 \
+        --listen-client-urls http://${__node_addr}:2379 \
+        --initial-cluster node1=http://${__node_addr}:2380 >/dev/null 2>&1
+}

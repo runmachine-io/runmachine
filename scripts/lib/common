@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+
+debug_enabled() {
+    if [[ $DEBUG != 0 ]]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+inline_if_debug() {
+    local __msg="$1"
+    if debug_enabled; then
+        echo -n "$__msg"
+    fi
+}
+
+print_if_debug() {
+    local __msg="$1"
+    if debug_enabled; then
+        echo "$__msg"
+    fi
+}
+
+verbose_enabled() {
+    if [[ $VERBOSE != 0 ]]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+inline_if_verbose() {
+    local __msg="$1"
+    if verbose_enabled; then
+        echo -n "$__msg"
+    fi
+}
+
+print_if_verbose() {
+    local __msg="$1"
+    if verbose_enabled; then
+        echo "$__msg"
+    fi
+}
+
+check_is_installed() {
+    local name="$1"
+    if ! is_installed "$name"; then
+        echo "Please install $name before running this script."
+        exit 1
+    fi
+}
+
+is_installed() {
+    local name="$1"
+    if $(which $name >/dev/null 2>&1); then
+        return 0
+    else
+        return 1
+    fi
+}

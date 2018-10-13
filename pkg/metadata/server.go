@@ -4,22 +4,24 @@ import (
 	"fmt"
 
 	"github.com/jaypipes/gsr"
+	"github.com/jaypipes/runmachine/pkg/metadata/config"
+	"github.com/jaypipes/runmachine/pkg/metadata/storage"
 
 	"github.com/jaypipes/runmachine/pkg/logging"
 )
 
 type Server struct {
 	log      *logging.Logs
-	cfg      *Config
+	cfg      *config.Config
 	registry *gsr.Registry
-	storage  *Storage
+	store    *storage.Store
 }
 
 func (s *Server) Close() {
 }
 
-func NewServer(
-	cfg *Config,
+func New(
+	cfg *config.Config,
 	log *logging.Logs,
 ) (*Server, error) {
 	log.L3("connecting to gsr service registry.")
@@ -29,7 +31,7 @@ func NewServer(
 	}
 	log.L2("connected to gsr service registry.")
 
-	storage, err := NewStorage(log, cfg)
+	store, err := storage.New(log, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to metadata storage: %v", err)
 	}
@@ -43,7 +45,7 @@ func NewServer(
 	}
 	err = registry.Register(&ep)
 	if err != nil {
-		log.ERR("unable to register %v with gsr: %v", ep, err)
+		return nil, fmt.Errorf("failed to register %v with gsr: %v", ep, err)
 	}
 	log.L2(
 		"registered %s service endpoint running at %s with gsr.",
@@ -51,11 +53,10 @@ func NewServer(
 		addr,
 	)
 
-	s := &Server{
+	return &Server{
 		log:      log,
 		cfg:      cfg,
 		registry: registry,
-		storage:  storage,
-	}
-	return s, nil
+		store:    store,
+	}, nil
 }

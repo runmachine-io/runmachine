@@ -9,6 +9,7 @@ import (
 	"google.golang.org/grpc/credentials"
 
 	"github.com/jaypipes/runmachine/pkg/metadata"
+	"github.com/jaypipes/runmachine/pkg/metadata/config"
 	pb "github.com/jaypipes/runmachine/proto"
 
 	"github.com/jaypipes/runmachine/pkg/logging"
@@ -19,9 +20,9 @@ func main() {
 
 	defer log.WithSection("runm-metadata")()
 
-	cfg := metadata.ConfigFromOpts()
+	cfg := config.ConfigFromOpts()
 
-	md, err := metadata.NewServer(cfg, log)
+	md, err := metadata.New(cfg, log)
 	if err != nil {
 		log.ERR("failed to create runm-metadata server: %v", err)
 		os.Exit(1)

@@ -1,4 +1,4 @@
-package metadata
+package storage
 
 import (
 	"context"
@@ -10,19 +10,45 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/jaypipes/runmachine/pkg/logging"
+	"github.com/jaypipes/runmachine/pkg/metadata/config"
 )
+
+type Store struct {
+	log    *logging.Logs
+	cfg    *config.Config
+	client *etcd.Client
+}
+
+func New(log *logging.Logs, cfg *config.Config) (*Store, error) {
+	client, err := connect(log, cfg)
+	if err != nil {
+		return nil, err
+	}
+	return &Store{
+		log:    log,
+		cfg:    cfg,
+		client: client,
+	}, nil
+}
+
+func (s *Store) requestCtx() (context.Context, context.CancelFunc) {
+	return context.WithTimeout(
+		context.Background(),
+		s.cfg.EtcdRequestTimeoutSeconds,
+	)
+}
 
 // Returns an etcd3 client using an exponential backoff and reconnect strategy.
 // This is to be tolerant of the etcd infrastructure VMs/containers starting
 // *after* the service that requires it.
-func etcdClientConnect(
+func connect(
 	log *logging.Logs,
-	cfg *Config,
+	cfg *config.Config,
 ) (*etcd.Client, error) {
 	var err error
 	var client *etcd.Client
 	fatal := false
-	connectTimeout := cfg.Storage.EtcdConnectTimeoutSeconds
+	connectTimeout := cfg.EtcdConnectTimeoutSeconds
 	etcdCfg := cfg.EtcdConfig()
 	etcdEps := etcdCfg.Endpoints
 
@@ -113,29 +139,4 @@ func etcdClientConnect(
 		return nil, err
 	}
 	return client, nil
-}
-
-type Storage struct {
-	log    *logging.Logs
-	cfg    *Config
-	client *etcd.Client
-}
-
-func NewStorage(log *logging.Logs, cfg *Config) (*Storage, error) {
-	client, err := etcdClientConnect(log, cfg)
-	if err != nil {
-		return nil, err
-	}
-	return &Storage{
-		log:    log,
-		cfg:    cfg,
-		client: client,
-	}, nil
-}
-
-func (s *Storage) requestCtx() (context.Context, context.CancelFunc) {
-	return context.WithTimeout(
-		context.Background(),
-		s.cfg.Storage.EtcdRequestTimeoutSeconds,
-	)
 }

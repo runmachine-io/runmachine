@@ -1,4 +1,4 @@
-package metadata
+package config
 
 import (
 	"crypto/tls"
@@ -17,10 +17,15 @@ import (
 )
 
 const (
-	cfgPath            = "/etc/runmachine/metadata"
-	defaultUseTLS      = false
-	defaultBindPort    = 10000
-	defaultServiceName = "runmachine-metadata"
+	cfgPath                          = "/etc/runmachine/metadata"
+	defaultUseTLS                    = false
+	defaultBindPort                  = 10000
+	defaultServiceName               = "runmachine-metadata"
+	defaultEtcdEndpoints             = "http://127.0.0.1:2379"
+	defaultEtcdKeyPrefix             = "runm-metadata/"
+	defaultEtcdConnectTimeoutSeconds = 300
+	defaultEtcdRequestTimeoutSeconds = 1
+	defaultEtcdDialTimeoutSeconds    = 1
 )
 
 var (
@@ -29,30 +34,18 @@ var (
 	defaultBindHost = util.BindHost()
 )
 
-const (
-	defaultEtcdEndpoints             = "http://127.0.0.1:2379"
-	defaultEtcdKeyPrefix             = "runm-metadata/"
-	defaultEtcdConnectTimeoutSeconds = 300
-	defaultEtcdRequestTimeoutSeconds = 1
-	defaultEtcdDialTimeoutSeconds    = 1
-)
-
-type StorageConfig struct {
+type Config struct {
+	UseTLS                    bool
+	CertPath                  string
+	KeyPath                   string
+	BindHost                  string
+	BindPort                  int
+	ServiceName               string
 	EtcdEndpoints             []string
 	EtcdKeyPrefix             string
 	EtcdConnectTimeoutSeconds time.Duration
 	EtcdRequestTimeoutSeconds time.Duration
 	EtcdDialTimeoutSeconds    time.Duration
-}
-
-type Config struct {
-	UseTLS      bool
-	CertPath    string
-	KeyPath     string
-	BindHost    string
-	BindPort    int
-	ServiceName string
-	Storage     *StorageConfig
 }
 
 func ConfigFromOpts() *Config {
@@ -99,20 +92,6 @@ func ConfigFromOpts() *Config {
 		"Name to use when registering with the service registry",
 	)
 
-	flag.Parse()
-
-	return &Config{
-		UseTLS:      *optUseTLS,
-		CertPath:    *optCertPath,
-		KeyPath:     *optKeyPath,
-		BindHost:    *optHost,
-		BindPort:    *optPort,
-		ServiceName: *optServiceName,
-		Storage:     StorageConfigFromOpts(),
-	}
-}
-
-func StorageConfigFromOpts() *StorageConfig {
 	etcdEndpointsStr := flag.String(
 		"storage-etcd-endpoints",
 		envutil.WithDefault(
@@ -120,7 +99,7 @@ func StorageConfigFromOpts() *StorageConfig {
 		),
 		"Comma-delimited list of etcd3 endpoints to use for metadata storage",
 	)
-	endpoints := etcdEndpoints(*etcdEndpointsStr)
+	endpoints := etcdNormalizeEndpoints(*etcdEndpointsStr)
 	keyPrefix := flag.String(
 		"storage-etcd-key-prefix",
 		strings.TrimRight(
@@ -159,7 +138,13 @@ func StorageConfigFromOpts() *StorageConfig {
 
 	flag.Parse()
 
-	return &StorageConfig{
+	return &Config{
+		UseTLS:                    *optUseTLS,
+		CertPath:                  *optCertPath,
+		KeyPath:                   *optKeyPath,
+		BindHost:                  *optHost,
+		BindPort:                  *optPort,
+		ServiceName:               *optServiceName,
 		EtcdEndpoints:             endpoints,
 		EtcdKeyPrefix:             *keyPrefix,
 		EtcdConnectTimeoutSeconds: time.Duration(*connectTimeout) * time.Second,
@@ -171,8 +156,8 @@ func StorageConfigFromOpts() *StorageConfig {
 // Returns an etcd configuration struct populated with all configured options.
 func (c *Config) EtcdConfig() *etcd.Config {
 	return &etcd.Config{
-		Endpoints:   c.Storage.EtcdEndpoints,
-		DialTimeout: c.Storage.EtcdDialTimeoutSeconds,
+		Endpoints:   c.EtcdEndpoints,
+		DialTimeout: c.EtcdDialTimeoutSeconds,
 		TLS:         c.TLSConfig(),
 	}
 }
@@ -233,7 +218,7 @@ func (c *Config) TLSConfig() *tls.Config {
 }
 
 // Returns the set of etcd3 endpoints used by runm-metadata
-func etcdEndpoints(epsStr string) []string {
+func etcdNormalizeEndpoints(epsStr string) []string {
 	eps := strings.Split(epsStr, ",")
 	res := make([]string, len(eps))
 	// Ensure endpoints begin with http[s]:// and contain a port. If missing,

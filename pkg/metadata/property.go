@@ -24,6 +24,21 @@ func (s *Server) PropertySchemaList(
 	req *pb.PropertySchemaListRequest,
 	stream pb.RunmMetadata_PropertySchemaListServer,
 ) error {
+	cur, err := s.store.PropertySchemaList(req)
+	if err != nil {
+		return err
+	}
+	defer cur.Close()
+	var key string
+	var msg pb.PropertySchema
+	for cur.Next() {
+		if err = cur.Scan(&key, &msg); err != nil {
+			return err
+		}
+		if err = stream.Send(&msg); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

@@ -6,37 +6,12 @@ import (
 	"syscall"
 
 	"github.com/cenkalti/backoff"
-	etcd "github.com/coreos/etcd/clientv3"
+	etcd "go.etcd.io/etcd/clientv3"
 	"google.golang.org/grpc"
 
 	"github.com/jaypipes/runmachine/pkg/logging"
 	"github.com/jaypipes/runmachine/pkg/metadata/config"
 )
-
-type Store struct {
-	log    *logging.Logs
-	cfg    *config.Config
-	client *etcd.Client
-}
-
-func New(log *logging.Logs, cfg *config.Config) (*Store, error) {
-	client, err := connect(log, cfg)
-	if err != nil {
-		return nil, err
-	}
-	return &Store{
-		log:    log,
-		cfg:    cfg,
-		client: client,
-	}, nil
-}
-
-func (s *Store) requestCtx() (context.Context, context.CancelFunc) {
-	return context.WithTimeout(
-		context.Background(),
-		s.cfg.EtcdRequestTimeoutSeconds,
-	)
-}
 
 // Returns an etcd3 client using an exponential backoff and reconnect strategy.
 // This is to be tolerant of the etcd infrastructure VMs/containers starting

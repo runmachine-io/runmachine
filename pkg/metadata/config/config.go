@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	etcd "github.com/coreos/etcd/clientv3"
 	flag "github.com/ogier/pflag"
+	etcd "go.etcd.io/etcd/clientv3"
 
 	"github.com/jaypipes/envutil"
 	"github.com/jaypipes/runmachine/pkg/util"

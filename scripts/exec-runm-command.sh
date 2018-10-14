@@ -38,7 +38,7 @@ fi
 echo -n "Grabbing IP for $METADATA_CONTAINER_NAME ... "
 if container_get_ip "$METADATA_CONTAINER_NAME" metadata_container_ip; then
     echo "ok."
-    echo "runm-metadata running in container at ${metadata_container_ip}:10000."
+    print_if_verbose "runm-metadata running in container at ${metadata_container_ip}:10000."
 else
     echo "FAIL"
 fi

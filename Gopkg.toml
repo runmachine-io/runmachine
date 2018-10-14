@@ -26,16 +26,36 @@
 
 
 [[constraint]]
+  name = "github.com/cenkalti/backoff"
+  version = "2.0.0"
+
+[[constraint]]
+  name = "github.com/coreos/etcd"
+  version = "3.3.10"
+
+[[constraint]]
   name = "github.com/golang/protobuf"
   version = "1.2.0"
+
+[[constraint]]
+  name = "github.com/jaypipes/envutil"
+  version = "0.1.0"
+
+[[constraint]]
+  name = "github.com/jaypipes/gsr"
+  version = "0.5.0"
 
 [[constraint]]
   name = "github.com/ogier/pflag"
   version = "0.0.1"
 
 [[constraint]]
-  name = "github.com/stretchr/testify"
-  version = "1.2.2"
+  branch = "master"
+  name = "github.com/olekukonko/tablewriter"
+
+[[constraint]]
+  name = "github.com/spf13/cobra"
+  version = "0.0.3"
 
 [[constraint]]
   branch = "master"
@@ -48,11 +68,3 @@
 [prune]
   go-tests = true
   unused-packages = true
-
-[[constraint]]
-  name = "github.com/jaypipes/gsr"
-  version = "0.4.0"
-
-[[constraint]]
-  name = "github.com/jaypipes/envutil"
-  version = "0.1.0"

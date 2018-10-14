@@ -6,7 +6,7 @@ import (
 	"syscall"
 
 	"github.com/cenkalti/backoff"
-	etcd "go.etcd.io/etcd/clientv3"
+	etcd "github.com/coreos/etcd/clientv3"
 	"google.golang.org/grpc"
 
 	"github.com/jaypipes/runmachine/pkg/logging"

@@ -12,13 +12,14 @@
   packages = [
     "auth/authpb",
     "clientv3",
+    "clientv3/namespace",
     "etcdserver/api/v3rpc/rpctypes",
     "etcdserver/etcdserverpb",
     "mvcc/mvccpb",
     "pkg/types"
   ]
-  revision = "fca8add78a9d926166eb739b8e4a124434025ba3"
-  version = "v3.3.9"
+  revision = "27fc7e2296f506182f58ce846e48f36b34fe6842"
+  version = "v3.3.10"
 
 [[projects]]
   name = "github.com/gogo/protobuf"
@@ -57,8 +58,8 @@
 [[projects]]
   name = "github.com/jaypipes/gsr"
   packages = ["."]
-  revision = "5b37f237dfc21b2cacd3a62db5cd96c450ca6b26"
-  version = "0.4"
+  revision = "de22181b64b39331e2c74244c09bf972cb16bfb5"
+  version = "0.5"
 
 [[projects]]
   name = "github.com/mattn/go-runewidth"
@@ -91,6 +92,12 @@
   version = "v1.0.3"
 
 [[projects]]
+  name = "go.etcd.io/etcd"
+  packages = ["clientv3"]
+  revision = "27fc7e2296f506182f58ce846e48f36b34fe6842"
+  version = "v3.3.10"
+
+[[projects]]
   branch = "master"
   name = "golang.org/x/net"
   packages = [
@@ -102,13 +109,13 @@
     "internal/timeseries",
     "trace"
   ]
-  revision = "4dfa2610cdf3b287375bbba5b8f2a14d3b01d8de"
+  revision = "49bb7cea24b1df9410e1712aa6433dae904ff66a"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix"]
-  revision = "e4b3c5e9061176387e7cea65e4dc5853801f3fb7"
+  revision = "fa43e7bc11baaae89f3f902b2b4d832b68234844"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -135,7 +142,7 @@
   branch = "master"
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
-  revision = "c7e5094acea1ca1b899e2259d80a6b0f882f81f8"
+  revision = "af9cb2a35e7f169ec875002c1829c9b315cddc04"
 
 [[projects]]
   name = "google.golang.org/grpc"
@@ -174,6 +181,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "2c5a48c8bdd8166212a13f2e79aa3ccfb32d79a04aa93bbe1e7bf77ecb6b4a44"
+  inputs-digest = "4d2bc76cf0698382fa302b10eb82683838804f288c152269d77706efad5b2416"
   solver-name = "gps-cdcl"
   solver-version = 1

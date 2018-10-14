@@ -1,11 +1,12 @@
 package storage
 
 import (
-	etcd "go.etcd.io/etcd/clientv3"
-	etcd_namespace "go.etcd.io/etcd/clientv3/namespace"
+	etcd "github.com/coreos/etcd/clientv3"
+	etcd_namespace "github.com/coreos/etcd/clientv3/namespace"
 
 	"github.com/jaypipes/runmachine/pkg/abstract"
 	"github.com/jaypipes/runmachine/pkg/cursor"
+	pb "github.com/jaypipes/runmachine/proto"
 )
 
 const (
@@ -13,7 +14,7 @@ const (
 )
 
 func (s *Store) kvPropertySchemas() etcd.KV {
-	return etcd_namespace.NewKV(s.KV, _KEY_PROPERTY_SCHEMA)
+	return etcd_namespace.NewKV(s.kv, _KEY_PROPERTY_SCHEMA)
 }
 
 func (s *Store) PropertySchemaList(
@@ -32,8 +33,8 @@ func (s *Store) PropertySchemaList(
 	cancel()
 	if err != nil {
 		s.log.ERR("error listing property schemas: %v", err)
-		return err
+		return nil, err
 	}
 
-	return &cursor.EtcdPBCursor{resp: resp}, nil
+	return cursor.NewEtcdPBCursor(resp), nil
 }

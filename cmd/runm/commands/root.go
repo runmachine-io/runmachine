@@ -90,6 +90,7 @@ func init() {
 	addConnectFlags()
 
 	RootCommand.AddCommand(helpEnvCommand)
+	RootCommand.AddCommand(propertySchemaCommand)
 	RootCommand.SilenceUsage = true
 
 	clientLog = log.New(ioutil.Discard, "", 0)

@@ -99,7 +99,7 @@ func connect(
 			if fatal {
 				break
 			}
-			log.L2("failed to connect to gsr: %v. retrying.", err)
+			log.L2("failed to connect to etcd storage: %v. retrying.", err)
 			continue
 		}
 
@@ -108,7 +108,7 @@ func connect(
 	}
 
 	if err != nil {
-		log.ERR("failed to connect to gsr. final error reported: %v", err)
+		log.ERR("failed to connect to etcd storage. final error reported: %v", err)
 		log.L2("attempted %d times over %v. exiting.",
 			attempts, bo.GetElapsedTime().String())
 		return nil, err

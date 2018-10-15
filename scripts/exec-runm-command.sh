@@ -3,7 +3,8 @@
 DEBUG=${DEBUG:-0}
 VERSION=$(git describe --tags --always --dirty)
 ROOT_DIR=$(cd $(dirname "$0")/.. && pwd)
-LIB_DIR=$ROOT_DIR/scripts/lib
+SCRIPTS_DIR=$ROOT_DIR/scripts
+LIB_DIR=$SCRIPTS_DIR/lib
 
 source $LIB_DIR/common
 
@@ -22,7 +23,17 @@ if [ $? -ne 0 ]; then
 fi
 
 EXEC_COMMAND=$1
-METADATA_CONTAINER_NAME=${METADATA_CONTAINER_NAME:-"runm-metadata"}
+ETCD_CONTAINER_NAME=${ETCD_CONTAINER_NAME:-"runm-test-etcd"}
+METADATA_CONTAINER_NAME=${METADATA_CONTAINER_NAME:-"runm-test-metadata"}
+
+if ! container_is_running "$ETCD_CONTAINER_NAME"; then
+    $SCRIPTS_DIR/start-etcd-container.sh "$ETCD_CONTAINER_NAME"
+fi
+
+if ! container_get_ip "$ETCD_CONTAINER_NAME" etcd_container_ip; then
+    echo "ERROR: failed to get etcd container IP"
+    exit 1
+fi
 
 if ! container_is_running "$METADATA_CONTAINER_NAME"; then
     echo -n "Starting runm-metadata container named $METADATA_CONTAINER_NAME... "
@@ -30,7 +41,11 @@ if ! container_is_running "$METADATA_CONTAINER_NAME"; then
         --rm \
         -p 10000:10000 \
         --name $METADATA_CONTAINER_NAME \
+        -e GSR_LOG_LEVEL=3 \
+        -e GSR_ETCD_ENDPOINTS="http://$etcd_container_ip:2379" \
         -e RUNM_LOG_LEVEL=3 \
+        -e RUNM_METADATA_STORAGE_ETCD_ENDPOINTS="http://$etcd_container_ip:2379" \
+        -e RUNM_METADATA_STORAGE_ETCD_KEY_PREFIX="$METADATA_CONTAINER_NAME" \
         runm-metadata:$VERSION # >/dev/null 2>&1
     echo "ok."
 fi
@@ -41,6 +56,7 @@ if container_get_ip "$METADATA_CONTAINER_NAME" metadata_container_ip; then
     print_if_verbose "runm-metadata running in container at ${metadata_container_ip}:10000."
 else
     echo "FAIL"
+    exit 1
 fi
 
-docker run --rm -e RUNM_USER=$USER -e RUNM_HOST="http://$metadata_container_ip" runm:$VERSION runm $EXEC_COMMAND
+docker run --rm --network host runm:$VERSION runm $EXEC_COMMAND

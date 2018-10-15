@@ -31,7 +31,7 @@ const (
 Please set the RUNM_USER environment variable or supply a value
 for the --user CLI option.
 `
-	errConnect = `Error: unable to connect to the Procession server.
+	errConnect = `Error: unable to connect to the runm-metadata server.
 
 Please check the RUNM_HOST and RUNM_PORT environment
 variables or --host and --port  CLI options.
@@ -86,8 +86,9 @@ func exitNoRecords() {
 func connect() *grpc.ClientConn {
 	var opts []grpc.DialOption
 	opts = append(opts, grpc.WithInsecure())
-	connectAddress := fmt.Sprintf("%s:%d", connectHost, connectPort)
-	conn, err := grpc.Dial(connectAddress, opts...)
+	addr := fmt.Sprintf("%s:%d", connectHost, connectPort)
+	printIf(verbose, "connecting to runm services at %s\n", addr)
+	conn, err := grpc.Dial(addr, opts...)
 	if err != nil {
 		fmt.Println(errConnect)
 		os.Exit(1)

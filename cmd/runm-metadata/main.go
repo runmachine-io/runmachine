@@ -8,11 +8,11 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
-	"github.com/jaypipes/runmachine/pkg/metadata"
-	"github.com/jaypipes/runmachine/pkg/metadata/config"
-	pb "github.com/jaypipes/runmachine/proto"
+	"github.com/runmachine-io/runmachine/pkg/metadata"
+	"github.com/runmachine-io/runmachine/pkg/metadata/config"
+	pb "github.com/runmachine-io/runmachine/proto"
 
-	"github.com/jaypipes/runmachine/pkg/logging"
+	"github.com/runmachine-io/runmachine/pkg/logging"
 )
 
 func main() {

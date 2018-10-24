@@ -4,9 +4,9 @@ import (
 	etcd "github.com/coreos/etcd/clientv3"
 	etcd_namespace "github.com/coreos/etcd/clientv3/namespace"
 
-	"github.com/jaypipes/runmachine/pkg/abstract"
-	"github.com/jaypipes/runmachine/pkg/cursor"
-	pb "github.com/jaypipes/runmachine/proto"
+	"github.com/runmachine-io/runmachine/pkg/abstract"
+	"github.com/runmachine-io/runmachine/pkg/cursor"
+	pb "github.com/runmachine-io/runmachine/proto"
 )
 
 const (

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/jaypipes/runmachine/cmd/runm/commands"
+	"github.com/runmachine-io/runmachine/cmd/runm/commands"
 )
 
 func main() {

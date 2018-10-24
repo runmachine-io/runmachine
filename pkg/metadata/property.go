@@ -3,7 +3,7 @@ package metadata
 import (
 	"context"
 
-	pb "github.com/jaypipes/runmachine/proto"
+	pb "github.com/runmachine-io/runmachine/proto"
 )
 
 func (s *Server) PropertySchemaDelete(

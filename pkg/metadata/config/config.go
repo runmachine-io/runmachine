@@ -13,7 +13,7 @@ import (
 	flag "github.com/ogier/pflag"
 
 	"github.com/jaypipes/envutil"
-	"github.com/jaypipes/runmachine/pkg/util"
+	"github.com/runmachine-io/runmachine/pkg/util"
 )
 
 const (

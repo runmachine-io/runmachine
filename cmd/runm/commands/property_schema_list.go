@@ -8,8 +8,8 @@ import (
 
 	"golang.org/x/net/context"
 
-	pb "github.com/jaypipes/runmachine/proto"
 	"github.com/olekukonko/tablewriter"
+	pb "github.com/runmachine-io/runmachine/proto"
 	"github.com/spf13/cobra"
 )
 

@@ -5,9 +5,9 @@ import (
 
 	"github.com/jaypipes/gsr"
 
-	"github.com/jaypipes/runmachine/pkg/logging"
-	"github.com/jaypipes/runmachine/pkg/metadata/config"
-	"github.com/jaypipes/runmachine/pkg/metadata/storage"
+	"github.com/runmachine-io/runmachine/pkg/logging"
+	"github.com/runmachine-io/runmachine/pkg/metadata/config"
+	"github.com/runmachine-io/runmachine/pkg/metadata/storage"
 )
 
 type Server struct {

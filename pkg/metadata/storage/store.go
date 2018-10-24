@@ -6,8 +6,8 @@ import (
 	etcd "github.com/coreos/etcd/clientv3"
 	etcd_namespace "github.com/coreos/etcd/clientv3/namespace"
 
-	"github.com/jaypipes/runmachine/pkg/logging"
-	"github.com/jaypipes/runmachine/pkg/metadata/config"
+	"github.com/runmachine-io/runmachine/pkg/logging"
+	"github.com/runmachine-io/runmachine/pkg/metadata/config"
 )
 
 const (

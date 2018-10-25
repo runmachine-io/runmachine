@@ -7,9 +7,10 @@ import resource_models
 
 
 class ResourceConstraint(object):
-    def __init__(self, resource_class, amount):
+    def __init__(self, resource_class, min_amount, max_amount):
         self.resource_class = resource_class
-        self.amount = amount
+        self.min_amount = min_amount
+        self.max_amount = max_amount
 
 
 class CapabilityConstraint(object):
@@ -137,7 +138,7 @@ def _process_claim_request_group(ctx, claim_request, group_index):
         alloc_item = resource_models.AllocationItem(
             resource_class=rc_constraint.resource_class,
             provider=chosen,
-            used=rc_constraint.amount,
+            used=rc_constraint.max_amount,
         )
         alloc_items.append(alloc_item)
     return alloc_items
@@ -243,7 +244,7 @@ def _process_resource_constraints(ctx, claim_time, release_time,
             return {}
 
         print "Found %d providers with capacity for %d %s" % (
-            len(providers), rc_constraint.amount, rc_constraint.resource_class
+            len(providers), rc_constraint.max_amount, rc_constraint.resource_class
         )
         rc_provider_ids = set(p.id for p in providers)
         if matched_provs:
@@ -364,7 +365,7 @@ def _find_providers_with_resource(ctx, claim_time, release_time,
             inv_tbl.c.resource_class_id == rc_id,
             ((inv_tbl.c.total - inv_tbl.c.reserved)
                 * inv_tbl.c.allocation_ratio)
-            >= (resource_constraint.amount + func.coalesce(usage_subq.c.total_used, 0)))
+            >= (resource_constraint.max_amount + func.coalesce(usage_subq.c.total_used, 0)))
     ).limit(50)
     sess = resource_models.get_session()
     return [

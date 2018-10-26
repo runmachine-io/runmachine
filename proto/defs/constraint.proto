@@ -21,20 +21,27 @@ message ProviderGroupConstraint {
 }
 
 message CapabilityConstraint {
-    // All providers involved in the request group must collectively contain
-    // ALL capabilities in this list
+    // All providers involved in the request group or resource constraint must
+    // collectively contain ALL capabilities in this list
     repeated Capability require = 1;
-    // No provider involved in the request group may contain ANY of the capabilities
-    // in this list
+    // No provider involved in the request group or resource constraint may
+    // contain ANY of the capabilities in this list
     repeated Capability forbid = 2;
-    // At least one provider involved in the request group must contain AT
-    // LEAST ONE of the capabilities in this list
+    // At least one provider involved in the request group or resource
+    // constraint must contain AT LEAST ONE of the capabilities in this list
     repeated Capability any = 3;
 }
 
 message ResourceConstraint {
     ResourceClass resource_class = 1;
     uint64 amount = 2;
+    // Providers having a matching amount of resources available to meet this
+    // constraint must also match these capability constraints. This is a way
+    // to have specific capability constraints apply to the provider of a
+    // specific resource -- e.g. requiring that the provider of a
+    // runm.cpu.dedicated resource have the AVX2 x86 instruction set extension
+    // capability associated with it.
+    CapabilityConstraint capability_constraint = 50;
 }
 
 message PropertyConstraint {

@@ -1,0 +1,16 @@
+request_groups:
+  - resources:
+      runm.cpu.shared:
+        min: 1
+        max: 1
+        capabilities:
+          require:
+            - hw.cpu.x86.avx2
+      runm.memory:
+        # 64M
+        min: 67108864
+        max: 67108864
+      runm.block_storage:
+        # 10GB
+        min: 1000000000
+        max: 1000000000

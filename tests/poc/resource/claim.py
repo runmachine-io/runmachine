@@ -7,10 +7,23 @@ import resource_models
 
 
 class ResourceConstraint(object):
-    def __init__(self, resource_class, min_amount, max_amount):
+    def __init__(self, resource_class, min_amount, max_amount,
+                 capability_constraint=None):
         self.resource_class = resource_class
         self.min_amount = min_amount
         self.max_amount = max_amount
+        self.capability_constraint = capability_constraint
+
+    def __repr__(self):
+        return (
+            "ResourceConstraint(resource_class=%s,min_amount=%d,"
+            "max_amount=%d,capabilities=%s)" % (
+                self.resource_class,
+                self.min_amount,
+                self.max_amount,
+                self.capability_constraint,
+            )
+        )
 
 
 class CapabilityConstraint(object):
@@ -18,6 +31,11 @@ class CapabilityConstraint(object):
         self.require_caps = require_caps
         self.forbid_caps = forbid_caps
         self.any_caps = any_caps
+
+    def __repr__(self):
+        return "CapabilityConstraint(require=%s,forbid=%s,any=%s)" % (
+            self.require_caps, self.forbid_caps, self.any_caps,
+        )
 
 
 class ProviderGroupConstraint(object):
@@ -52,9 +70,10 @@ class ClaimRequestGroup(object):
 
 
 class ClaimRequest(object):
-    def __init__(self, consumer, groups, claim_time=None, release_time=None):
+    def __init__(self, consumer, request_groups, claim_time=None,
+            release_time=None):
         self.consumer = consumer
-        self.groups = groups
+        self.request_groups = request_groups
         self.claim_time = claim_time
         self.release_time = release_time
 
@@ -78,7 +97,7 @@ def process_claim_request(ctx, claim_request):
     alloc_items = []
     item_to_group_map = {}
     item_index = 0
-    for group_index in range(len(claim_request.groups)):
+    for group_index in range(len(claim_request.request_groups)):
         group_alloc_items = _process_claim_request_group(
             ctx, claim_request, group_index)
         for _ in range(len(group_alloc_items)):
@@ -101,9 +120,14 @@ def _process_claim_request_group(ctx, claim_request, group_index):
     """
     providers = {}
     matched_provs = set()
-    caps_providers = _process_capability_constraints(
-        ctx, claim_request.groups[group_index])
 
+    # First thing we do is limit to the providers that match the request
+    # group's general capabilities constraints. Note that there may be
+    # capabilities constraints on individual resources involved in a resource
+    # constraint. Those are applied while satisfying a resource constraint
+    # itself.
+    caps_providers = _process_capability_constraints(
+        ctx, claim_request.request_groups[group_index])
     if caps_providers is not None:
         if not caps_providers:
             return []
@@ -112,7 +136,7 @@ def _process_claim_request_group(ctx, claim_request, group_index):
 
     rc_providers = _process_resource_constraints(
         ctx, claim_request.claim_time, claim_request.release_time,
-        claim_request.groups[group_index])
+        claim_request.request_groups[group_index])
 
     if matched_provs:
         matched_provs &= set(rc_providers)
@@ -132,7 +156,7 @@ def _process_claim_request_group(ctx, claim_request, group_index):
     # matched_provs set for each resource class in the constraint
     chosen_id = iter(providers).next()
     chosen = providers[chosen_id]
-    for rc_constraint in claim_request.groups[0].resource_constraints:
+    for rc_constraint in claim_request.request_groups[0].resource_constraints:
         # Add the first provider supplying this resource class to our
         # allocation
         alloc_item = resource_models.AllocationItem(
@@ -238,13 +262,11 @@ def _process_resource_constraints(ctx, claim_time, release_time,
         providers = _find_providers_with_resource(
             ctx, claim_time, release_time, rc_constraint)
         if not providers:
-            print "Failed to find provider with capacity for %d %s" % (
-                rc_constraint.amount, rc_constraint.resource_class
-            )
+            print "Failed to find provider matching %s" % rc_constraint
             return {}
 
-        print "Found %d providers with capacity for %d %s" % (
-            len(providers), rc_constraint.max_amount, rc_constraint.resource_class
+        print "Found %d providers matching %s" % (
+            len(providers), rc_constraint,
         )
         rc_provider_ids = set(p.id for p in providers)
         if matched_provs:
@@ -270,6 +292,37 @@ def _cap_id_from_code(ctx, cap):
 
 
 def _find_providers_with_all_caps(ctx, required_caps):
+    p_tbl = resource_models.get_table('providers')
+    p_caps_tbl = resource_models.get_table('provider_capabilities')
+
+    cap_ids = [
+        _cap_id_from_code(ctx, cap) for cap in required_caps
+    ]
+
+    p_to_p_caps = sa.join(
+        p_tbl, p_caps_tbl,
+        p_tbl.c.id == p_caps_tbl.c.provider_id,
+    )
+    cols = [
+        p_tbl.c.id,
+        p_tbl.c.uuid,
+    ]
+    sel = sa.select(cols).select_from(
+        p_to_p_caps
+    ).where(
+        p_caps_tbl.c.capability_id.in_(cap_ids)
+    ).group_by(
+        p_caps_tbl.c.provider_id
+    ).having(
+        func.count(p_caps_tbl.c.capability_id) == len(required_caps)
+    ).limit(50)
+    sess = resource_models.get_session()
+    return [
+        resource_models.Provider(id=r[0], uuid=r[1]) for r in sess.execute(sel)
+    ]
+
+
+def _find_providers_with_any_caps(ctx, required_caps):
     p_tbl = resource_models.get_table('providers')
     p_caps_tbl = resource_models.get_table('provider_capabilities')
 
@@ -343,8 +396,13 @@ def _find_providers_with_resource(ctx, claim_time, release_time,
     )
     usage_subq = sa.alias(usage_subq, "usages")
 
+    join_to = p_tbl
+    if resource_constraint.capability_constraint:
+        cap_constraint = resource_constraint.capability_constraint
+        join_to = _select_add_capability_constraint(ctx, p_tbl, cap_constraint)
+
     p_to_inv = sa.join(
-        p_tbl, inv_tbl,
+        join_to, inv_tbl,
         sa.and_(
             p_tbl.c.id == inv_tbl.c.provider_id,
             inv_tbl.c.resource_class_id == rc_id,
@@ -366,8 +424,96 @@ def _find_providers_with_resource(ctx, claim_time, release_time,
             ((inv_tbl.c.total - inv_tbl.c.reserved)
                 * inv_tbl.c.allocation_ratio)
             >= (resource_constraint.max_amount + func.coalesce(usage_subq.c.total_used, 0)))
-    ).limit(50)
+    )
+    sel = sel.limit(50)
     sess = resource_models.get_session()
     return [
         resource_models.Provider(id=r[0], uuid=r[1]) for r in sess.execute(sel)
     ]
+
+def _select_add_capability_constraint(ctx, relation, constraint):
+    """Adds the following expression to the supplied SELECT statement:
+
+    if "any" is in the constraint or if there's only one cap in "require":
+
+        JOIN provider_capabilities AS pc
+        ON providers.id = pc.provider_id
+        AND pc.capability_id IN ($ANY_CAPS)
+
+    if "require" is in the constraint and there's >1 required cap:
+
+        JOIN (
+            SELECT pc.provider_id, COUNT(*) AS num_caps
+            FROM provider_capabilities AS pc
+            GROUP BY pc.provider_id
+            HAVING COUNT(*) = $NUM_REQUIRE_CAPS
+        ) AS provs_having_all
+        ON providers.id = provs_having_all.provider_id
+
+    if "forbid" is in the constraint:
+
+        JOIN provider_capabilities AS pc
+        ON providers.id = pc.provider_id
+        AND pc.capability_id NOT IN ($FORBID_CAPS)
+
+    """
+    p_tbl = resource_models.get_table('providers')
+    p_caps_tbl = resource_models.get_table('provider_capabilities')
+    p_caps_tbl = sa.alias(p_caps_tbl, name='pc')
+    if constraint.require_caps:
+        if len(constraint.require_caps) == 1:
+            cap_id = _cap_id_from_code(ctx, constraint.require_caps[0])
+            # Just join to placement_capabilities and be done with it. No need
+            # to get more complicated than that.
+            relation = sa.join(
+                p_tbl, p_caps_tbl,
+                sa.and_(
+                    p_tbl.c.id == p_caps_tbl.c.provider_id,
+                    p_caps_tbl.c.capability_id == cap_id
+                )
+            )
+        else:
+            # This is the complicated bit. We join to a derived table
+            # representing the providers that have ALL of the required
+            # capabilities.
+            require_cap_ids = [
+                _cap_id_from_code(ctx, cap) for cap in constraint.require_caps
+            ]
+            cols = [
+                p_caps_tbl.c.provider_id,
+                func.count(p_caps_tbl.c.capability_id).label('num_caps')
+            ]
+            derived = sa.select(cols).group_by(
+                p_caps_tbl.c.provider_id
+            ).where(
+                p_caps_tbl.c.capability_id.in_(require_cap_ids)
+            ).having(
+                func.count(p_caps_tbl.c.capability_id) == len(require_cap_ids)
+            )
+            relation = sa.join(
+                p_tbl, derived,
+                p_tbl.c.id == derived.c.provider_id,
+            )
+    if constraint.forbid_caps or constraint.any_caps:
+        conds = [
+            p_tbl.c.id == p_caps.c.provider_id,
+        ]
+        if constraint.forbid_caps:
+            forbid_cap_ids = [
+                _cap_id_from_code(ctx, cap) for cap in constraint.forbid_caps
+            ]
+            conds.append(
+                ~p_caps_tbl.c.capability_id.in_(forbid_cap_ds)
+            )
+        if constraint.any_caps:
+            any_cap_ids = [
+                _cap_id_from_code(ctx, cap) for cap in constraint.any_caps
+            ]
+            conds.append(
+                p_caps_tbl.c.capability_id.in_(any_cap_ds)
+            )
+        relation = sa.join(
+            relation, p_caps_tbl,
+            sa.and_(conds),
+        )
+    return relation

@@ -50,9 +50,6 @@ def find_claims(ctx):
     ctx.claim_config = claim_config.ClaimConfig(fp)
     ctx.status_ok()
     consumer = resource_models.Consumer(name="instance0")
-    cap_constraints = [
-        claim.CapabilityConstraint(require_caps=["hw.cpu.x86.avx2"])
-    ]
     claim_time = datetime.datetime.utcnow()
     claim_time = int(time.mktime(claim_time.timetuple()))
     release_time = sys.maxint

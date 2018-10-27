@@ -291,12 +291,24 @@ def _cap_id_from_code(ctx, cap):
     return res[0]
 
 
-def _find_providers_with_all_caps(ctx, required_caps):
+def _find_providers_with_all_caps(ctx, caps, limit=50):
+    """Returns providers that have all of the supplied capabilities.
+
+    The SQL that is generated looks like this:
+
+    SELECT p.id, p.uuid
+    FROM providers AS p
+    JOIN provider_capabilities AS pc
+      ON p.id = pc.provider_id
+    WHERE pc.capability_id IN ($CAPABILITIES)
+    GROUP BY p.id
+    HAVING COUNT(pc.capability_id) == $NUM_CAPABILITIES
+    """
     p_tbl = resource_models.get_table('providers')
     p_caps_tbl = resource_models.get_table('provider_capabilities')
 
     cap_ids = [
-        _cap_id_from_code(ctx, cap) for cap in required_caps
+        _cap_id_from_code(ctx, cap) for cap in caps
     ]
 
     p_to_p_caps = sa.join(
@@ -315,19 +327,31 @@ def _find_providers_with_all_caps(ctx, required_caps):
         p_caps_tbl.c.provider_id
     ).having(
         func.count(p_caps_tbl.c.capability_id) == len(required_caps)
-    ).limit(50)
+    ).limit(limit)
     sess = resource_models.get_session()
     return [
         resource_models.Provider(id=r[0], uuid=r[1]) for r in sess.execute(sel)
     ]
 
 
-def _find_providers_with_any_caps(ctx, required_caps):
+def _find_providers_with_any_caps(ctx, caps, limit=50):
+    """Returns providers that have any of the supplied capabilities.
+
+    The SQL that is generated looks like this:
+
+    SELECT p.id, p.uuid
+    FROM providers AS p
+    JOIN provider_capabilities AS pc
+      ON p.id = pc.provider_id
+    WHERE pc.capability_id IN ($CAPABILITIES)
+    GROUP BY p.id
+    HAVING COUNT(pc.capability_id) == $NUM_CAPABILITIES
+    """
     p_tbl = resource_models.get_table('providers')
     p_caps_tbl = resource_models.get_table('provider_capabilities')
 
     cap_ids = [
-        _cap_id_from_code(ctx, cap) for cap in required_caps
+        _cap_id_from_code(ctx, cap) for cap in caps
     ]
 
     p_to_p_caps = sa.join(
@@ -342,7 +366,7 @@ def _find_providers_with_any_caps(ctx, required_caps):
         p_to_p_caps
     ).where(
         p_caps_tbl.c.capability_id.in_(cap_ids)
-    ).limit(50)
+    ).limit(limit)
     sess = resource_models.get_session()
     return [
         resource_models.Provider(id=r[0], uuid=r[1]) for r in sess.execute(sel)
@@ -363,6 +387,36 @@ def _rc_id_from_code(ctx, resource_class):
 
 def _find_providers_with_resource(ctx, claim_time, release_time,
         resource_constraint):
+    """Queries for providers that have capacity for the requested amount of a
+    resource class and optionally meet resource-specific capability
+    constraints. The query is done in a claim start/end window.
+
+    The SQL generated for a resource constraint without the optional capability
+    constraint ends up looking like this:
+
+    SELECT p.id, p.uuid
+    FROM providers AS p
+    JOIN inventories AS i
+      ON p.id = i.provider_id
+    LEFT JOIN (
+      SELECT ai.provider_id, SUM(ai.used) AS total_used
+      FROM allocation_items AS ai
+      JOIN (
+        SELECT id AS allocation_id
+        FROM allocations
+        WHERE claim_time >= $CLAIM_START
+        AND release_time < $CLAIM_END
+        GROUP BY id
+      ) AS allocs_in_window
+        ON ai.allocation_id = allocs_in_window
+      WHERE ai.resource_class_id = $RESOURCE_CLASS
+    ) AS usages
+      ON i.provider_id = usages.provider_id
+    WHERE i.resource_class_id = $RESOURCE_CLASS
+    AND ((i.total - i.reserved) * i.allocation_ratio) >=
+         $RESOURCE_REQUEST_AMOUNT + COALESCE(usages.used, 0))
+
+    """
     p_tbl = resource_models.get_table('providers')
     inv_tbl = resource_models.get_table('inventories')
     alloc_tbl = resource_models.get_table('allocations')

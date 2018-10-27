@@ -113,51 +113,97 @@ def process_claim_request(ctx, claim_request):
     ]
 
 
+class MatchContext(object):
+    """An object that is passed to matching functions to keep state during the
+    constraint solving process.
+    """
+
+    def __init__(self, claim_request, group_index):
+        self.claim_request = claim_request
+
+        # The first time the matches dict is updated with a set of filtered
+        # providers, this is set to True
+        self.started_filtering = False
+
+        # The ClaimRequestGroup being tracked
+        self.request_group = claim_request.request_groups[group_index]
+
+        # dict, keyd by internal provider ID, of provider UUIDs that have
+        # matched all of the applied filters from constraints contained in the
+        # request group
+        self.matches = {}
+
+        # dict, keyed by internal provider ID, of provider UUIDs that matched
+        # an "exclusion filter" in a constraint and must be excluded when
+        # considering other constraints in the request group.
+        self.exclude = {}
+
+    def match_or(self, new_matches):
+        """If the matching has begun, updates the match context's matching
+        provider dict with the supplied matches using a set union. If
+        matching has not begun, sets the match context's matching provider dict
+        to the supplied matches.
+
+        Returns True if there are any matches after the operation, False
+        otherwise.
+        """
+        if self.started_filtering:
+            self.matches.update(new_matches)
+        else:
+            self.matches = new_matches
+            self.started_filtering = True
+        return len(self.matches) > 0
+
+    def match_and(self, new_matches):
+        """If the matching has begun, updates the match context's matching
+        provider dict with the supplied matches using a set intersection. If
+        matching has not begun, sets the match context's matching provider dict
+        to the supplied matches.
+
+        Returns True if there are any matches after the operation, False
+        otherwise.
+        """
+        if self.started_filtering:
+            in_both = set(self.matches) & set(new_matches)
+            self.matches = {
+                k: v for k, v in self.matches.items()
+                if k in in_both
+            }
+        else:
+            self.matches = new_matches
+            self.started_filtering = True
+        return len(self.matches) > 0
+
+
 def _process_claim_request_group(ctx, claim_request, group_index):
     """Given an index to a single claim request group, returns a list of
     AllocationItem objects that would be satisfied by the request group after
     determining the providers matching the request group's constraints.
     """
-    providers = {}
-    matched_provs = set()
+    mctx = MatchContext(claim_request, group_index)
 
     # First thing we do is limit to the providers that match the request
     # group's general capabilities constraints. Note that there may be
     # capabilities constraints on individual resources involved in a resource
     # constraint. Those are applied while satisfying a resource constraint
     # itself.
-    caps_providers = _process_capability_constraints(
-        ctx, claim_request.request_groups[group_index])
-    if caps_providers is not None:
-        if not caps_providers:
-            return []
-        matched_provs = set(caps_providers)
-        providers.update(caps_providers)
+    if not _process_capability_constraints(ctx, mctx):
+        return []
 
     # Then find the providers that have the capacity for one or more resource
     # constraints
-    rc_providers = _process_resource_constraints(
-        ctx, claim_request.claim_time, claim_request.release_time,
-        claim_request.request_groups[group_index])
-
-    if matched_provs:
-        matched_provs &= set(rc_providers)
-    else:
-        if not rc_providers:
-            return []
-        matched_provs = set(rc_providers)
-        providers.update(rc_providers)
-
-    # Remove all providers not in the set intersection for all
-    # constraint-matched providers
-    providers = {k: v for k, v in providers.items() if k in matched_provs}
+    if not _process_resource_constraints(ctx, mctx):
+        return []
 
     alloc_items = []
 
     # Now add an allocation item for the first provider that is in the
-    # matched_provs set for each resource class in the constraint
-    chosen_id = iter(providers).next()
-    chosen = providers[chosen_id]
+    # matches set for each resource class in the constraint
+    chosen_id = iter(mctx.matches).next()
+    chosen = resource_models.Provider(
+        id=chosen_id,
+        uuid=mctx.matches[chosen_id],
+    )
     for rc_constraint in claim_request.request_groups[0].resource_constraints:
         # Add the first provider supplying this resource class to our
         # allocation
@@ -170,41 +216,34 @@ def _process_claim_request_group(ctx, claim_request, group_index):
     return alloc_items
 
 
-def _process_capability_constraints(ctx, claim_request_group):
+def _process_capability_constraints(ctx, mctx):
     """Returns a dict, keyed by internal provider ID, of providers that have
     the required, forbidden or any capabilities in the group's capability
     constraints.
 
-    If the group contains no capability constraints at all, the function
-    returns None to differentiate between an empty dict (which means no
-    providers matched the constraints).
+    Returns True if the constraints were able to be satisfied, False otherwise
+
+    :param ctx: RunContext
+    :param mctx: MatchContext
     """
-    if not claim_request_group.capability_constraints:
-        return None
+    if not mctx.request_group.capability_constraints:
+        return True
 
     # A hashmap of provider internal ID to provider object for providers
     cap_providers = {}
-    # The set of provider internal ID, that have been matched for previous
-    # iterations of constraints
-    matched_provs = set()
-    for cap_constraint in claim_request_group.capability_constraints:
+    for cap_constraint in mctx.request_group.capability_constraints:
         cap_constraint_providers = _process_capability_constraint(
             ctx, cap_constraint)
         if cap_constraint_providers is None and not cap_providers:
-            return None
-        if matched_provs:
-            # Within a claim request group, the list of capability constraint
-            # objects is OR'd together.
-            matched_provs |= set(cap_constraint_providers)
-        else:
-            if not cap_constraint_providers:
-                print "No matching providers for capability constraint %s" % (
-                    cap_constraint
-                )
-                return {}
-            matched_provs = set(cap_constraint_providers)
-        cap_providers.update(cap_constraint_providers)
-    return {k: v for k, v in cap_providers.items() if k in matched_provs}
+            continue
+        # Within a claim request group, the list of capability constraint
+        # objects is OR'd together.
+        if not mctx.match_or(cap_constraint_providers):
+            print "No matching providers for capability constraint %s" % (
+                cap_constraint
+            )
+            return False
+    return True
 
 
 def _process_capability_constraint(ctx, cap_constraint):
@@ -305,37 +344,28 @@ def _process_capability_constraint(ctx, cap_constraint):
     return {k: v for k, v in cap_providers.items() if k in matched_provs}
 
 
-def _process_resource_constraints(ctx, claim_time, release_time,
-        claim_request_group):
+def _process_resource_constraints(ctx, mctx):
     """Returns a dict, keyed by internal provider ID, of providers that have
     capacity for ALL resources listed in the supplied claim request group.
+
+    Returns True if the constraints were able to be satisfied, False otherwise
+
+    :param ctx: RunContext
+    :param mctx: MatchContext
     """
-    # A hashmap of resource class code to list of providers having capacity for
-    # an amount of that resource
-    rc_providers = {}
-    # The set of provider internal ID, that have been matched for previous
-    # iterations of constraints
-    matched_provs = set()
-    for rc_constraint in claim_request_group.resource_constraints:
+    for rc_constraint in mctx.request_group.resource_constraints:
         providers = _find_providers_with_resource(
-            ctx, claim_time, release_time, rc_constraint)
-        if not providers:
+            ctx, mctx.claim_request.claim_time,
+            mctx.claim_request.release_time, rc_constraint)
+        if not mctx.match_and(providers):
             print "Failed to find provider matching %s" % rc_constraint
-            return {}
+            return False
 
         print "Found %d providers matching %s" % (
             len(providers), rc_constraint,
         )
-        rc_provider_ids = set(p.id for p in providers)
-        if matched_provs:
-            matched_provs &= rc_provider_ids
-            if not matched_provs:
-                return {}
-        else:
-            matched_provs = rc_provider_ids
-        rc_providers.update({p.id: p for p in providers})
 
-    return {k: v for k, v in rc_providers.items() if k in matched_provs}
+    return True
 
 
 def _cap_id_from_code(ctx, cap):
@@ -387,9 +417,9 @@ def _find_providers_with_all_caps(ctx, caps, limit=50):
         func.count(p_caps_tbl.c.capability_id) == len(required_caps)
     ).limit(limit)
     sess = resource_models.get_session()
-    return [
-        resource_models.Provider(id=r[0], uuid=r[1]) for r in sess.execute(sel)
-    ]
+    return {
+        r[0]: r[1] for r in sess.execute(sel)
+    }
 
 
 def _find_providers_with_any_caps(ctx, caps, limit=50):
@@ -424,9 +454,9 @@ def _find_providers_with_any_caps(ctx, caps, limit=50):
         p_caps_tbl.c.capability_id.in_(cap_ids)
     ).limit(limit)
     sess = resource_models.get_session()
-    return [
-        resource_models.Provider(id=r[0], uuid=r[1]) for r in sess.execute(sel)
-    ]
+    return {
+        r[0]: r[1] for r in sess.execute(sel)
+    }
 
 
 def _rc_id_from_code(ctx, resource_class):
@@ -442,7 +472,7 @@ def _rc_id_from_code(ctx, resource_class):
 
 
 def _find_providers_with_resource(ctx, claim_time, release_time,
-        resource_constraint):
+        resource_constraint, limit=50):
     """Queries for providers that have capacity for the requested amount of a
     resource class and optionally meet resource-specific capability
     constraints. The query is done in a claim start/end window.
@@ -535,11 +565,12 @@ def _find_providers_with_resource(ctx, claim_time, release_time,
                 * inv_tbl.c.allocation_ratio)
             >= (resource_constraint.max_amount + func.coalesce(usage_subq.c.total_used, 0)))
     )
-    sel = sel.limit(50)
+    sel = sel.limit(limit)
     sess = resource_models.get_session()
-    return [
-        resource_models.Provider(id=r[0], uuid=r[1]) for r in sess.execute(sel)
-    ]
+    return {
+        r[0]: r[1] for r in sess.execute(sel)
+    }
+
 
 def _select_add_capability_constraint(ctx, relation, constraint):
     """Adds the following expression to the supplied SELECT statement:

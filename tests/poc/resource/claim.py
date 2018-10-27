@@ -365,8 +365,8 @@ def _providers_matching_capability_constraint(ctx, cap_constraint):
         else:
             # If we matched no providers having forbidden capabilities, AND
             # this constraint specified no required or any capabilities, then
-            # return None instead of {} to indicate that the constraint should
-            # not be taken into account.
+            # return NoExclude to indicate that there was actually a positive
+            # result from the constraint matching.
             if not cap_constraint.require_caps and not cap_constraint.any_caps:
                 print (
                     "Found 0 providers matching %s."

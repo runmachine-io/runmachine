@@ -204,7 +204,7 @@ def _process_claim_request_group(ctx, claim_request, group_index):
         id=chosen_id,
         uuid=mctx.matches[chosen_id],
     )
-    for rc_constraint in claim_request.request_groups[0].resource_constraints:
+    for rc_constraint in mctx.request_group.resource_constraints:
         # Add the first provider supplying this resource class to our
         # allocation
         alloc_item = resource_models.AllocationItem(
@@ -217,11 +217,10 @@ def _process_claim_request_group(ctx, claim_request, group_index):
 
 
 def _process_capability_constraints(ctx, mctx):
-    """Returns a dict, keyed by internal provider ID, of providers that have
-    the required, forbidden or any capabilities in the group's capability
-    constraints.
+    """Returns True if the capability constraints in the request group could be
+    satisfied by one or more providers, False otherwise.
 
-    Returns True if the constraints were able to be satisfied, False otherwise
+    Returns True if there were no capability constraints on the request group.
 
     :param ctx: RunContext
     :param mctx: MatchContext
@@ -229,38 +228,60 @@ def _process_capability_constraints(ctx, mctx):
     if not mctx.request_group.capability_constraints:
         return True
 
-    # A hashmap of provider internal ID to provider object for providers
-    cap_providers = {}
     for cap_constraint in mctx.request_group.capability_constraints:
-        cap_constraint_providers = _process_capability_constraint(
-            ctx, cap_constraint)
-        if cap_constraint_providers is None and not cap_providers:
+        if not any([
+                cap_constraint.require_caps,
+                cap_constraint.forbid_caps,
+                cap_constraint.any_caps]):
             continue
-        # Within a claim request group, the list of capability constraint
-        # objects is OR'd together.
-        if not mctx.match_or(cap_constraint_providers):
+
+        res = _providers_matching_capability_constraint(ctx, cap_constraint)
+        if res == NoMatches:
             print "No matching providers for capability constraint %s" % (
                 cap_constraint
             )
             return False
+
+        # Within a claim request group, the list of capability constraint
+        # objects is OR'd together.
+        mctx.match_or(res.matches)
     return True
 
 
-def _process_capability_constraint(ctx, cap_constraint):
-    """Returns a dict, keyed by internal provider ID, of providers that have
-    the required, forbidden or any capabilities in supplied capability
-    constraint.
-
-    If the contains no required, forbidden and any capability attributes,
-    returns None to differentiate between an empty dict (which means no
-    providers matched the constraint).
+class ConstraintMatchResult(object):
+    """Describes the matches and anti-matches (exclusion filters) that were
+    determined for a constraint.
     """
-    if not any([
-            cap_constraint.require_caps,
-            cap_constraint.forbid_caps,
-            cap_constraint.any_caps]):
-        return None
+    def __init__(self):
+        # dict, keyed by internal provider ID, of provider UUIDs that matched
+        # one of the positive filters in the constraint
+        self.matches = {}
 
+        # dict, keyed by internal provider Id, of provider UUIDs that should be
+        # excluded from matches in other constraints. These are the providers
+        # that matched a "forbid" constraint (an exclusion filter).
+        #
+        # No providers in 'excludes' shall exist in 'matches', as these are
+        # fully disjoint sets.
+        self.excludes = {}
+
+# A singleton ConstraintMatch used to signal that the constraint contained
+# either 'require' or 'any' constraint specifiers but that no matching
+# providers could be found. This is a negative match and will prevent the
+# matching process from proceeding any further.
+NoMatches = ConstraintMatchResult()
+# A singleton ConstraintMatch used to signal that the constraint only contained
+# exclusion filters (forbid specs) and there were no matches on these exclusion
+# filters. So, unlike NoMatches, this is a positive match that won't prevent
+# the matching process from proceeding further.
+NoExcludes = ConstraintMatchResult()
+
+
+def _providers_matching_capability_constraint(ctx, cap_constraint):
+    """Returns a ConstraintMatch that describes the providers having the
+    required, forbidden or any capabilities in supplied capability constraint.
+    """
+    res = ConstraintMatchResult()
     # A hashmap of provider internal ID to provider object for providers
     cap_providers = {}
     # The set of provider internal ID, that have been matched for previous
@@ -273,18 +294,13 @@ def _process_capability_constraint(ctx, cap_constraint):
             print "Failed to find provider with required caps %s" % (
                 required_caps
             )
-            return {}
+            return NoMatches
 
         print "Found %d providers with required caps %s" % (
             len(providers), required_caps
         )
         cap_provider_ids = set(p.id for p in providers)
-        if matched_provs:
-            matched_provs &= cap_provider_ids
-            if not matched_provs:
-                return {}
-        else:
-            matched_provs = cap_provider_ids
+        matched_provs = cap_provider_ids
         cap_providers.update({p.id: p for p in providers})
 
     if cap_constraint.any_caps:
@@ -294,7 +310,7 @@ def _process_capability_constraint(ctx, cap_constraint):
             print "Failed to find provider with any caps %s" % (
                 any_caps
             )
-            return {}
+            return NoMatches
 
         print "Found %d providers with any caps %s" % (
             len(providers), any_caps
@@ -303,7 +319,7 @@ def _process_capability_constraint(ctx, cap_constraint):
         if matched_provs:
             matched_provs &= cap_provider_ids
             if not matched_provs:
-                return {}
+                return NoMatches
         else:
             matched_provs = cap_provider_ids
         cap_providers.update({p.id: p for p in providers})
@@ -321,12 +337,9 @@ def _process_capability_constraint(ctx, cap_constraint):
                 # capability
                 matched_provs -= cap_provider_ids
                 if not matched_provs:
-                    return {}
+                    return NoMatches
             else:
-                # TODO(jaypipes): Return these forbidden provider IDs so that
-                # the remainder of the request group's constraint matchers can
-                # take them as a parameter
-                forbidden_provs = cap_provider_ids
+                res.excludes = providers
         else:
             # If we matched no providers having forbidden capabilities, AND
             # this constraint specified no required or any capabilities, then
@@ -339,9 +352,12 @@ def _process_capability_constraint(ctx, cap_constraint):
                     "and no matches were found for those forbidden "
                     "capabilities)" % cap_constraint
                 )
-                return None
+                return NoExcludes
 
-    return {k: v for k, v in cap_providers.items() if k in matched_provs}
+    res.matches = {
+        k: v for k, v in cap_providers.items() if k in matched_provs
+    }
+    return res
 
 
 def _process_resource_constraints(ctx, mctx):

@@ -113,50 +113,105 @@ def process_claim_request(ctx, claim_request):
     ]
 
 
+class MatchContext(object):
+    """An object that is passed to matching functions to keep state during the
+    constraint solving process.
+    """
+
+    def __init__(self, claim_request, group_index):
+        self.claim_request = claim_request
+
+        # The first time the matches dict is updated with a set of filtered
+        # providers, this is set to True
+        self.started_filtering = False
+
+        # The ClaimRequestGroup being tracked
+        self.request_group = claim_request.request_groups[group_index]
+
+        # dict, keyd by internal provider ID, of provider UUIDs that have
+        # matched all of the applied filters from constraints contained in the
+        # request group
+        self.matches = {}
+
+        # dict, keyed by internal provider ID, of provider UUIDs that matched
+        # an "exclusion filter" in a constraint and must be excluded when
+        # considering other constraints in the request group.
+        self.exclude = {}
+
+    def match_or(self, new_matches):
+        """If the matching has begun, updates the match context's matching
+        provider dict with the supplied matches using a set union. If
+        matching has not begun, sets the match context's matching provider dict
+        to the supplied matches.
+
+        Returns True if there are any matches after the operation, False
+        otherwise.
+        """
+        if self.started_filtering:
+            self.matches.update(new_matches)
+        else:
+            self.matches = new_matches
+            self.started_filtering = True
+        return len(self.matches) > 0
+
+    def match_and(self, new_matches):
+        """If the matching has begun, updates the match context's matching
+        provider dict with the supplied matches using a set intersection. If
+        matching has not begun, sets the match context's matching provider dict
+        to the supplied matches.
+
+        Returns True if there are any matches after the operation, False
+        otherwise.
+        """
+        if self.started_filtering:
+            in_both = set(self.matches) & set(new_matches)
+            self.matches = {
+                k: v for k, v in self.matches.items()
+                if k in in_both
+            }
+        else:
+            self.matches = new_matches
+            self.started_filtering = True
+        return len(self.matches) > 0
+
+    def exclude_or(self, new_exclude):
+        """Updates the context's dict of to-be-excluded provider information
+        with a supplied dict, keyed by internal provider ID, of provider UUIDs
+        to exclude.
+        """
+        self.exclude.update(new_exclude)
+
+
 def _process_claim_request_group(ctx, claim_request, group_index):
     """Given an index to a single claim request group, returns a list of
     AllocationItem objects that would be satisfied by the request group after
     determining the providers matching the request group's constraints.
     """
-    providers = {}
-    matched_provs = set()
+    mctx = MatchContext(claim_request, group_index)
 
     # First thing we do is limit to the providers that match the request
     # group's general capabilities constraints. Note that there may be
     # capabilities constraints on individual resources involved in a resource
     # constraint. Those are applied while satisfying a resource constraint
     # itself.
-    caps_providers = _process_capability_constraints(
-        ctx, claim_request.request_groups[group_index])
-    if caps_providers is not None:
-        if not caps_providers:
-            return []
-        matched_provs = set(caps_providers)
-        providers.update(caps_providers)
+    if not _process_capability_constraints(ctx, mctx):
+        return []
 
-    rc_providers = _process_resource_constraints(
-        ctx, claim_request.claim_time, claim_request.release_time,
-        claim_request.request_groups[group_index])
-
-    if matched_provs:
-        matched_provs &= set(rc_providers)
-    else:
-        if not rc_providers:
-            return []
-        matched_provs = set(rc_providers)
-        providers.update(rc_providers)
-
-    # Remove all providers not in the set intersection for all
-    # constraint-matched providers
-    providers = {k: v for k, v in providers.items() if k in matched_provs}
+    # Then find the providers that have the capacity for one or more resource
+    # constraints
+    if not _process_resource_constraints(ctx, mctx):
+        return []
 
     alloc_items = []
 
     # Now add an allocation item for the first provider that is in the
-    # matched_provs set for each resource class in the constraint
-    chosen_id = iter(providers).next()
-    chosen = providers[chosen_id]
-    for rc_constraint in claim_request.request_groups[0].resource_constraints:
+    # matches set for each resource class in the constraint
+    chosen_id = iter(mctx.matches).next()
+    chosen = resource_models.Provider(
+        id=chosen_id,
+        uuid=mctx.matches[chosen_id],
+    )
+    for rc_constraint in mctx.request_group.resource_constraints:
         # Add the first provider supplying this resource class to our
         # allocation
         alloc_item = resource_models.AllocationItem(
@@ -168,56 +223,87 @@ def _process_claim_request_group(ctx, claim_request, group_index):
     return alloc_items
 
 
-def _process_capability_constraints(ctx, claim_request_group):
-    """Returns a dict, keyed by internal provider ID, of providers that have
-    the required, forbidden or any capabilities in the group's capability
-    constraints.
+def _process_capability_constraints(ctx, mctx):
+    """Returns True if the capability constraints in the request group could be
+    satisfied by one or more providers, False otherwise.
 
-    If the group contains no capability constraints at all, the function
-    returns None to differentiate between an empty dict (which means no
-    providers matched the constraints).
+    Returns True if there were no capability constraints on the request group.
+
+    :param ctx: RunContext
+    :param mctx: MatchContext
     """
-    if not claim_request_group.capability_constraints:
-        return None
+    if not mctx.request_group.capability_constraints:
+        return True
 
-    # A hashmap of provider internal ID to provider object for providers
-    cap_providers = {}
-    # The set of provider internal ID, that have been matched for previous
-    # iterations of constraints
-    matched_provs = set()
-    for cap_constraint in claim_request_group.capability_constraints:
-        cap_constraint_providers = _process_capability_constraint(
-            ctx, cap_constraint)
-        if cap_constraint_providers is None and not cap_providers:
-            return None
-        if matched_provs:
-            matched_provs &= set(cap_constraint_providers)
-        else:
-            if not cap_constraint_providers:
-                print "No matching providers for capability constraint %s" % (
-                    cap_constraint
-                )
-                return {}
-            matched_provs = set(cap_constraint_providers)
-        cap_providers.update(cap_constraint_providers)
-    return {k: v for k, v in cap_providers.items() if k in matched_provs}
+    for cap_constraint in mctx.request_group.capability_constraints:
+        if not any([
+                cap_constraint.require_caps,
+                cap_constraint.forbid_caps,
+                cap_constraint.any_caps]):
+            continue
+
+        res = _providers_matching_capability_constraint(ctx, cap_constraint)
+        if res == NoMatches:
+            print "No matching providers for capability constraint %s" % (
+                cap_constraint
+            )
+            return False
+        elif res == NoExclude:
+            # Constraint only contained exclusion filters (forbid) and there
+            # were no providers matching those forbidden capabilities, so just
+            # continue
+            continue
+
+        if res.exclude:
+            # Make sure we save providers that were marked for exclusion by a
+            # previous constraint pass. When we exit out of this funtion and
+            # perform resource constraints, we will need to pass the providers
+            # that should be excluded from consideration by the resource
+            # constraints
+            mctx.exclude_or(res.exclude)
+
+        if res.matches:
+            # Within a claim request group, the list of capability constraint
+            # objects is OR'd together.
+            mctx.match_or(res.matches)
+
+    return True
 
 
-def _process_capability_constraint(ctx, cap_constraint):
-    """Returns a dict, keyed by internal provider ID, of providers that have
-    the required, forbidden or any capabilities in supplied capability
-    constraint.
-
-    If the contains no required, forbidden and any capability attributes,
-    returns None to differentiate between an empty dict (which means no
-    providers matched the constraint).
+class ConstraintMatchResult(object):
+    """Describes the matches and anti-matches (exclusion filters) that were
+    determined for a constraint.
     """
-    if not any([
-            cap_constraint.require_caps,
-            cap_constraint.forbid_caps,
-            cap_constraint.any_caps]):
-        return None
+    def __init__(self):
+        # dict, keyed by internal provider ID, of provider UUIDs that matched
+        # one of the positive filters in the constraint
+        self.matches = {}
 
+        # dict, keyed by internal provider Id, of provider UUIDs that should be
+        # excluded from matches in other constraints. These are the providers
+        # that matched a "forbid" constraint (an exclusion filter).
+        #
+        # No providers in 'excludes' shall exist in 'matches', as these are
+        # fully disjoint sets.
+        self.exclude = {}
+
+# A singleton ConstraintMatch used to signal that the constraint contained
+# either 'require' or 'any' constraint specifiers but that no matching
+# providers could be found. This is a negative match and will prevent the
+# matching process from proceeding any further.
+NoMatches = ConstraintMatchResult()
+# A singleton ConstraintMatch used to signal that the constraint only contained
+# exclusion filters (forbid specs) and there were no matches on these exclusion
+# filters. So, unlike NoMatches, this is a positive match that won't prevent
+# the matching process from proceeding further.
+NoExclude = ConstraintMatchResult()
+
+
+def _providers_matching_capability_constraint(ctx, cap_constraint):
+    """Returns a ConstraintMatch that describes the providers having the
+    required, forbidden or any capabilities in supplied capability constraint.
+    """
+    res = ConstraintMatchResult()
     # A hashmap of provider internal ID to provider object for providers
     cap_providers = {}
     # The set of provider internal ID, that have been matched for previous
@@ -230,54 +316,98 @@ def _process_capability_constraint(ctx, cap_constraint):
             print "Failed to find provider with required caps %s" % (
                 required_caps
             )
-            return {}
+            return NoMatches
 
         print "Found %d providers with required caps %s" % (
             len(providers), required_caps
         )
-        cap_provider_ids = set(p.id for p in providers)
+        cap_provider_ids = set(providers)
+        matched_provs = cap_provider_ids
+        cap_providers.update({p.id: p for p in providers})
+
+    if cap_constraint.any_caps:
+        any_caps = cap_constraint.any_caps
+        providers = _find_providers_with_any_caps(ctx, any_caps)
+        if not providers:
+            print "Failed to find provider with any caps %s" % (
+                any_caps
+            )
+            return NoMatches
+
+        print "Found %d providers with any caps %s" % (
+            len(providers), any_caps
+        )
+        cap_provider_ids = set(providers)
         if matched_provs:
             matched_provs &= cap_provider_ids
             if not matched_provs:
-                return {}
+                return NoMatches
         else:
             matched_provs = cap_provider_ids
         cap_providers.update({p.id: p for p in providers})
 
-    return {k: v for k, v in cap_providers.items() if k in matched_provs}
+    if cap_constraint.forbid_caps:
+        forbid_caps = cap_constraint.forbid_caps
+        providers = _find_providers_with_any_caps(ctx, forbid_caps)
+        if providers:
+            print "Excluding %d providers with forbidden caps %s" % (
+                len(providers), forbid_caps
+            )
+            cap_provider_ids = set(providers)
+            if matched_provs:
+                # Remove previously matched providers that have a forbidden
+                # capability
+                matched_provs -= cap_provider_ids
+                if not matched_provs:
+                    return NoMatches
+            else:
+                res.excludes = providers
+        else:
+            # If we matched no providers having forbidden capabilities, AND
+            # this constraint specified no required or any capabilities, then
+            # return NoExclude to indicate that there was actually a positive
+            # result from the constraint matching.
+            if not cap_constraint.require_caps and not cap_constraint.any_caps:
+                print (
+                    "Found 0 providers matching %s."
+                    "\n\t(constraint only contains a forbid section "
+                    "and no matches were found for those forbidden "
+                    "capabilities)" % cap_constraint
+                )
+                return NoExclude
+
+    res.matches = {
+        k: v for k, v in cap_providers.items() if k in matched_provs
+    }
+    return res
 
 
-def _process_resource_constraints(ctx, claim_time, release_time,
-        claim_request_group):
+def _process_resource_constraints(ctx, mctx):
     """Returns a dict, keyed by internal provider ID, of providers that have
     capacity for ALL resources listed in the supplied claim request group.
+
+    Returns True if the constraints were able to be satisfied, False otherwise
+
+    :param ctx: RunContext
+    :param mctx: MatchContext
     """
-    # A hashmap of resource class code to list of providers having capacity for
-    # an amount of that resource
-    rc_providers = {}
-    # The set of provider internal ID, that have been matched for previous
-    # iterations of constraints
-    matched_provs = set()
-    for rc_constraint in claim_request_group.resource_constraints:
+    for rc_constraint in mctx.request_group.resource_constraints:
         providers = _find_providers_with_resource(
-            ctx, claim_time, release_time, rc_constraint)
-        if not providers:
+            ctx,
+            mctx.claim_request.claim_time,
+            mctx.claim_request.release_time,
+            rc_constraint,
+            exclude=mctx.exclude,
+        )
+        if not mctx.match_and(providers):
             print "Failed to find provider matching %s" % rc_constraint
-            return {}
+            return False
 
         print "Found %d providers matching %s" % (
             len(providers), rc_constraint,
         )
-        rc_provider_ids = set(p.id for p in providers)
-        if matched_provs:
-            matched_provs &= rc_provider_ids
-            if not matched_provs:
-                return {}
-        else:
-            matched_provs = rc_provider_ids
-        rc_providers.update({p.id: p for p in providers})
 
-    return {k: v for k, v in rc_providers.items() if k in matched_provs}
+    return True
 
 
 def _cap_id_from_code(ctx, cap):
@@ -291,12 +421,24 @@ def _cap_id_from_code(ctx, cap):
     return res[0]
 
 
-def _find_providers_with_all_caps(ctx, required_caps):
+def _find_providers_with_all_caps(ctx, caps, limit=50):
+    """Returns providers that have all of the supplied capabilities.
+
+    The SQL that is generated looks like this:
+
+    SELECT p.id, p.uuid
+    FROM providers AS p
+    JOIN provider_capabilities AS pc
+      ON p.id = pc.provider_id
+    WHERE pc.capability_id IN ($CAPABILITIES)
+    GROUP BY p.id
+    HAVING COUNT(pc.capability_id) == $NUM_CAPABILITIES
+    """
     p_tbl = resource_models.get_table('providers')
     p_caps_tbl = resource_models.get_table('provider_capabilities')
 
     cap_ids = [
-        _cap_id_from_code(ctx, cap) for cap in required_caps
+        _cap_id_from_code(ctx, cap) for cap in caps
     ]
 
     p_to_p_caps = sa.join(
@@ -315,19 +457,29 @@ def _find_providers_with_all_caps(ctx, required_caps):
         p_caps_tbl.c.provider_id
     ).having(
         func.count(p_caps_tbl.c.capability_id) == len(required_caps)
-    ).limit(50)
+    ).limit(limit)
     sess = resource_models.get_session()
-    return [
-        resource_models.Provider(id=r[0], uuid=r[1]) for r in sess.execute(sel)
-    ]
+    return {
+        r[0]: r[1] for r in sess.execute(sel)
+    }
 
 
-def _find_providers_with_any_caps(ctx, required_caps):
+def _find_providers_with_any_caps(ctx, caps, limit=50):
+    """Returns providers that have any of the supplied capabilities.
+
+    The SQL that is generated looks like this:
+
+    SELECT p.id, p.uuid
+    FROM providers AS p
+    JOIN provider_capabilities AS pc
+      ON p.id = pc.provider_id
+    WHERE pc.capability_id IN ($CAPABILITIES)
+    """
     p_tbl = resource_models.get_table('providers')
     p_caps_tbl = resource_models.get_table('provider_capabilities')
 
     cap_ids = [
-        _cap_id_from_code(ctx, cap) for cap in required_caps
+        _cap_id_from_code(ctx, cap) for cap in caps
     ]
 
     p_to_p_caps = sa.join(
@@ -342,11 +494,11 @@ def _find_providers_with_any_caps(ctx, required_caps):
         p_to_p_caps
     ).where(
         p_caps_tbl.c.capability_id.in_(cap_ids)
-    ).limit(50)
+    ).limit(limit)
     sess = resource_models.get_session()
-    return [
-        resource_models.Provider(id=r[0], uuid=r[1]) for r in sess.execute(sel)
-    ]
+    return {
+        r[0]: r[1] for r in sess.execute(sel)
+    }
 
 
 def _rc_id_from_code(ctx, resource_class):
@@ -362,7 +514,45 @@ def _rc_id_from_code(ctx, resource_class):
 
 
 def _find_providers_with_resource(ctx, claim_time, release_time,
-        resource_constraint):
+        resource_constraint, exclude=None, limit=50):
+    """Queries for providers that have capacity for the requested amount of a
+    resource class and optionally meet resource-specific capability
+    constraints. The query is done in a claim start/end window.
+
+    The SQL generated for a resource constraint without the optional capability
+    constraint ends up looking like this:
+
+    SELECT p.id, p.uuid
+    FROM providers AS p
+    JOIN inventories AS i
+      ON p.id = i.provider_id
+    LEFT JOIN (
+      SELECT ai.provider_id, SUM(ai.used) AS total_used
+      FROM allocation_items AS ai
+      JOIN (
+        SELECT id AS allocation_id
+        FROM allocations
+        WHERE claim_time >= $CLAIM_START
+        AND release_time < $CLAIM_END
+        GROUP BY id
+      ) AS allocs_in_window
+        ON ai.allocation_id = allocs_in_window
+      WHERE ai.resource_class_id = $RESOURCE_CLASS
+    ) AS usages
+      ON i.provider_id = usages.provider_id
+    WHERE i.resource_class_id = $RESOURCE_CLASS
+    AND ((i.total - i.reserved) * i.allocation_ratio) >=
+         $RESOURCE_REQUEST_AMOUNT + COALESCE(usages.used, 0))
+
+    If the optional `exclude` argument is provided, we tack on a:
+
+    WHERE p.id NOT IN ($EXCLUDE)
+
+    clause. The `exclude` argument is populated when the capabilities
+    constraints that may have been previously processed identified some
+    providers that should be excluded (they met an "exclusion filter" -- i.e.
+    they matched for a 'forbid' specification in a constraint).
+    """
     p_tbl = resource_models.get_table('providers')
     inv_tbl = resource_models.get_table('inventories')
     alloc_tbl = resource_models.get_table('allocations')
@@ -425,11 +615,14 @@ def _find_providers_with_resource(ctx, claim_time, release_time,
                 * inv_tbl.c.allocation_ratio)
             >= (resource_constraint.max_amount + func.coalesce(usage_subq.c.total_used, 0)))
     )
-    sel = sel.limit(50)
+    if exclude:
+        sel = sel.where(~p_tbl.c.id.in_(set(exclude)))
+    sel = sel.limit(limit)
     sess = resource_models.get_session()
-    return [
-        resource_models.Provider(id=r[0], uuid=r[1]) for r in sess.execute(sel)
-    ]
+    return {
+        r[0]: r[1] for r in sess.execute(sel)
+    }
+
 
 def _select_add_capability_constraint(ctx, relation, constraint):
     """Adds the following expression to the supplied SELECT statement:

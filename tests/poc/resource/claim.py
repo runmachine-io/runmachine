@@ -134,6 +134,8 @@ def _process_claim_request_group(ctx, claim_request, group_index):
         matched_provs = set(caps_providers)
         providers.update(caps_providers)
 
+    # Then find the providers that have the capacity for one or more resource
+    # constraints
     rc_providers = _process_resource_constraints(
         ctx, claim_request.claim_time, claim_request.release_time,
         claim_request.request_groups[group_index])
@@ -191,7 +193,9 @@ def _process_capability_constraints(ctx, claim_request_group):
         if cap_constraint_providers is None and not cap_providers:
             return None
         if matched_provs:
-            matched_provs &= set(cap_constraint_providers)
+            # Within a claim request group, the list of capability constraint
+            # objects is OR'd together.
+            matched_provs |= set(cap_constraint_providers)
         else:
             if not cap_constraint_providers:
                 print "No matching providers for capability constraint %s" % (
@@ -243,6 +247,60 @@ def _process_capability_constraint(ctx, cap_constraint):
         else:
             matched_provs = cap_provider_ids
         cap_providers.update({p.id: p for p in providers})
+
+    if cap_constraint.any_caps:
+        any_caps = cap_constraint.any_caps
+        providers = _find_providers_with_any_caps(ctx, any_caps)
+        if not providers:
+            print "Failed to find provider with any caps %s" % (
+                any_caps
+            )
+            return {}
+
+        print "Found %d providers with any caps %s" % (
+            len(providers), any_caps
+        )
+        cap_provider_ids = set(p.id for p in providers)
+        if matched_provs:
+            matched_provs &= cap_provider_ids
+            if not matched_provs:
+                return {}
+        else:
+            matched_provs = cap_provider_ids
+        cap_providers.update({p.id: p for p in providers})
+
+    if cap_constraint.forbid_caps:
+        forbid_caps = cap_constraint.forbid_caps
+        providers = _find_providers_with_any_caps(ctx, forbid_caps)
+        if providers:
+            print "Removing %d providers with forbidden caps %s" % (
+                len(providers), forbid_caps
+            )
+            cap_provider_ids = set(p.id for p in providers)
+            if matched_provs:
+                # Remove previously matched providers that have a forbidden
+                # capability
+                matched_provs -= cap_provider_ids
+                if not matched_provs:
+                    return {}
+            else:
+                # TODO(jaypipes): Return these forbidden provider IDs so that
+                # the remainder of the request group's constraint matchers can
+                # take them as a parameter
+                forbidden_provs = cap_provider_ids
+        else:
+            # If we matched no providers having forbidden capabilities, AND
+            # this constraint specified no required or any capabilities, then
+            # return None instead of {} to indicate that the constraint should
+            # not be taken into account.
+            if not cap_constraint.require_caps and not cap_constraint.any_caps:
+                print (
+                    "Found 0 providers matching %s."
+                    "\n\t(constraint only contains a forbid section "
+                    "and no matches were found for those forbidden "
+                    "capabilities)" % cap_constraint
+                )
+                return None
 
     return {k: v for k, v in cap_providers.items() if k in matched_provs}
 
@@ -344,8 +402,6 @@ def _find_providers_with_any_caps(ctx, caps, limit=50):
     JOIN provider_capabilities AS pc
       ON p.id = pc.provider_id
     WHERE pc.capability_id IN ($CAPABILITIES)
-    GROUP BY p.id
-    HAVING COUNT(pc.capability_id) == $NUM_CAPABILITIES
     """
     p_tbl = resource_models.get_table('providers')
     p_caps_tbl = resource_models.get_table('provider_capabilities')

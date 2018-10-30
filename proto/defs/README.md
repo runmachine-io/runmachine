@@ -33,3 +33,29 @@ backwards-incompatible object or service API changes. Things are in very fluid
 in these early stages of development. Object models and service APIs are being
 stretched and changed as we prototype the services and, more importantly, how
 clients will interact and use these objects and service APIs.
+
+## Generating code from Protobuffer definitions files
+
+To generate Golang code files from the object and service definitions in the
+[proto/defs](/) directory, do the following from the root source directory:
+
+```
+make generated
+```
+
+Once this is done, you will find Golang files in the [proto/](../) directory.
+These Golang files may then be used as an importable package in your code, like
+so:
+
+```
+package main
+
+import (
+    "runm_pb" github.com/runmachine-io/runmachine/proto
+)
+
+...
+
+```
+
+**NOTE**: In the future, we'll support more languages than Golang.

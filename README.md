@@ -49,7 +49,21 @@ No API extensions. No custom API resources.
 
 * Partitioning
 
-TODO
+To support highly-distributed hardware environments with many physical sites,
+`runmachine` is designed from the beginning to be a shard-aware system. In
+other words, the data housed in a particular installation of `runmachine` is
+*always* contained in a unique partition, and data is stored in backend storage
+systems along with that partitioning key.
+
+Having this partitioning key stored in backend storage means that two
+installations of `runmachine` can have identically-named objects (such as
+providers named `site1.row1.rack1.node1`) and both of these `runmachine`
+systems can share data with the other and handle each other's data without
+worrying about violating uniqueness constraints within their own installation.
+
+This enables many use cases, including federation (the ability for users of two
+unique `runmachine` installations to operate on the other), data export/import
+scenarios, and common "reseller" setups.
 
 ### Project scope
 
@@ -84,7 +98,27 @@ hardware in an organization.
 
 #### Resource claims, reservations and scheduling
 
-TODO
+The natural counterpart to inventory management functionality is the ability
+for users to consume that inventory in a controlled manner. Therefore, it is
+essential that `runmachine` provide robust resource reservation and scheduling
+along with transactionally safe resource claiming across the known set of
+inventory.
+
+In addition to an accurate view of the system's capacity, a good scheduling and
+reservation system **must** have deep knowledge of the following in order to
+make accurate and reliable placement decisions:
+
+* capabilities/features of the providers of inventory
+* how providers are grouped
+* the relative distance between providers (important to satisfy affinity and
+  anti-affinity constraints)
+
+Furthermore, a reliable placement engine **must** be the system that handles
+the atomic consumption of resources against the known system inventory. It is
+*not* possible to build a reliable placement engine unless the resource-claim
+process is fully owned and guaranteed by the placement engine itself. Too many
+race conditions occur and too much system flakiness is observed when outside
+agents are allowed to control all or part of the resource-claim process.
 
 #### Structure object metadata and tagging
 

@@ -120,9 +120,19 @@ process is fully owned and guaranteed by the placement engine itself. Too many
 race conditions occur and too much system flakiness is observed when outside
 agents are allowed to control all or part of the resource-claim process.
 
-#### Structure object metadata and tagging
+#### Structured object metadata and tagging
 
-TODO
+Most software needs to provide users (and the system itself) with the ability
+to associate information with objects the system knows about. This information
+is sometimes called "metadata" (data **about** data).
+
+However, when there are no rules to how metadata can be used to catalog objects
+in the system, maintainability and interoperability of the software is
+decreased.
+
+`runmachine` tries to balance the need for robust, full-featured cataloguing of
+objects with these concerns about long-term code maintenance and
+interoperability.
 
 #### Start and stop machine resources
 

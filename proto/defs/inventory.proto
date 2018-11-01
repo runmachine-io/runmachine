@@ -3,13 +3,13 @@ syntax = "proto3";
 package runm;
 
 import "provider.proto";
-import "resource_class.proto";
+import "resource_type.proto";
 
 // An inventory is a record of the capacity of a provider to provide some
 // amount of resources
 message Inventory {
     Provider provider = 1;
-    ResourceClass resource_class = 2;
+    ResourceType resource_type = 2;
     uint64 total = 3;
     uint64 reserved_for_provider = 4;
     uint64 min_unit = 5;

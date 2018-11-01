@@ -4,13 +4,13 @@ package runm;
 
 import "consumer.proto";
 import "provider.proto";
-import "resource_class.proto";
+import "resource_type.proto";
 
 // An allocation is a record of how many resources a particular consumer is
 // consuming on a set pf provider during a given time interval.
 message AllocationItem {
     Provider provider = 1;
-    ResourceClass resource_class = 2;
+    ResourceType resource_type = 2;
     uint64 used = 3;
 }
 

@@ -6,7 +6,7 @@ import "wrappers.proto";
 
 // A class of consumable resource provided by one or more providers in the
 // system.
-message ResourceClass {
+message ResourceType {
     string code = 1;
     StringValue description = 2;
 }

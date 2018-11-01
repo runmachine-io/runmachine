@@ -13,7 +13,7 @@ import "inventory.proto";
 import "partition.proto";
 import "project.proto";
 import "provider.proto";
-import "resource_class.proto";
+import "resource_type.proto";
 import "search.proto";
 import "session.proto";
 import "usage.proto";
@@ -24,20 +24,20 @@ import "wrappers.proto";
 // resource providers, the transactional claims of resources, basic scheduling
 // and reservations.
 service RunmResource {
-    // Returns information about a specific resource class
-    rpc resource_class_get(ResourceClassGetRequest) returns (ResourceClass) {}
+    // Returns information about a specific resource type
+    rpc resource_type_get(ResourceTypeGetRequest) returns (ResourceType) {}
 
-    // Deletes one or more resource classes
-    rpc resource_class_delete(ResourceClassDeleteRequest) returns (
-        ResourceClassDeleteResponse) {}
+    // Deletes one or more resource types
+    rpc resource_type_delete(ResourceTypeDeleteRequest) returns (
+        ResourceTypeDeleteResponse) {}
 
-    // Set information about a specific resource class
-    rpc resource_class_set(ResourceClassSetRequest) returns (
-        ResourceClassSetResponse) {}
+    // Set information about a specific resource type
+    rpc resource_type_set(ResourceTypeSetRequest) returns (
+        ResourceTypeSetResponse) {}
 
-    // Returns information about multiple resource classs
-    rpc resource_class_list(ResourceClassListRequest) returns (
-        stream ResourceClass) {}
+    // Returns information about multiple resource types
+    rpc resource_type_list(ResourceTypeListRequest) returns (
+        stream ResourceType) {}
 
     // Returns information about a specific capability
     rpc capability_get(CapabilityGetRequest) returns (Capability) {}
@@ -55,7 +55,7 @@ service RunmResource {
     // Returns information about a specific consumer type
     rpc consumer_type_get(ConsumerTypeGetRequest) returns (ConsumerType) {}
 
-    // Deletes one or more consumer typees
+    // Deletes one or more consumer types
     rpc consumer_type_delete(ConsumerTypeDeleteRequest) returns (
         ConsumerTypeDeleteResponse) {}
 
@@ -70,7 +70,7 @@ service RunmResource {
     // Returns information about a specific consumer type
     rpc consumer_get(ConsumerGetRequest) returns (Consumer) {}
 
-    // Deletes one or more consumer typees
+    // Deletes one or more consumer types
     rpc consumer_delete(ConsumerDeleteRequest) returns (
         ConsumerDeleteResponse) {}
 
@@ -83,7 +83,7 @@ service RunmResource {
     // Returns information about a specific distance type
     rpc distance_type_get(DistanceTypeGetRequest) returns (DistanceType) {}
 
-    // Deletes one or more distance typees
+    // Deletes one or more distance types
     rpc distance_type_delete(DistanceTypeDeleteRequest) returns (
         DistanceTypeDeleteResponse) {}
 
@@ -111,7 +111,7 @@ service RunmResource {
     // Returns information about a specific provider type
     rpc provider_type_get(ProviderTypeGetRequest) returns (ProviderType) {}
 
-    // Deletes one or more provider typees
+    // Deletes one or more provider types
     rpc provider_type_delete(ProviderTypeDeleteRequest) returns (
         ProviderTypeDeleteResponse) {}
 
@@ -201,43 +201,43 @@ service RunmResource {
 }
 
 // RPC Request payload messages
-message ResourceClassGetRequest {
+message ResourceTypeGetRequest {
     Session session = 1;
     string search = 2;
 }
 
-message ResourceClassSetFields {
+message ResourceTypeSetFields {
     StringValue code = 1;
     StringValue description = 2;
 }
 
-message ResourceClassSetRequest {
+message ResourceTypeSetRequest {
     Session session = 1;
-    ResourceClass resource_class = 2;
-    ResourceClassSetFields changed = 3;
+    ResourceType resource_type = 2;
+    ResourceTypeSetFields changed = 3;
 }
 
-message ResourceClassSetResponse {
+message ResourceTypeSetResponse {
     repeated Error errors = 1;
-    ResourceClass resource_class = 2;
+    ResourceType resource_type = 2;
 }
 
-message ResourceClassListFilters {
+message ResourceTypeListFilters {
     repeated string identifiers = 1;
 }
 
-message ResourceClassListRequest {
+message ResourceTypeListRequest {
     Session session = 1;
-    ResourceClassListFilters filters = 2;
+    ResourceTypeListFilters filters = 2;
     SearchOptions options = 3;
 }
 
-message ResourceClassDeleteRequest {
+message ResourceTypeDeleteRequest {
     Session session = 1;
-    repeated ResourceClass resource_classes = 2;
+    repeated ResourceType resource_types = 2;
 }
 
-message ResourceClassDeleteResponse {
+message ResourceTypeDeleteResponse {
     repeated Error errors = 1;
     uint64 num_deleted = 2;
 }
@@ -616,7 +616,7 @@ message ProviderInventoriesSetResponse {
 }
 
 message ProviderInventoriesListFilters {
-    repeated string resource_class_identifiers = 1;
+    repeated string resource_type_identifiers = 1;
 }
 
 message ProviderInventoriesListRequest {
@@ -627,7 +627,7 @@ message ProviderInventoriesListRequest {
 }
 
 message ProviderAllocationsListFilters {
-    repeated string resource_class_identifiers = 1;
+    repeated string resource_type_identifiers = 1;
     int64 claim_time = 2;
     int64 release_time = 3;
 }

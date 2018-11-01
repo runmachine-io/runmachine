@@ -5,7 +5,7 @@ package runm;
 import "distance.proto";
 import "property.proto";
 import "provider.proto";
-import "resource_class.proto";
+import "resource_type.proto";
 import "capability.proto";
 
 message ProviderGroupConstraint {
@@ -33,7 +33,7 @@ message CapabilityConstraint {
 }
 
 message ResourceConstraint {
-    ResourceClass resource_class = 1;
+    ResourceType resource_type = 1;
     uint64 amount = 2;
     // Providers having a matching amount of resources available to meet this
     // constraint must also match these capability constraints. This is a way

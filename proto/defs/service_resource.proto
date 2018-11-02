@@ -628,8 +628,8 @@ message ProviderInventoriesListRequest {
 
 message ProviderAllocationsListFilters {
     repeated string resource_type_identifiers = 1;
-    int64 claim_time = 2;
-    int64 release_time = 3;
+    int64 start_time = 2;
+    int64 end_time = 3;
 }
 
 message ProviderAllocationsListRequest {
@@ -777,8 +777,8 @@ message ClaimExecuteResponse {
 message UsageListFilters {
     repeated string user_identifiers = 1;
     repeated string project_identifiers = 2;
-    int64 claim_time = 3;
-    int64 release_time = 4;
+    int64 start_time = 3;
+    int64 end_time = 4;
 }
 
 message UsageListRequest {

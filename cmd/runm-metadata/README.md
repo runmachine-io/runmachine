@@ -1,4 +1,4 @@
-# runm-metadata
+# The `runm-metadata` service
 
 Most software needs to provide users (and the system itself) with the ability
 to associate information with objects the system knows about. This information

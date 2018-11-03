@@ -64,7 +64,7 @@ func addConnectFlags() {
 			"RUNM_HOST",
 			defaultConnectHost,
 		),
-		"The host where the Procession API can be found.",
+		"The host where the runmachine API can be found.",
 	)
 	RootCommand.PersistentFlags().IntVarP(
 		&connectPort,
@@ -73,7 +73,7 @@ func addConnectFlags() {
 			"RUNM_PORT",
 			defaultConnectPort,
 		),
-		"The port where the Procession API can be found.",
+		"The port where the runmachine API can be found.",
 	)
 	RootCommand.PersistentFlags().StringVarP(
 		&authUser,
@@ -82,7 +82,7 @@ func addConnectFlags() {
 			"RUNM_USER",
 			"",
 		),
-		"UUID, email or \"slug\" of the user to log in to Procession with.",
+		"UUID, email or \"slug\" of the user to execute commands with.",
 	)
 }
 

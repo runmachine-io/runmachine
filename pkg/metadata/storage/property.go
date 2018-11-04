@@ -24,7 +24,7 @@ func (s *Store) PropertySchemaList(
 	ctx, cancel := s.requestCtx()
 	resp, err := kv.Get(
 		ctx,
-		"",
+		"/",
 		etcd.WithPrefix(),
 		// TODO(jaypipes): Factor the sorting/limiting/pagination out into a
 		// separate utility

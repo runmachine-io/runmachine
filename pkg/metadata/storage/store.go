@@ -15,13 +15,17 @@ const (
 	// store stuff in etcd. This namespace comes directly UNDER the
 	// Config.EtcdKeyPrefix namespace
 	_SERVICE_KEY = "runm-metadata/"
+
+	// Used when creating empty leaf-level keys or key namespaces
+	_NO_VALUE = ""
 )
 
 type Store struct {
-	log    *logging.Logs
-	cfg    *config.Config
-	client *etcd.Client
-	kv     etcd.KV
+	log          *logging.Logs
+	cfg          *config.Config
+	client       *etcd.Client
+	kv           etcd.KV
+	bootstrapped bool
 }
 
 func New(log *logging.Logs, cfg *config.Config) (*Store, error) {
@@ -29,12 +33,18 @@ func New(log *logging.Logs, cfg *config.Config) (*Store, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Store{
+	s := &Store{
 		log:    log,
 		cfg:    cfg,
 		client: client,
 		kv:     etcd_namespace.NewKV(client.KV, cfg.EtcdKeyPrefix+_SERVICE_KEY),
-	}, nil
+	}
+	ctx, cancel := s.requestCtx()
+	defer cancel()
+	if err = s.bootstrap(ctx); err != nil {
+		return nil, err
+	}
+	return s, nil
 }
 
 func (s *Store) requestCtx() (context.Context, context.CancelFunc) {

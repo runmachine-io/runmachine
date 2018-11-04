@@ -146,7 +146,6 @@ $OBJECTS (e.g. $ROOT/partitions/by-uuid/d79706e01fbd4e48aae89209061cdb71/objects
   /by-uuid
     /54b8d8d7e24c43799bbf70c16e921e52
     /60b53edd16764f6abc081ddb0a73e69c
-    ...
 ```
 
 As you see above, the `$OBJECTS/by-type` key namespace contains additional key
@@ -160,7 +159,31 @@ The example key layout above shows a partition that has two image objects named
 
 ### The `$PROPERTY_SCHEMAS` key namespace
 
-TODO
+The `$PROPERTY_SCHEMAS` key namespace stores information about the property
+schemas defined within a partition. The key namespace itself has a very simple
+layout:
+
+```
+$PROPERTY_SCHEMAS (e.g. $ROOT/partitions/by-uuid/d79706e01fbd4e48aae89209061cdb71/property-schemas)
+  /by-type
+    /runm.image
+      /architecture
+        /1 -> serialized PropertySchema protobuffer message
+        /2 -> serialized PropertySchema protobuffer message
+    /runm.machine
+      /appgroup
+        /1 -> serialized PropertySchema protobuffer message
+```
+
+Above shows an example key namespace for `$PROPERTY_SCHEMAS` in a partition
+where an administrator has defined two property schemas, one for `runm.image`
+object types with a property key of "architecture" and another for
+`runm.machine` object types with a property key of "appgroup". Under the key
+namespace representing the property schemas for an object type (e.g.
+`$PROPERTY_SCHEMAS/by-type/runm.image`) are additional key namespaces, one for
+each property key that has a schema defined for it. The valued keys in those
+key namespaces have keys representing the schema *version* and the value is a
+serialized Protobuffer message representing the [property schema](../../../proto/defs/property_schema.proto) itself.
 
 ### The `$PROPERTIES` key namespace
 

@@ -224,4 +224,19 @@ particular property.
 
 ### The `$TAGS` key namespace
 
-TODO
+Finally, the `$TAGS` namespace contains all the simple string tags for objects
+in a partition. The structure of this key namespace looks like this:
+
+```
+$TAGS (e.g. $ROOT/partitions/by-uuid/d79706e01fbd4e48aae89209061cdb71/tags)
+  /unicorn
+    /54b8d8d7e24c43799bbf70c16e921e52
+    /60b53edd16764f6abc081ddb0a73e69c
+  /rainbow
+    /3bf3e700f11b4a7cb99244c554b3a856
+```
+
+Above, we have three objects in the partition that have tags decorating them.
+Two objects are decorated with a tag "unicorn" and one object is decorated with
+a tag "rainbow". The lowest-level keys within each tag key namespace are the
+object's UUID.

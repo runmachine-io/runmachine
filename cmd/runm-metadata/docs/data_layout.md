@@ -149,9 +149,9 @@ $OBJECTS (e.g. $ROOT/partitions/by-uuid/d79706e01fbd4e48aae89209061cdb71/objects
           /by-name
             /instance0-appgroupA -> 3bf3e700f11b4a7cb99244c554b3a856
   /by-uuid
-    /54b8d8d7e24c43799bbf70c16e921e52
-    /60b53edd16764f6abc081ddb0a73e69c
-    /3bf3e700f11b4a7cb99244c554b3a856
+    /54b8d8d7e24c43799bbf70c16e921e52 -> serialized Object protobuffer message
+    /60b53edd16764f6abc081ddb0a73e69c -> serialized Object protobuffer message
+    /3bf3e700f11b4a7cb99244c554b3a856 -> serialized Object protobuffer message
 ```
 
 As you see above, the `$OBJECTS/by-type` key namespace contains additional key
@@ -163,6 +163,15 @@ The example key layout above shows a partition that has two image objects named
 `rhel7.5.2` and `debian-sid` in a project with the UUID
 `eff883565999408dbec3eb5070d5ecf5`. There is also a machine object named
 `instance0-appgroupA` with the UUID of `3bf3e700f11b4a7cb99244c554b3a856`.
+
+The valued keys in the `$OBJECTS/by-uuid` key namespace have the UUID of the
+object as the key and a serialized Google Protobuffer message of the
+[Object](../../../proto/defs/object.proto) itself as the value.
+
+**NOTE**: Having the serialized Object protobuffer message as the value of the
+`%OBJECTS/by-uuid` key namespace's valued keys allows the `runm-metadata`
+service to answer queries like "get me the tags on this object" with an
+efficient single key fetch operation.
 
 ### The `$PROPERTY_SCHEMAS` key namespace
 

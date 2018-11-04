@@ -143,9 +143,15 @@ $OBJECTS (e.g. $ROOT/partitions/by-uuid/d79706e01fbd4e48aae89209061cdb71/objects
           /by-name
             /rhel7.5.2 -> 54b8d8d7e24c43799bbf70c16e921e52
             /debian-sid -> 60b53edd16764f6abc081ddb0a73e69c
+    /runm.machine
+      /by-project
+        /eff883565999408dbec3eb5070d5ecf5
+          /by-name
+            /instance0-appgroupA -> 3bf3e700f11b4a7cb99244c554b3a856
   /by-uuid
     /54b8d8d7e24c43799bbf70c16e921e52
     /60b53edd16764f6abc081ddb0a73e69c
+    /3bf3e700f11b4a7cb99244c554b3a856
 ```
 
 As you see above, the `$OBJECTS/by-type` key namespace contains additional key
@@ -155,7 +161,8 @@ particular name.
 
 The example key layout above shows a partition that has two image objects named
 `rhel7.5.2` and `debian-sid` in a project with the UUID
-`eff883565999408dbec3eb5070d5ecf5`.
+`eff883565999408dbec3eb5070d5ecf5`. There is also a machine object named
+`instance0-appgroupA` with the UUID of `3bf3e700f11b4a7cb99244c554b3a856`.
 
 ### The `$PROPERTY_SCHEMAS` key namespace
 
@@ -187,7 +194,33 @@ serialized Protobuffer message representing the [property schema](../../../proto
 
 ### The `$PROPERTIES` key namespace
 
-TODO
+The `$PROPERTIES` key namespace stores information about the object properties
+for all objects known to the partition.
+
+Here is an example layout for a partition with a two `runm.image` objects and
+one `runm.machine` object, with the image objects having an "architecture"
+property associated with them and the machine object having an "appgroup"
+property associated with it:
+
+```
+$PROPERTIES (e.g. $ROOT/partitions/by-uuid/d79706e01fbd4e48aae89209061cdb71/properties)
+  /by-type
+    /runm.image
+      /architecture
+        /x86_64
+          /54b8d8d7e24c43799bbf70c16e921e52
+        /arm64
+          /60b53edd16764f6abc081ddb0a73e69c
+    /runm.machine
+      /appgroup
+        /A
+          /3bf3e700f11b4a7cb99244c554b3a856
+```
+
+`runm-metadata` can use the key namespaces defined in the `$PROPERTIES` key
+namespace to look up objects that have a particular property (key, or key and
+value). The lowest-level keys are UUIDs for the objects that match that
+particular property.
 
 ### The `$TAGS` key namespace
 

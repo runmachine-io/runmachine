@@ -155,9 +155,9 @@ Compose/Swarm and Mesos are all good fits).
 
 * A job scheduling system
 
-`runmachine` doesn't aim to provide some generation job/batch scheduling
-system. If you need this kind of functionality, look at Kubernetes (it has a
-Job object that suits this use case) or Mesos.
+`runmachine` doesn't aim to provide some general job/batch scheduling system.
+If you need this kind of functionality, look at Kubernetes (it has a Job object
+that suits this use case) or Mesos.
 
 * A hypervisor or virtualization abstraction system
 

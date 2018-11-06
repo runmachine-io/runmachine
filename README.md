@@ -138,6 +138,43 @@ interoperability.
 
 TODO
 
+#### What `runmachine` IS NOT
+
+While it is important to define the scope of a project, it's also helpful to
+list some things that `runmachine` is **NOT** trying to be.
+
+Here are things that `runmachine` has no interest in being:
+
+* A container orchestration system
+
+There are plenty of excellent container orchestration systems around. If what
+you need is a system to describe how different application processes,
+microservices daemons or application containers relate to each other, use one
+of the excellent existing container orchestration systems (Kubernetes, Docker
+Compose/Swarm and Mesos are all good fits).
+
+* A job scheduling system
+
+`runmachine` doesn't aim to provide some generation job/batch scheduling
+system. If you need this kind of functionality, look at Kubernetes (it has a
+Job object that suits this use case) or Mesos.
+
+* A hypervisor or virtualization abstraction system
+
+We also have no interest in writing hypervisor software or in providing an
+abstraction layer over multiple hypervisors. If you need a super-flexible,
+vendor-neutral hypervisor abstraction layer, look at things like OpenStack
+Nova or the libvirt/kubevirt projects.
+
+* A traditional "enterprise" managed virtualization system
+
+`runmachine` has no intention of filling use cases that traditional heavyweight
+managed virtualization platforms like VMWare/vCenter provide. If you (think
+you) need functionality around "live migration" or "live resize" or
+"distributed resource scheduling", `runmachine` is definitely not something you
+should look at. Instead, fork your money over to VMWare or try to use the
+functionality provided by OpenStack Nova's vCenter virtualization driver.
+
 ## Architecture
 
 TODO

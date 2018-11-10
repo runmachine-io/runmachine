@@ -10,7 +10,8 @@ SRC = $(shell find . -type f -name '*.go' -not -path "*/$(VENDOR)/*" -not -path 
 
 .PHONY: test
 test: generated fmtcheck vet
-	go test $(PKGS)
+	@echo "Running all go tests ... "
+	@go test $(PKGS)
 
 $(GO_PROTOC_BIN):
 	@go get -u github.com/golang/protobuf/protoc-gen-go
@@ -25,7 +26,7 @@ generated: $(GO_PROTOC_BIN)
 
 $(GOMETALINTER):
 	go get -u github.com/alecthomas/gometalinter
-	$(GOMETALINTER) --install &> /dev/null
+	$(GOMETALINTER) --install
 
 .PHONY: lint
 lint: $(GOMETALINTER)
@@ -42,7 +43,7 @@ fmtcheck:
 
 .PHONY: vet
 vet:
-	go vet $(PKGS)
+	@go vet $(PKGS)
 
 .PHONY: cover
 cover:
@@ -55,5 +56,14 @@ cover:
 
 build: test
 	@echo "building all binaries as Docker images ..."
-	docker build -t runm-metadata:$(VERSION) . -f cmd/runm-metadata/Dockerfile
-	docker build -t runm:$(VERSION) . -f cmd/runm/Dockerfile
+	docker build -q --label built-by=runmachine.io -t runm/base . -f cmd/Dockerfile
+	docker build -q --label built-by=runmachine.io -t runm/metadata:$(VERSION) . -f cmd/runm-metadata/Dockerfile
+	docker build -q --label built-by=runmachine.io -t runm/runm:$(VERSION) . -f cmd/runm/Dockerfile
+
+.PHONY: clean
+clean:
+	@echo "Cleaning up all built Docker images ..."
+	@docker image prune --force > /dev/null 2>&1
+	@for i in $( docker image list | grep runm | awk '{print $3}' ); do \
+		docker image rm $i --force > /dev/null 2>&1; \
+	done

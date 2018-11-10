@@ -7,6 +7,8 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	pb "github.com/runmachine-io/runmachine/proto"
 )
 
 const (
@@ -83,8 +85,29 @@ func exitNoRecords() {
 	os.Exit(0)
 }
 
+// getSession constructs a Session protobuffer message by looking for
+// partition, user and project information in a variety of configuration file,
+// CLI argument and environs variable locations.
+func getSession() *pb.Session {
+	user := authUser
+	project := authProject
+	partition := authPartition
+	if user == "" || project == "" || partition == "" {
+		// TODO(jaypipes): Load a YAML configuration file where we might be
+		// able to find missing user/project/partition information
+	}
+	return &pb.Session{
+		User:    user,
+		Project: project,
+		Partition: &pb.Partition{
+			Uuid: partition,
+		},
+	}
+}
+
 func connect() *grpc.ClientConn {
 	var opts []grpc.DialOption
+	// TODO(jaypipes): Don't hardcode this to WithInsecure
 	opts = append(opts, grpc.WithInsecure())
 	addr := fmt.Sprintf("%s:%d", connectHost, connectPort)
 	printIf(verbose, "connecting to runm services at %s\n", addr)

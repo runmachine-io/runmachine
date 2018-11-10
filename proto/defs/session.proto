@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package runm;
 
+import "partition.proto";
+
 // A session is a context for a series of requests made to a service endpoint
 // or executor
 message Session {
@@ -14,5 +16,5 @@ message Session {
     // indicates that the user is accessing information across multiple
     // partitions. This partition identifier, when not empty, will be used when
     // constructing new providers or when listing providers.
-    string partition = 3;
+    Partition partition = 3;
 }

@@ -30,12 +30,14 @@ const (
 )
 
 var (
-	quiet       bool
-	verbose     bool
-	connectHost string
-	connectPort int
-	authUser    string
-	clientLog   Logger
+	quiet         bool
+	verbose       bool
+	connectHost   string
+	connectPort   int
+	authPartition string
+	authUser      string
+	authProject   string
+	clientLog     Logger
 )
 
 var RootCommand = &cobra.Command{
@@ -76,6 +78,15 @@ func addConnectFlags() {
 		"The port where the runmachine API can be found.",
 	)
 	RootCommand.PersistentFlags().StringVarP(
+		&authPartition,
+		"partition", "",
+		envutil.WithDefault(
+			"RUNM_PARTITION",
+			"",
+		),
+		"UUID or name of the partition to execute commands against.",
+	)
+	RootCommand.PersistentFlags().StringVarP(
 		&authUser,
 		"user", "",
 		envutil.WithDefault(
@@ -83,6 +94,15 @@ func addConnectFlags() {
 			"",
 		),
 		"UUID, email or \"slug\" of the user to execute commands with.",
+	)
+	RootCommand.PersistentFlags().StringVarP(
+		&authProject,
+		"project", "",
+		envutil.WithDefault(
+			"RUNM_PROJECT",
+			"",
+		),
+		"UUID or name of the project to execute commands under.",
 	)
 }
 

@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"fmt"
 
 	etcd "github.com/coreos/etcd/clientv3"
 	etcd_namespace "github.com/coreos/etcd/clientv3/namespace"
@@ -13,11 +14,15 @@ import (
 const (
 	// The key that carves out a namespace for the runm-metadata service to
 	// store stuff in etcd. This namespace comes directly UNDER the
-	// Config.EtcdKeyPrefix namespace
+	// Config.EtcdKeyPrefix namespace. This namespace is referred to as $ROOT
 	_SERVICE_KEY = "runm-metadata/"
 
 	// Used when creating empty leaf-level keys or key namespaces
 	_NO_VALUE = ""
+
+	// $PARTITION refers to the key namespace at
+	// $ROOT/partitions/by-uuid/{partition_uuid}
+	_PARTITIONS_BY_UUID_KEY = "partitions/by-uuid/%s/"
 )
 
 type Store struct {
@@ -45,6 +50,11 @@ func New(log *logging.Logs, cfg *config.Config) (*Store, error) {
 		return nil, err
 	}
 	return s, nil
+}
+
+func (s *Store) kvPartition(partition string) etcd.KV {
+	key := fmt.Sprintf(_PARTITIONS_BY_UUID_KEY, partition)
+	return etcd_namespace.NewKV(s.kv, key)
 }
 
 func (s *Store) requestCtx() (context.Context, context.CancelFunc) {

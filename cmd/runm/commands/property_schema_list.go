@@ -26,7 +26,7 @@ func propertySchemaList(cmd *cobra.Command, args []string) {
 
 	client := pb.NewRunmMetadataClient(conn)
 	req := &pb.PropertySchemaListRequest{
-		Session: &pb.Session{},
+		Session: getSession(),
 		Filters: filters,
 	}
 	stream, err := client.PropertySchemaList(context.Background(), req)

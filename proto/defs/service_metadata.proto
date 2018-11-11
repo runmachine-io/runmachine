@@ -165,34 +165,23 @@ message ObjectDeleteResponse {
 
 message PropertySchemaGetRequest {
     Session session = 1;
-    // If nil, we use the session's partition
-    Partition partition = 2;
-    ObjectType object_type = 3;
+    string partition = 2;
+    string object_type = 3;
     string key = 4;
-    UInt32Value version = 5;
-}
-
-message PropertySchemaSetFields {
-    Partition partition = 1;
-    ObjectType object_type = 2;
-    StringValue key = 3;
-    StringValue schema = 4;
 }
 
 message PropertySchemaSetRequest {
     Session session = 1;
     PropertySchema property_schema = 2;
-    PropertySchemaSetFields changed = 3;
 }
 
 message PropertySchemaSetResponse {
-    repeated Error errors = 1;
     PropertySchema property_schema = 2;
 }
 
 message PropertySchemaListFilters {
-    repeated Partition partitions = 1;
-    repeated ObjectType object_types = 2;
+    repeated string partitions = 1;
+    repeated string object_types = 2;
     repeated string keys = 3;
 }
 

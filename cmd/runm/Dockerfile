@@ -10,5 +10,4 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags '-extldflag
 FROM scratch
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=builder /bin/runm /bin/runm
-WORKDIR /bin
-CMD ["./runm"]
+ENTRYPOINT ["/bin/runm"]

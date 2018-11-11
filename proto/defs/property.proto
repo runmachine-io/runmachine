@@ -44,16 +44,22 @@ message PropertyAccessPermission {
 // }
 //
 // The adminstrator would then save a PropertySchema message with an
-// object_type of "image", a key of "application_code", a version of 1, and a
-// schema of the above serialized JSONSchema document.
+// object_type of "image", a key of "application_code", and a schema of the
+// above serialized JSONSchema document.
 //
 // Once saved to the property service, the "application_type" property item
 // values would be validated against the above schema before being stored.
 message PropertySchema {
-    Partition partition = 1;
-    ObjectType object_type = 2;
+    // UUID of the partition this property schema has been created in
+    string partition = 1;
+    // String code of the object type the property schema applies to. e.g.
+    // "runm.machine"
+    string object_type = 2;
+    // The property key to apply the property schema to. e.g. "architecture"
     string key = 3;
-    uint32 version = 4;
-    string schema = 5;
+    // a YAML document describing the format and type constraints of the value
+    // of the property
+    string schema = 4;
+    // Collection of access permissions applied to this property schema
     repeated PropertyAccessPermission access_permissions = 50;
 }

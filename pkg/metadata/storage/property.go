@@ -32,12 +32,11 @@ func (s *Store) PropertySchemaGet(
 	partition string,
 	objType string,
 	propSchemaKey string,
-	version uint32,
 ) (*pb.PropertySchema, error) {
 	kv := s.kvPropertySchemas(partition)
 	ctx, cancel := s.requestCtx()
 	defer cancel()
-	key := fmt.Sprintf("by-type/%s/%s/%d", objType, propSchemaKey, version)
+	key := fmt.Sprintf("by-type/%s/%s", objType, propSchemaKey)
 	gr, err := kv.Get(ctx, key, etcd.WithPrefix())
 	if err != nil {
 		s.log.ERR("error getting key %s: %v", key, err)
@@ -64,7 +63,7 @@ func (s *Store) PropertySchemaList(
 	if req.Filters != nil {
 		if len(req.Filters.Partitions) > 0 {
 			// TODO(jaypipes): loop through all searched-for partitions
-			partition = req.Filters.Partitions[0].Uuid
+			partition = req.Filters.Partitions[0]
 		}
 	}
 	kv := s.kvPropertySchemas(partition)
@@ -84,4 +83,38 @@ func (s *Store) PropertySchemaList(
 	}
 
 	return cursor.NewEtcdPBCursor(resp), nil
+}
+
+// PropertySchemaCreate writes the supplied PropertySchema object to the key at
+// $PARTITION/property-schemas/by-type/{object_type}/{property_key}/{version}
+func (s *Store) PropertySchemaCreate(
+	obj *pb.PropertySchema,
+) error {
+	kv := s.kvPropertySchemas(obj.Partition)
+	ctx, cancel := s.requestCtx()
+	defer cancel()
+
+	objType := obj.ObjectType
+	propSchemaKey := obj.Key
+
+	key := fmt.Sprintf("by-type/%s/%s", objType, propSchemaKey)
+	value, err := proto.Marshal(obj)
+	if err != nil {
+		return err
+	}
+	// create the property schema using a transaction that ensures another
+	// thread hasn't created a property schema with the same key underneath us
+	onSuccess := etcd.OpPut(key, string(value))
+	// Ensure the key doesn't yet exist
+	compare := etcd.Compare(etcd.Version(key), "=", 0)
+	resp, err := kv.Txn(ctx).If(compare).Then(onSuccess).Commit()
+
+	if err != nil {
+		s.log.ERR("failed to create txn in etcd: %v", err)
+		return err
+	} else if resp.Succeeded == false {
+		s.log.L3("another thread already created key %s.", key)
+		return errors.ErrGenerationConflict
+	}
+	return nil
 }

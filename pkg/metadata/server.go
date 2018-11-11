@@ -10,6 +10,10 @@ import (
 	"github.com/runmachine-io/runmachine/pkg/metadata/storage"
 )
 
+var (
+	ErrBadInput = fmt.Errorf("Bad input. Check response.Errors for more information")
+)
+
 type Server struct {
 	log      *logging.Logs
 	cfg      *config.Config

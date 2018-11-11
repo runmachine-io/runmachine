@@ -18,7 +18,7 @@ if debug_enabled; then
     set -o xtrace
 fi
 
-docker image inspect runm-metadata:$VERSION >/dev/null 2>&1
+docker image inspect runm/metadata:$VERSION >/dev/null 2>&1
 if [ $? -ne 0 ]; then
     make build
 fi
@@ -47,7 +47,7 @@ if ! container_is_running "$METADATA_CONTAINER_NAME"; then
         -e RUNM_LOG_LEVEL=3 \
         -e RUNM_METADATA_STORAGE_ETCD_ENDPOINTS="http://$etcd_container_ip:2379" \
         -e RUNM_METADATA_STORAGE_ETCD_KEY_PREFIX="$METADATA_CONTAINER_NAME" \
-        runm-metadata:$VERSION >/dev/null 2>&1
+        runm/metadata:$VERSION >/dev/null 2>&1
     print_if_verbose "ok."
 fi
 
@@ -66,4 +66,4 @@ print_if_verbose "Running \`runm $EXEC_COMMAND\` in single-use docker container.
 print_if_verbose "*********************************************************************"
 print_if_verbose ""
 
-docker run --rm --network host runm:$VERSION runm $EXEC_COMMAND
+docker run --rm --network host runm/runm:$VERSION $EXEC_COMMAND

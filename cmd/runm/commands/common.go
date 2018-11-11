@@ -38,11 +38,7 @@ for the --user CLI option.
 Please check the RUNM_HOST and RUNM_PORT environment
 variables or --host and --port  CLI options.
 `
-	errForbidden     = `Error: you are not authorized to perform that action.`
-	errBadVisibility = `Error: incorrect value for visibility.
-
-Valid values are PUBLIC or PRIVATE.
-`
+	errForbidden = `Error: you are not authorized to perform that action.`
 )
 
 const (

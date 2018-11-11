@@ -1,10 +1,8 @@
 package commands
 
 import (
-	"fmt"
 	"io"
 	"os"
-	"strconv"
 
 	"golang.org/x/net/context"
 
@@ -48,31 +46,15 @@ func propertySchemaList(cmd *cobra.Command, args []string) {
 		"Partition",
 		"Object Type",
 		"Key",
-		"Version",
 		"Schema",
 	}
 	rows := make([][]string, len(msgs))
-	for x, msg := range msgs {
-		partition := ""
-		if msg.Partition != nil {
-			partition = fmt.Sprintf(
-				"%s",
-				msg.Partition.DisplayName,
-			)
-		}
-		objType := ""
-		if msg.ObjectType != nil {
-			objType = fmt.Sprintf(
-				"%s",
-				msg.ObjectType.Code,
-			)
-		}
+	for x, obj := range msgs {
 		rows[x] = []string{
-			partition,
-			objType,
-			msg.Key,
-			strconv.Itoa(int(msg.Version)),
-			msg.Schema,
+			obj.Partition,
+			obj.ObjectType,
+			obj.Key,
+			obj.Schema,
 		}
 	}
 	table := tablewriter.NewWriter(os.Stdout)

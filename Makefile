@@ -63,7 +63,7 @@ build: test
 .PHONY: clean
 clean:
 	@echo "Cleaning up all built Docker images ..."
-	@docker image prune --force > /dev/null 2>&1
 	@for i in $( docker image list | grep runm | awk '{print $3}' ); do \
-		docker image rm $i --force > /dev/null 2>&1; \
+		docker image rm $i --force; \
 	done
+	@docker image prune --force

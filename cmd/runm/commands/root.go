@@ -111,6 +111,7 @@ func init() {
 
 	RootCommand.AddCommand(helpEnvCommand)
 	RootCommand.AddCommand(propertySchemaCommand)
+	RootCommand.AddCommand(partitionCommand)
 	RootCommand.SilenceUsage = true
 
 	clientLog = log.New(ioutil.Discard, "", 0)

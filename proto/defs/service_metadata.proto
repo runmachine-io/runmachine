@@ -19,9 +19,6 @@ import "wrappers.proto";
 // administrator may create property schema items which dictate the required
 // format or type of a property's values.
 service RunmMetadata {
-    // Returns information about a specific partition
-    rpc partition_get(PartitionGetRequest) returns (Partition) {}
-
     // Returns information about multiple partitions
     rpc partition_list(PartitionListRequest) returns (
         stream Partition) {}
@@ -79,13 +76,6 @@ service RunmMetadata {
     // Returns property items for an object
     rpc object_properties_list(ObjectPropertiesListRequest) returns (
         stream Property) {}
-}
-
-// RPC Request payload messages
-message PartitionGetRequest {
-    Session session = 1;
-    // Simple string lookup. search may be a UUID or a human-readable name
-    string search = 2;
 }
 
 message PartitionListFilters {

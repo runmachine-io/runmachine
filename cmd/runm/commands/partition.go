@@ -11,4 +11,5 @@ var partitionCommand = &cobra.Command{
 
 func init() {
 	partitionCommand.AddCommand(partitionListCommand)
+	partitionCommand.AddCommand(partitionGetCommand)
 }

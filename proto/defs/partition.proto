@@ -9,6 +9,5 @@ package runm;
 // working with or have access to.
 message Partition {
     string uuid = 1;
-    string display_name = 2;
-    string slug = 3;
+    string name = 2;
 }

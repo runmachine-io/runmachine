@@ -13,12 +13,6 @@ import (
 const (
 	// The one-time-use bootstrap token is stored here
 	_BOOTSTRAP_KEY = "bootstrap"
-	// The index into partition UUIDs by name
-	_PARTITIONS_BY_NAME_KEY = "partitions/by-name/%s"
-	// The index into Partition protobuffer objects by UUID
-	// $PARTITION refers to the key namespace at
-	// $ROOT/partitions/by-uuid/{partition_uuid}
-	_PARTITIONS_BY_UUID_KEY = "partitions/by-uuid/%s/"
 )
 
 var (
@@ -56,12 +50,12 @@ func (s *Store) keyNamespaceExists(
 	kv etcd.KV,
 	ns string,
 ) (bool, error) {
-	gr, err := kv.Get(ctx, ns, etcd.WithPrefix())
+	gr, err := kv.Get(ctx, ns, etcd.WithPrefix(), etcd.WithCountOnly())
 	if err != nil {
 		s.log.ERR("error getting key namespace %s: %v", ns, err)
 		return false, err
 	}
-	return (len(gr.Kvs) > 0), nil
+	return (gr.Count > 0), nil
 }
 
 // createKeyNamespace creates the supplied key namespace. If the namespace

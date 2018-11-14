@@ -46,6 +46,9 @@ type Config struct {
 	EtcdConnectTimeoutSeconds time.Duration
 	EtcdRequestTimeoutSeconds time.Duration
 	EtcdDialTimeoutSeconds    time.Duration
+	// The value of a one-time-use token that can be used to bootstrap a
+	// runmachine deployment with a new partition by an unauthenticated user
+	BootstrapToken string
 }
 
 func ConfigFromOpts() *Config {
@@ -92,15 +95,15 @@ func ConfigFromOpts() *Config {
 		"Name to use when registering with the service registry",
 	)
 
-	etcdEndpointsStr := flag.String(
+	optEtcdEndpointsStr := flag.String(
 		"storage-etcd-endpoints",
 		envutil.WithDefault(
 			"RUNM_METADATA_STORAGE_ETCD_ENDPOINTS", defaultEtcdEndpoints,
 		),
 		"Comma-delimited list of etcd3 endpoints to use for metadata storage",
 	)
-	endpoints := etcdNormalizeEndpoints(*etcdEndpointsStr)
-	keyPrefix := flag.String(
+	endpoints := etcdNormalizeEndpoints(*optEtcdEndpointsStr)
+	optKeyPrefix := flag.String(
 		"storage-etcd-key-prefix",
 		strings.TrimRight(
 			envutil.WithDefault(
@@ -111,7 +114,7 @@ func ConfigFromOpts() *Config {
 		)+"/",
 		"Prefix to use to segregate all runm-metadata inside etcd3",
 	)
-	connectTimeout := flag.Int(
+	optConnectTimeout := flag.Int(
 		"storage-etcd-connect-timeout-seconds",
 		envutil.WithDefaultInt(
 			"RUNM_METADATA_STORAGE_ETCD_CONNECT_TIMEOUT_SECONDS",
@@ -119,7 +122,7 @@ func ConfigFromOpts() *Config {
 		),
 		"Total number of seconds to attempt connection to etcd",
 	)
-	requestTimeout := flag.Int(
+	optRequestTimeout := flag.Int(
 		"storage-etcd-request-timeout-seconds",
 		envutil.WithDefaultInt(
 			"RUNM_METADATA_STORAGE_ETCD_REQUEST_TIMEOUT_SECONDS",
@@ -127,13 +130,21 @@ func ConfigFromOpts() *Config {
 		),
 		"Number of seconds to timeout attempting each individual etcd request",
 	)
-	dialTimeout := flag.Int(
+	optDialTimeout := flag.Int(
 		"storage-etcd-dial-timeout-seconds",
 		envutil.WithDefaultInt(
 			"RUNM_METADATA_STORAGE_ETCD_DIAL_TIMEOUT_SECONDS",
 			defaultEtcdDialTimeoutSeconds,
 		),
 		"Number of seconds to timeout attempting each connect/dial attempt to etcd",
+	)
+	optBootstrapToken := flag.String(
+		"bootstrap-token",
+		envutil.WithDefault(
+			"RUNM_METADATA_BOOTSTRAP_TOKEN", "",
+		),
+		"Value of the one-time-use bootstrap token to create on startup. "+
+			"The default is empty string, which means that no bootstrap token will be created.",
 	)
 
 	flag.Parse()
@@ -146,10 +157,11 @@ func ConfigFromOpts() *Config {
 		BindPort:                  *optPort,
 		ServiceName:               *optServiceName,
 		EtcdEndpoints:             endpoints,
-		EtcdKeyPrefix:             *keyPrefix,
-		EtcdConnectTimeoutSeconds: time.Duration(*connectTimeout) * time.Second,
-		EtcdRequestTimeoutSeconds: time.Duration(*requestTimeout) * time.Second,
-		EtcdDialTimeoutSeconds:    time.Duration(*dialTimeout) * time.Second,
+		EtcdKeyPrefix:             *optKeyPrefix,
+		EtcdConnectTimeoutSeconds: time.Duration(*optConnectTimeout) * time.Second,
+		EtcdRequestTimeoutSeconds: time.Duration(*optRequestTimeout) * time.Second,
+		EtcdDialTimeoutSeconds:    time.Duration(*optDialTimeout) * time.Second,
+		BootstrapToken:            *optBootstrapToken,
 	}
 }
 

@@ -21,7 +21,8 @@ var (
 
 // init is responsible for creating the etcd key namespace layout that the
 // `runm-metadata` service uses to store and fetch information about the
-// objects in the system.
+// objects in the system. It is also responsible for creating the one-time-use
+// bootstrap token if necessary.
 func (s *Store) init(ctx context.Context) error {
 	// ensure that we have the $ROOT key namespace created
 	rootNs := "/"
@@ -33,9 +34,28 @@ func (s *Store) init(ctx context.Context) error {
 		if err = s.keyNamespaceCreate(ctx, s.kv, rootNs); err != nil {
 			return err
 		}
-		s.log.L3("init: root namespace created")
+		s.log.L2("init: root namespace created")
 	} else {
 		s.log.L3("init: root namespace already exists")
+	}
+
+	if s.cfg.BootstrapToken == "" {
+		s.log.L3("init: no bootstrap token specified. ensuring bootstrap token does not exist...")
+		ctx, cancel := s.requestCtx()
+		defer cancel()
+
+		if _, err := s.kv.Delete(ctx, _BOOTSTRAP_KEY); err != nil {
+			s.log.ERR("failed trying to delete the bootstrap key: %s", err)
+		}
+	} else {
+		s.log.L3("init: ensuring bootstrap token...")
+		ctx, cancel := s.requestCtx()
+		defer cancel()
+
+		if _, err := s.kv.Put(ctx, _BOOTSTRAP_KEY, s.cfg.BootstrapToken); err != nil {
+			s.log.ERR("failed trying to create the bootstrap key: %s", err)
+		}
+		s.log.L2("init: bootstrap token created")
 	}
 	return nil
 }

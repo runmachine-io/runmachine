@@ -47,6 +47,7 @@ if ! container_is_running "$METADATA_CONTAINER_NAME"; then
         -e RUNM_LOG_LEVEL=3 \
         -e RUNM_METADATA_STORAGE_ETCD_ENDPOINTS="http://$etcd_container_ip:2379" \
         -e RUNM_METADATA_STORAGE_ETCD_KEY_PREFIX="$METADATA_CONTAINER_NAME" \
+        -e RUNM_METADATA_BOOTSTRAP_TOKEN="bootstrapme" \
         runm/metadata:$VERSION >/dev/null 2>&1
     print_if_verbose "ok."
 fi

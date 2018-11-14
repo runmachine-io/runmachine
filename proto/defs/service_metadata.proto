@@ -19,6 +19,10 @@ import "wrappers.proto";
 // administrator may create property schema items which dictate the required
 // format or type of a property's values.
 service RunmMetadata {
+    // Creates minimal information for service to run, including a name for a
+    // partition.
+    rpc bootstrap(BootstrapRequest) returns (BootstrapResponse) {}
+
     // Returns information about a specific partition
     rpc partition_get(PartitionGetRequest) returns (Partition) {}
 
@@ -79,6 +83,23 @@ service RunmMetadata {
     // Returns property items for an object
     rpc object_properties_list(ObjectPropertiesListRequest) returns (
         stream Property) {}
+}
+
+message BootstrapRequest {
+    // The value of the one-time bootstrap token. This must match exactly the
+    // value of the `--bootstrap-token` used when starting the metadata service
+    // and this is destroyed at the successful execution of a bootstrap
+    // operation.
+    string bootstrap_token = 1;
+    // A human-readable name for the partition you want to ensure exists
+    string partition_name = 2;
+    // Useful if you want to pre-determine partition UUIDs or during testing
+    StringValue partition_uuid = 3;
+}
+
+message BootstrapResponse {
+    // The partition that was created as part of the bootstrap process
+    Partition partition = 1;
 }
 
 message PartitionGetRequest {

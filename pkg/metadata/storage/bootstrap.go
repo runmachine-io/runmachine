@@ -154,7 +154,7 @@ func (s *Store) Bootstrap(
 		// Add the entry for the index by partition name
 		etcd.OpPut(partByNameKey, partUuid),
 		// Add the entry for the index by partition UUID
-		etcd.OpPut(partByNameKey, partValue),
+		etcd.OpPut(partByUuidKey, partValue),
 		// And remove the one-time-use bootstrap token/key
 		etcd.OpDelete(_BOOTSTRAP_KEY),
 	}

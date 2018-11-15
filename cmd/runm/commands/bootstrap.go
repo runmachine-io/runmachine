@@ -10,10 +10,6 @@ import (
 )
 
 var (
-	// Value of the bootstrap token the user provided
-	bootstrapToken string
-	// Human-readable name for the partition to create
-	bootstrapPartitionName string
 	// Optional UUID for the partition to create
 	bootstrapPartitionUuid string
 )

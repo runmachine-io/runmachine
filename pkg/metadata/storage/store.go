@@ -14,10 +14,13 @@ const (
 	// The key that carves out a namespace for the runm-metadata service to
 	// store stuff in etcd. This namespace comes directly UNDER the
 	// Config.EtcdKeyPrefix namespace. This namespace is referred to as $ROOT
-	_SERVICE_KEY = "runm-metadata/"
+	_SERVICE_KEY = "runm/metadata/"
 
 	// Used when creating empty leaf-level keys or key namespaces
 	_NO_VALUE = ""
+
+	// Used in ranges when limiting searches on UUID indexes
+	_MAX_UUID = "ffffffffffffffffffffffffffffffff"
 )
 
 type Store struct {
@@ -38,9 +41,7 @@ func New(log *logging.Logs, cfg *config.Config) (*Store, error) {
 		client: client,
 		kv:     etcd_namespace.NewKV(client.KV, cfg.EtcdKeyPrefix+_SERVICE_KEY),
 	}
-	ctx, cancel := s.requestCtx()
-	defer cancel()
-	if err = s.init(ctx); err != nil {
+	if err = s.ensureBootstrap(); err != nil {
 		return nil, err
 	}
 	return s, nil

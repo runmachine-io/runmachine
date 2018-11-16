@@ -1,9 +1,8 @@
 package storage
 
 import (
-	"fmt"
-
 	etcd "github.com/coreos/etcd/clientv3"
+	etcd_namespace "github.com/coreos/etcd/clientv3/namespace"
 	"github.com/gogo/protobuf/proto"
 
 	"github.com/runmachine-io/runmachine/pkg/abstract"
@@ -19,12 +18,18 @@ const (
 	// listed by UUID with values containing Partition protobuffer records.
 	_PARTITIONS_KEY = "partitions/"
 	// The index into partition UUIDs by name
-	_PARTITIONS_BY_NAME_KEY = "partitions/by-name/%s"
+	_PARTITIONS_BY_NAME_KEY = "partitions/by-name/"
 	// The index into Partition protobuffer objects by UUID
-	// $PARTITION refers to the key namespace at
-	// $ROOT/partitions/by-uuid/{partition_uuid}
-	_PARTITIONS_BY_UUID_KEY = "partitions/by-uuid/%s"
+	_PARTITIONS_BY_UUID_KEY = "partitions/by-uuid/"
 )
+
+// kvPartition returns an etcd.KV that is nahespaced to a specific partition.
+// We use the nomenclature $PARTITION to refer to this key namespace.
+// $PARTITION refers to $ROOT/partitions/by-uuid/{partition_uuid}/
+func (s *Store) kvPartition(partUuid string) etcd.KV {
+	key := _PARTITIONS_BY_UUID_KEY + partUuid + "/"
+	return etcd_namespace.NewKV(s.kv, key)
+}
 
 // PartitionGet returns a Partition protobuffer message that has the UUID or
 // name of the supplied search string
@@ -40,7 +45,7 @@ func (s *Store) PartitionGet(
 
 	// First try looking up the partition by UUID. If not, match, then we try
 	// the by-name index...
-	byUuidKey := fmt.Sprintf(_PARTITIONS_BY_UUID_KEY, search)
+	byUuidKey := _PARTITIONS_BY_UUID_KEY + search
 	grByUuid, err := s.kv.Get(ctx, byUuidKey)
 	if err != nil {
 		s.log.ERR("error getting key %s: %v", byUuidKey, err)
@@ -48,7 +53,7 @@ func (s *Store) PartitionGet(
 	}
 
 	if grByUuid.Count == 0 {
-		byNameKey := fmt.Sprintf(_PARTITIONS_BY_NAME_KEY, search)
+		byNameKey := _PARTITIONS_BY_NAME_KEY + search
 		grByName, err := s.kv.Get(ctx, byNameKey)
 		if err != nil {
 			s.log.ERR("error getting key %s: %v", byNameKey, err)
@@ -58,7 +63,7 @@ func (s *Store) PartitionGet(
 			return nil, errors.ErrNotFound
 		}
 		partUuid := grByName.Kvs[0].Value
-		byUuidKey = fmt.Sprintf(_PARTITIONS_BY_UUID_KEY, partUuid)
+		byUuidKey = _PARTITIONS_BY_UUID_KEY + string(partUuid)
 		grByUuid, err = s.kv.Get(ctx, byUuidKey)
 		if err != nil {
 			s.log.ERR("error getting key %s: %v", byUuidKey, err)
@@ -87,15 +92,23 @@ func (s *Store) PartitionList(
 ) (abstract.Cursor, error) {
 	ctx, cancel := s.requestCtx()
 	defer cancel()
-
 	resp, err := s.kv.Get(
 		ctx,
-		_PARTITIONS_KEY,
+		_PARTITIONS_BY_UUID_KEY,
 		etcd.WithPrefix(),
+		// Since each partition will have a key namespace equal to
+		// (_PARTITIONS_BY_UUID_KEY + {UUID} + "/") we need to limit our search
+		// range to end with only the fixed 32 characters that all UUID values
+		// comprise. This allows $ROOT/partitions/by-uuid/{UUID} to be returned
+		// but prevents $ROOT/partitions/by-uuid/{UUID}/ from being returned.
+		// The latter is the partition key namespace. The former is the
+		// partition key that contains a serialized Protobuffer object.
+		etcd.WithRange(_PARTITIONS_BY_UUID_KEY+_MAX_UUID),
 		// TODO(jaypipes): Factor the sorting/limiting/pagination out into a
 		// separate utility
 		etcd.WithSort(etcd.SortByKey, etcd.SortAscend),
 	)
+
 	if err != nil {
 		s.log.ERR("error listing partitions: %v", err)
 		return nil, err

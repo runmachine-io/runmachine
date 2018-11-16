@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	etcd "github.com/coreos/etcd/clientv3"
+	etcd_namespace "github.com/coreos/etcd/clientv3/namespace"
 	"github.com/gogo/protobuf/proto"
 
 	"github.com/runmachine-io/runmachine/pkg/abstract"
@@ -21,10 +22,16 @@ const (
 	// The index into partition UUIDs by name
 	_PARTITIONS_BY_NAME_KEY = "partitions/by-name/%s"
 	// The index into Partition protobuffer objects by UUID
-	// $PARTITION refers to the key namespace at
-	// $ROOT/partitions/by-uuid/{partition_uuid}
 	_PARTITIONS_BY_UUID_KEY = "partitions/by-uuid/%s"
 )
+
+// kvPartition returns an etcd.KV that is nahespaced to a specific partition.
+// We use the nomenclature $PARTITION to refer to this key namespace.
+// $PARTITION refers to $ROOT/partitions/by-uuid/{partition_uuid}/
+func (s *Store) kvPartition(partition string) etcd.KV {
+	key := fmt.Sprintf(_PARTITIONS_BY_UUID_KEY, partition) + "/"
+	return etcd_namespace.NewKV(s.kv, key)
+}
 
 // PartitionGet returns a Partition protobuffer message that has the UUID or
 // name of the supplied search string

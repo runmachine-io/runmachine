@@ -54,14 +54,14 @@ The root of the tree of keys in `etcd` used by the `runm-metadata` service
 always starts at the value designated by the
 `RUNM_METADATA_STORAGE_ETCD_KEY_PREFIX` environs variable (or equivalent
 `--storage-etcd-key-prefix` command line option) and is followed by the
-constant `runm-metadata`.
+constant `runm/metadata`.
 
 So, for example, assuming that `RUNM_METADATA_STORAGE_ETCD_KEY_PREFIX` is its
 default value of `/`. The top-level key namespace in `etcd` for all
-`runm-metadata` data would be the string `runm-metadata/`:
+`runm-metadata` data would be the string `runm/metadata/`:
 
 ```
-runm-metadata/
+runm/metadata/
 ```
 
 This value will be referred to as the `$ROOT` key namespace (or just `$ROOT`
@@ -69,7 +69,7 @@ for short) in this document.
 
 ### The `$ROOT` key namespace
 
-The keys directly Under `$ROOT` describe the known **partitions** in the
+The keys directly under `$ROOT` describe the known **partitions** in the
 system. It's easier to explain the structure by looking at a sample key
 namespace layout.
 

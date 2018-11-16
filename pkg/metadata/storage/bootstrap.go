@@ -76,8 +76,8 @@ func (s *Store) Bootstrap(
 		return ErrBootstrapFailed
 	}
 
-	partByNameKey := fmt.Sprintf(_PARTITIONS_BY_NAME_KEY, partName)
-	partByUuidKey := fmt.Sprintf(_PARTITIONS_BY_UUID_KEY, partUuid)
+	partByNameKey := _PARTITIONS_BY_NAME_KEY + partName
+	partByUuidKey := _PARTITIONS_BY_UUID_KEY + partUuid
 
 	partValue, err := proto.Marshal(
 		&pb.Partition{

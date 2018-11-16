@@ -18,6 +18,9 @@ const (
 
 	// Used when creating empty leaf-level keys or key namespaces
 	_NO_VALUE = ""
+
+	// Used in ranges when limiting searches on UUID indexes
+	_MAX_UUID = "ffffffffffffffffffffffffffffffff"
 )
 
 type Store struct {

@@ -16,7 +16,7 @@ var errNilPtr = errors.New("destination pointer is nil") // embedded in descript
 // idxScan member is not protected.
 type EtcdPBCursor struct {
 	resp    *etcd.GetResponse
-	idxScan int // The last record that was Scan()'d
+	idxScan int64 // The last record that was Scan()'d
 }
 
 func NewEtcdPBCursor(resp *etcd.GetResponse) *EtcdPBCursor {
@@ -28,9 +28,10 @@ func NewEtcdPBCursor(resp *etcd.GetResponse) *EtcdPBCursor {
 
 func (c *EtcdPBCursor) Scan(dest ...interface{}) error {
 	idx := c.idxScan
-	if idx > len(c.resp.Kvs) {
+	if idx > c.resp.Count {
 		return fmt.Errorf("attempted to read past end of etcd cursor.")
 	}
+
 	if err := copyToDest(dest[0], c.resp.Kvs[idx].Key); err != nil {
 		return err
 	}
@@ -69,7 +70,7 @@ func cloneBytes(b []byte) []byte {
 }
 
 func (c *EtcdPBCursor) Next() bool {
-	cnt := len(c.resp.Kvs)
+	cnt := c.resp.Count
 	return cnt > 0 && c.idxScan < cnt
 }
 

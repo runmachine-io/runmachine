@@ -79,12 +79,16 @@ func (s *Store) Bootstrap(
 	partByNameKey := fmt.Sprintf(_PARTITIONS_BY_NAME_KEY, partName)
 	partByUuidKey := fmt.Sprintf(_PARTITIONS_BY_UUID_KEY, partUuid)
 
-	partValue := proto.MarshalTextString(
+	partValue, err := proto.Marshal(
 		&pb.Partition{
 			Name: partName,
 			Uuid: partUuid,
 		},
 	)
+	if err != nil {
+		s.log.ERR("bootstrap: failed to serialize object: %v", err)
+		return ErrBootstrapFailed
+	}
 
 	// creates the partition keys and deletes the one-time bootstrap token
 	// using a transaction that ensures if another thread modified anything
@@ -93,7 +97,7 @@ func (s *Store) Bootstrap(
 		// Add the entry for the index by partition name
 		etcd.OpPut(partByNameKey, partUuid),
 		// Add the entry for the index by partition UUID
-		etcd.OpPut(partByUuidKey, partValue),
+		etcd.OpPut(partByUuidKey, string(partValue)),
 		// And remove the one-time-use bootstrap token/key
 		etcd.OpDelete(_BOOTSTRAP_KEY),
 	}

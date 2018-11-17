@@ -28,12 +28,14 @@ func (s *Store) kvPropertySchemas(
 	)
 }
 
+// PropertySchemaGet returns a property schema by partition UUID, object type
+// and property key.
 func (s *Store) PropertySchemaGet(
-	partition string,
+	partUuid string,
 	objType string,
 	propSchemaKey string,
 ) (*pb.PropertySchema, error) {
-	kv := s.kvPropertySchemas(partition)
+	kv := s.kvPropertySchemas(partUuid)
 	ctx, cancel := s.requestCtx()
 	defer cancel()
 	key := fmt.Sprintf("by-type/%s/%s", objType, propSchemaKey)
@@ -42,10 +44,9 @@ func (s *Store) PropertySchemaGet(
 		s.log.ERR("error getting key %s: %v", key, err)
 		return nil, err
 	}
-	nKeys := len(gr.Kvs)
-	if nKeys == 0 {
+	if gr.Count == 0 {
 		return nil, errors.ErrNotFound
-	} else if nKeys > 1 {
+	} else if gr.Count > 1 {
 		return nil, errors.ErrMultipleRecords
 	}
 	var obj *pb.PropertySchema
@@ -59,7 +60,7 @@ func (s *Store) PropertySchemaGet(
 func (s *Store) PropertySchemaList(
 	req *pb.PropertySchemaListRequest,
 ) (abstract.Cursor, error) {
-	partition := req.Session.Partition.Uuid
+	partition := req.Session.Partition
 	if req.Filters != nil {
 		if len(req.Filters.Partitions) > 0 {
 			// TODO(jaypipes): loop through all searched-for partitions

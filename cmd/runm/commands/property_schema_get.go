@@ -41,14 +41,10 @@ func propertySchemaGet(cmd *cobra.Command, args []string) {
 	client := pb.NewRunmMetadataClient(conn)
 
 	session := getSession()
-	partition := session.Partition.Uuid
-	if propSchemaGetPartition != "" {
-		partition = propSchemaGetPartition
-	}
 
 	req := &pb.PropertySchemaGetRequest{
 		Session:    session,
-		Partition:  partition,
+		Partition:  propSchemaGetPartition,
 		ObjectType: args[0],
 		Key:        args[1],
 	}

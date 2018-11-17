@@ -20,6 +20,10 @@ var (
 		codes.NotFound,
 		"object could not be found.",
 	)
+	ErrPartitionUnknown = status.Errorf(
+		codes.FailedPrecondition,
+		"unknown partition.",
+	)
 	ErrPartitionRequired = status.Errorf(
 		codes.FailedPrecondition,
 		"partition is required.",
@@ -55,19 +59,34 @@ func (s *Server) PropertySchemaGet(
 	ctx context.Context,
 	req *pb.PropertySchemaGetRequest,
 ) (*pb.PropertySchema, error) {
+	// TODO(jaypipes): AUTHZ check user can read property schemas
 	if req.ObjectType == "" {
 		return nil, ErrObjectTypeRequired
 	}
+	// TODO(jaypipes): Look up whether object type exists
+
+	var partSearch string
 	if req.Partition == "" {
+		// Use the session's partition if not specified
+		partSearch = req.Session.Partition
+	}
+	if partSearch == "" {
 		return nil, ErrPartitionRequired
 	}
+	part, err := s.store.PartitionGet(partSearch)
+	if err != nil {
+		if err == errors.ErrNotFound {
+			return nil, ErrPartitionUnknown
+		}
+		return nil, ErrUnknown
+	}
+	// TODO(jaypipes): AUTHZ check user can use partition
+
 	if req.Key == "" {
 		return nil, ErrPropertyKeyRequired
 	}
-	// TODO(jaypipes): AUTHZ check user can specify partition
-	// TODO(jaypipes): AUTHZ check user can read property schemas
 	obj, err := s.store.PropertySchemaGet(
-		req.Partition,
+		part.Uuid,
 		req.ObjectType,
 		req.Key,
 	)

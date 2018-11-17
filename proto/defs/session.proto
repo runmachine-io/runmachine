@@ -12,9 +12,6 @@ message Session {
     // A project is a tenant/account the user belongs to. It associates a user
     // with billing and quotas.
     string project = 2;
-    // The partition that the user is "targeting". This can be empty, which
-    // indicates that the user is accessing information across multiple
-    // partitions. This partition identifier, when not empty, will be used when
-    // constructing new providers or when listing providers.
-    Partition partition = 3;
+    // The partition that the user is "targeting".
+    string partition = 3;
 }

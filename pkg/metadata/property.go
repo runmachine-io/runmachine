@@ -9,6 +9,7 @@ import (
 	pb "github.com/runmachine-io/runmachine/proto"
 
 	"github.com/runmachine-io/runmachine/pkg/errors"
+	"github.com/runmachine-io/runmachine/pkg/metadata/storage"
 )
 
 var (
@@ -99,11 +100,60 @@ func (s *Server) PropertySchemaGet(
 	return obj, nil
 }
 
+func (s *Server) buildPropertySchemaFilter(
+	filter *pb.PropertySchemaListFilter,
+) (*storage.PropertySchemaFilter, error) {
+	f := &storage.PropertySchemaFilter{}
+	if filter.Partition != "" {
+		// Verify that the partition exists and translate names to UUIDs
+		part, err := s.store.PartitionGet(filter.Partition)
+		if err != nil {
+			return nil, err
+		} else {
+			f.PartitionUuid = part.Uuid
+		}
+	}
+	return f, nil
+}
+
+// PropertySchemaList streams PropertySchema protobuffer messages representing
+// property schemas that matched the requested filters
 func (s *Server) PropertySchemaList(
 	req *pb.PropertySchemaListRequest,
 	stream pb.RunmMetadata_PropertySchemaListServer,
 ) error {
-	cur, err := s.store.PropertySchemaList(req)
+	any := make([]*storage.PropertySchemaFilter, 0)
+	for _, filter := range req.Any {
+		if f, err := s.buildPropertySchemaFilter(filter); err != nil {
+			if err == errors.ErrNotFound {
+				// Just return nil since clearly we can have no
+				// property schemas matching an unknown partition
+				return nil
+			}
+			return ErrUnknown
+		} else if f != nil {
+			any = append(any, f)
+		}
+	}
+	if len(any) == 0 {
+		// By default, filter by the session's partition
+		part, err := s.store.PartitionGet(req.Session.Partition)
+		if err != nil {
+			if err == errors.ErrNotFound {
+				// Just return nil since clearly we can have no
+				// property schemas matching an unknown partition
+				return nil
+			}
+			return ErrUnknown
+		}
+		any = append(
+			any,
+			&storage.PropertySchemaFilter{
+				PartitionUuid: part.Uuid,
+			},
+		)
+	}
+	cur, err := s.store.PropertySchemaList(any)
 	if err != nil {
 		return err
 	}

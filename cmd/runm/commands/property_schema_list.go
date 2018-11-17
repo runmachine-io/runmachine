@@ -18,14 +18,12 @@ var propertySchemaListCommand = &cobra.Command{
 }
 
 func propertySchemaList(cmd *cobra.Command, args []string) {
-	filters := &pb.PropertySchemaListFilters{}
 	conn := connect()
 	defer conn.Close()
 
 	client := pb.NewRunmMetadataClient(conn)
 	req := &pb.PropertySchemaListRequest{
 		Session: getSession(),
-		Filters: filters,
 	}
 	stream, err := client.PropertySchemaList(context.Background(), req)
 	exitIfConnectErr(err)

@@ -111,6 +111,7 @@ func init() {
 
 	RootCommand.AddCommand(helpEnvCommand)
 	RootCommand.AddCommand(bootstrapCommand)
+	RootCommand.AddCommand(objectTypeCommand)
 	RootCommand.AddCommand(propertySchemaCommand)
 	RootCommand.AddCommand(partitionCommand)
 	RootCommand.SilenceUsage = true

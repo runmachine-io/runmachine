@@ -79,6 +79,33 @@ func (s *Store) ensureObjectTypes() error {
 	return nil
 }
 
+// ObjectTypeGet returns an ObjectType protobuffer object having the supplied
+// code
+func (s *Store) ObjectTypeGet(
+	code string,
+) (*pb.ObjectType, error) {
+	ctx, cancel := s.requestCtx()
+	defer cancel()
+
+	key := _OBJECT_TYPES_KEY + code
+	resp, err := s.kv.Get(ctx, key)
+	if err != nil {
+		s.log.ERR("error getting key %s: %v", key, err)
+		return nil, err
+	}
+
+	if resp.Count == 0 {
+		return nil, errors.ErrNotFound
+	}
+
+	obj := &pb.ObjectType{}
+	if err = proto.Unmarshal(resp.Kvs[0].Value, obj); err != nil {
+		return nil, err
+	}
+
+	return obj, nil
+}
+
 // ObjectTypeList returns a cursor over zero or more ObjectType
 // protobuffer objects matching a set of supplied filters.
 func (s *Store) ObjectTypeList(
@@ -123,7 +150,7 @@ func (s *Store) objectTypesGetByCode(
 	return cursor.NewEtcdPBCursor(resp), nil
 }
 
-// ObjectTypeCreate writes the supplied ObjectType object to the key at
+// objectTypeCreate writes the supplied ObjectType object to the key at
 // $ROOT/object-types/{object_type_code}
 func (s *Store) objectTypeCreate(
 	obj *pb.ObjectType,

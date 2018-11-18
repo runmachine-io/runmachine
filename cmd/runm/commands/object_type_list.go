@@ -3,6 +3,7 @@ package commands
 import (
 	"io"
 	"os"
+	"strings"
 
 	"golang.org/x/net/context"
 
@@ -11,10 +12,56 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	usageObjectTypeFilterOption = `optional filter to apply.
+
+The filter value is the object type code to filter on. You can use an asterisk
+(*) to indicate a prefix match. For example, to list all object types that
+start with the string "runm", you would use --filter runm*
+`
+)
+
+var (
+	// CLI-provided set of --filter options
+	cliObjectTypeFilters = []string{}
+)
+
 var objectTypeListCommand = &cobra.Command{
 	Use:   "list",
 	Short: "List information about object types",
 	Run:   objectTypeList,
+}
+
+func setupObjectTypeListFlags() {
+	objectTypeListCommand.Flags().StringArrayVarP(
+		&cliObjectTypeFilters,
+		"filter", "f",
+		nil,
+		usageObjectTypeFilterOption,
+	)
+}
+
+func init() {
+	setupObjectTypeListFlags()
+}
+
+func processObjectTypeFilters() []*pb.ObjectTypeFilter {
+	filters := make([]*pb.ObjectTypeFilter, 0)
+	for _, f := range cliObjectTypeFilters {
+		usePrefix := false
+		if strings.HasSuffix(f, "*") {
+			usePrefix = true
+			f = strings.TrimRight(f, "*")
+		}
+		filters = append(
+			filters,
+			&pb.ObjectTypeFilter{
+				Code:      f,
+				UsePrefix: usePrefix,
+			},
+		)
+	}
+	return filters
 }
 
 func objectTypeList(cmd *cobra.Command, args []string) {
@@ -24,6 +71,11 @@ func objectTypeList(cmd *cobra.Command, args []string) {
 	client := pb.NewRunmMetadataClient(conn)
 	req := &pb.ObjectTypeListRequest{
 		Session: getSession(),
+	}
+
+	filters := processObjectTypeFilters()
+	if len(filters) > 0 {
+		req.Any = filters
 	}
 	stream, err := client.ObjectTypeList(context.Background(), req)
 	exitIfConnectErr(err)

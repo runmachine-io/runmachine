@@ -11,4 +11,5 @@ var objectTypeCommand = &cobra.Command{
 
 func init() {
 	objectTypeCommand.AddCommand(objectTypeListCommand)
+	objectTypeCommand.AddCommand(objectTypeGetCommand)
 }

@@ -93,11 +93,9 @@ func getSession() *pb.Session {
 		// able to find missing user/project/partition information
 	}
 	return &pb.Session{
-		User:    user,
-		Project: project,
-		Partition: &pb.Partition{
-			Uuid: partition,
-		},
+		User:      user,
+		Project:   project,
+		Partition: partition,
 	}
 }
 

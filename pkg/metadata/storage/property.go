@@ -28,12 +28,14 @@ func (s *Store) kvPropertySchemas(
 	)
 }
 
+// PropertySchemaGet returns a property schema by partition UUID, object type
+// and property key.
 func (s *Store) PropertySchemaGet(
-	partition string,
+	partUuid string,
 	objType string,
 	propSchemaKey string,
 ) (*pb.PropertySchema, error) {
-	kv := s.kvPropertySchemas(partition)
+	kv := s.kvPropertySchemas(partUuid)
 	ctx, cancel := s.requestCtx()
 	defer cancel()
 	key := fmt.Sprintf("by-type/%s/%s", objType, propSchemaKey)
@@ -42,10 +44,9 @@ func (s *Store) PropertySchemaGet(
 		s.log.ERR("error getting key %s: %v", key, err)
 		return nil, err
 	}
-	nKeys := len(gr.Kvs)
-	if nKeys == 0 {
+	if gr.Count == 0 {
 		return nil, errors.ErrNotFound
-	} else if nKeys > 1 {
+	} else if gr.Count > 1 {
 		return nil, errors.ErrMultipleRecords
 	}
 	var obj *pb.PropertySchema
@@ -56,19 +57,43 @@ func (s *Store) PropertySchemaGet(
 	return obj, nil
 }
 
+type PropertySchemaFilter struct {
+	PartitionUuid  string
+	ObjectTypeCode string
+	PropertyKey    string
+}
+
+// PropertySchemaList returns a cursor over zero or more PropertySchema
+// protobuffer objects matching a set of supplied filters.
 func (s *Store) PropertySchemaList(
-	req *pb.PropertySchemaListRequest,
+	any []*PropertySchemaFilter,
 ) (abstract.Cursor, error) {
-	partition := req.Session.Partition.Uuid
-	if req.Filters != nil {
-		if len(req.Filters.Partitions) > 0 {
-			// TODO(jaypipes): loop through all searched-for partitions
-			partition = req.Filters.Partitions[0]
+	// Iterate over the partitions in our filter list
+	partUuids := make([]string, 0)
+	for _, filter := range any {
+		if filter.PartitionUuid != "" {
+			partUuids = append(partUuids, filter.PartitionUuid)
 		}
 	}
-	kv := s.kvPropertySchemas(partition)
+	if len(partUuids) == 0 {
+		// TODO(jaypipes): Grab the list of all known partition UUIDs. Note
+		// that the metadata server will have already verified the calling user
+		// has the ability to see all partitions.
+	}
+	for _, partUuid := range partUuids {
+		// TODO(jaypipes): Merge all returned getters into a single cursor
+		return s.propertySchemaGetFilteredByPartition(partUuid)
+	}
+	return nil, nil
+}
+
+func (s *Store) propertySchemaGetFilteredByPartition(
+	partUuid string,
+) (abstract.Cursor, error) {
+	kv := s.kvPropertySchemas(partUuid)
 	ctx, cancel := s.requestCtx()
 	defer cancel()
+	// TODO(jaypipes): Handle the any filters
 	resp, err := kv.Get(
 		ctx,
 		"/",

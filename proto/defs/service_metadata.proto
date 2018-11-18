@@ -223,16 +223,18 @@ message PropertySchemaSetResponse {
     PropertySchema property_schema = 2;
 }
 
-message PropertySchemaListFilters {
-    repeated string partitions = 1;
-    repeated string object_types = 2;
-    repeated string keys = 3;
+message PropertySchemaListFilter {
+    string partition = 1;
+    string object_type = 2;
+    string key = 3;
 }
 
 message PropertySchemaListRequest {
     Session session = 1;
-    PropertySchemaListFilters filters = 2;
-    SearchOptions options = 3;
+    SearchOptions options = 2;
+    // A set of filter expressions that are OR'd together when determining
+    // matches
+    repeated PropertySchemaListFilter any = 3;
 }
 
 message PropertySchemaDeleteRequest {

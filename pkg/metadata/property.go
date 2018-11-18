@@ -9,6 +9,7 @@ import (
 	pb "github.com/runmachine-io/runmachine/proto"
 
 	"github.com/runmachine-io/runmachine/pkg/errors"
+	"github.com/runmachine-io/runmachine/pkg/metadata/storage"
 )
 
 var (
@@ -19,6 +20,10 @@ var (
 	ErrNotFound = status.Errorf(
 		codes.NotFound,
 		"object could not be found.",
+	)
+	ErrPartitionUnknown = status.Errorf(
+		codes.FailedPrecondition,
+		"unknown partition.",
 	)
 	ErrPartitionRequired = status.Errorf(
 		codes.FailedPrecondition,
@@ -55,19 +60,34 @@ func (s *Server) PropertySchemaGet(
 	ctx context.Context,
 	req *pb.PropertySchemaGetRequest,
 ) (*pb.PropertySchema, error) {
+	// TODO(jaypipes): AUTHZ check user can read property schemas
 	if req.ObjectType == "" {
 		return nil, ErrObjectTypeRequired
 	}
+	// TODO(jaypipes): Look up whether object type exists
+
+	var partSearch string
 	if req.Partition == "" {
+		// Use the session's partition if not specified
+		partSearch = req.Session.Partition
+	}
+	if partSearch == "" {
 		return nil, ErrPartitionRequired
 	}
+	part, err := s.store.PartitionGet(partSearch)
+	if err != nil {
+		if err == errors.ErrNotFound {
+			return nil, ErrPartitionUnknown
+		}
+		return nil, ErrUnknown
+	}
+	// TODO(jaypipes): AUTHZ check user can use partition
+
 	if req.Key == "" {
 		return nil, ErrPropertyKeyRequired
 	}
-	// TODO(jaypipes): AUTHZ check user can specify partition
-	// TODO(jaypipes): AUTHZ check user can read property schemas
 	obj, err := s.store.PropertySchemaGet(
-		req.Partition,
+		part.Uuid,
 		req.ObjectType,
 		req.Key,
 	)
@@ -80,11 +100,60 @@ func (s *Server) PropertySchemaGet(
 	return obj, nil
 }
 
+func (s *Server) buildPropertySchemaFilter(
+	filter *pb.PropertySchemaListFilter,
+) (*storage.PropertySchemaFilter, error) {
+	f := &storage.PropertySchemaFilter{}
+	if filter.Partition != "" {
+		// Verify that the partition exists and translate names to UUIDs
+		part, err := s.store.PartitionGet(filter.Partition)
+		if err != nil {
+			return nil, err
+		} else {
+			f.PartitionUuid = part.Uuid
+		}
+	}
+	return f, nil
+}
+
+// PropertySchemaList streams PropertySchema protobuffer messages representing
+// property schemas that matched the requested filters
 func (s *Server) PropertySchemaList(
 	req *pb.PropertySchemaListRequest,
 	stream pb.RunmMetadata_PropertySchemaListServer,
 ) error {
-	cur, err := s.store.PropertySchemaList(req)
+	any := make([]*storage.PropertySchemaFilter, 0)
+	for _, filter := range req.Any {
+		if f, err := s.buildPropertySchemaFilter(filter); err != nil {
+			if err == errors.ErrNotFound {
+				// Just return nil since clearly we can have no
+				// property schemas matching an unknown partition
+				return nil
+			}
+			return ErrUnknown
+		} else if f != nil {
+			any = append(any, f)
+		}
+	}
+	if len(any) == 0 {
+		// By default, filter by the session's partition
+		part, err := s.store.PartitionGet(req.Session.Partition)
+		if err != nil {
+			if err == errors.ErrNotFound {
+				// Just return nil since clearly we can have no
+				// property schemas matching an unknown partition
+				return nil
+			}
+			return ErrUnknown
+		}
+		any = append(
+			any,
+			&storage.PropertySchemaFilter{
+				PartitionUuid: part.Uuid,
+			},
+		)
+	}
+	cur, err := s.store.PropertySchemaList(any)
 	if err != nil {
 		return err
 	}

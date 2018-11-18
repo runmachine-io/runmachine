@@ -44,6 +44,9 @@ func New(log *logging.Logs, cfg *config.Config) (*Store, error) {
 	if err = s.ensureBootstrap(); err != nil {
 		return nil, err
 	}
+	if err = s.ensureObjectTypes(); err != nil {
+		return nil, err
+	}
 	return s, nil
 }
 

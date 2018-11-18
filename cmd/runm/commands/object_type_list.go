@@ -45,7 +45,7 @@ func init() {
 	setupObjectTypeListFlags()
 }
 
-func processObjectTypeFilters() []*pb.ObjectTypeFilter {
+func buildObjectTypeFilters() []*pb.ObjectTypeFilter {
 	filters := make([]*pb.ObjectTypeFilter, 0)
 	for _, f := range cliObjectTypeFilters {
 		usePrefix := false
@@ -71,11 +71,7 @@ func objectTypeList(cmd *cobra.Command, args []string) {
 	client := pb.NewRunmMetadataClient(conn)
 	req := &pb.ObjectTypeListRequest{
 		Session: getSession(),
-	}
-
-	filters := processObjectTypeFilters()
-	if len(filters) > 0 {
-		req.Any = filters
+		Any:     buildObjectTypeFilters(),
 	}
 	stream, err := client.ObjectTypeList(context.Background(), req)
 	exitIfConnectErr(err)

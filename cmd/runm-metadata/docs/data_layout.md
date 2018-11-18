@@ -69,12 +69,17 @@ for short) in this document.
 
 ### The `$ROOT` key namespace
 
-The keys directly under `$ROOT` describe the known **partitions** in the
-system. It's easier to explain the structure by looking at a sample key
-namespace layout.
+The keys directly under `$ROOT` describe the known **object types** and
+**partitions** in the system. It's easier to explain the structure by looking
+at a sample key namespace layout.
 
 ```
 $ROOT
+  object-types/
+    runm.image -> serialized ObjectType Protobuffer message
+    runm.machine -> serialized ObjectType Protobuffer message
+    runm.provider -> serialized ObjectType Protobuffer message
+    runm.provider_group -> serialized ObjectType Protobuffer message
   partitions/
     by-name/
       us-east.example.com -> d3873f99a21f45f5bce156c1f8b84b03
@@ -84,12 +89,18 @@ $ROOT
       d79706e01fbd4e48aae89209061cdb71
 ```
 
-Above, you can see that `$ROOT` has a single key namespace called `partitions`.
-This key has two key namespaces below it, called `by-name` and `by-uuid`.
+Above, you can see that `$ROOT` has two key namespaces, one called
+`object-types` and another called `partitions`.
 
-The `$ROOT/partitions/by-name/` key namespace contains [valued keys](#Valued
-keys), with the key being the human-readable name of the partition and the
-value being the UUID of that partition.
+The `$ROOT/object-types` key namespace has a set of [valued keys](#Valued keys)
+describing the object types known to the system.
+
+The `$ROOT/partitions/` key namespace has two key namespaces below it, called
+`by-name` and `by-uuid`.
+
+The `$ROOT/partitions/by-name/` key namespace contains valued keys, with the
+key being the human-readable name of the partition and the value being the UUID
+of that partition.
 
 Each UUID value listed in `$ROOT/partitions/by-name/` will be a key namespace
 under `$ROOT/partitions/by-uuid/` that contains *all* objects known to that

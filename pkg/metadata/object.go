@@ -47,31 +47,3 @@ func (s *Server) ObjectPropertiesSet(
 ) (*pb.ObjectPropertiesSetResponse, error) {
 	return nil, nil
 }
-
-func (s *Server) ObjectTypeDelete(
-	ctx context.Context,
-	req *pb.ObjectTypeDeleteRequest,
-) (*pb.ObjectTypeDeleteResponse, error) {
-	return nil, nil
-}
-
-func (s *Server) ObjectTypeGet(
-	ctx context.Context,
-	req *pb.ObjectTypeGetRequest,
-) (*pb.ObjectType, error) {
-	return nil, nil
-}
-
-func (s *Server) ObjectTypeList(
-	req *pb.ObjectTypeListRequest,
-	stream pb.RunmMetadata_ObjectTypeListServer,
-) error {
-	return nil
-}
-
-func (s *Server) ObjectTypeSet(
-	ctx context.Context,
-	req *pb.ObjectTypeSetRequest,
-) (*pb.ObjectTypeSetResponse, error) {
-	return nil, nil
-}

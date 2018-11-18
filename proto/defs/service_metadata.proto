@@ -33,14 +33,6 @@ service RunmMetadata {
     // Returns information about a specific object type
     rpc object_type_get(ObjectTypeGetRequest) returns (ObjectType) {}
 
-    // Deletes one or more object typees
-    rpc object_type_delete(ObjectTypeDeleteRequest) returns (
-        ObjectTypeDeleteResponse) {}
-
-    // Set information about a specific object type
-    rpc object_type_set(ObjectTypeSetRequest) returns (
-        ObjectTypeSetResponse) {}
-
     // Returns information about multiple object types
     rpc object_type_list(ObjectTypeListRequest) returns (
         stream ObjectType) {}
@@ -121,43 +113,23 @@ message PartitionListRequest {
 
 message ObjectTypeGetRequest {
     Session session = 1;
-    string search = 2;
+    // An exact-match search term on the object type's string code
+    string code = 2;
 }
 
-message ObjectTypeSetFields {
-    StringValue code = 1;
-    StringValue description = 2;
-}
-
-message ObjectTypeSetRequest {
-    Session session = 1;
-    ObjectType object_type = 2;
-    ObjectTypeSetFields changed = 3;
-}
-
-message ObjectTypeSetResponse {
-    repeated Error errors = 1;
-    ObjectType object_type = 2;
-}
-
-message ObjectTypeListFilters {
-    repeated string identifiers = 1;
+message ObjectTypeFilter {
+    // A search term on the object type's string code
+    string code = 1;
+    // Indicates the search should be a prefix expression
+    bool use_prefix = 2;
 }
 
 message ObjectTypeListRequest {
     Session session = 1;
-    ObjectTypeListFilters filters = 2;
-    SearchOptions options = 3;
-}
-
-message ObjectTypeDeleteRequest {
-    Session session = 1;
-    repeated ObjectType object_types = 2;
-}
-
-message ObjectTypeDeleteResponse {
-    repeated Error errors = 1;
-    uint64 num_deleted = 2;
+    SearchOptions options = 2;
+    // A set of filter expressions that are OR'd together when determining
+    // matches
+    repeated ObjectTypeFilter any = 3;
 }
 
 message ObjectGetRequest {

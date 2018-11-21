@@ -140,19 +140,12 @@ message ObjectSetResponse {
     Object object = 2;
 }
 
-message ObjectListFilters {
-    repeated Partition partitions = 1;
-    repeated ObjectType object_types = 2;
-    repeated string uuids = 3;
-    repeated string names = 4;
-}
-
 message ObjectListRequest {
     Session session = 1;
-    ObjectListFilters filters = 2;
-    SearchOptions options = 3;
-    // When grabbing object information, fetch the object's properties
-    bool fetch_properties = 50;
+    SearchOptions options = 2;
+    // A set of filter expressions that are OR'd together when determining
+    // matches
+    repeated ObjectFilter any = 3;
 }
 
 message ObjectDeleteRequest {

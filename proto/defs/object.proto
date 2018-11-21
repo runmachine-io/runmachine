@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package runm;
 
+import "object_type.proto";
+import "partition.proto";
 import "property.proto";
 
 // An externally-referenceable object in the runm system. All objects in the
@@ -39,4 +41,17 @@ message Object {
     repeated Property properties = 50;
     // The collection of simple string tags associated with the object
     repeated string tags = 51;
+}
+
+// Used in matching object records
+message ObjectFilter {
+    PartitionFilter partition = 1;
+    ObjectTypeFilter object_type = 2;
+    // The project the object must belong to, if the object type scope of this
+    // object is PROJECT
+    string project = 3;
+    // A search term on the object's UUID or name
+    string search = 4;
+    // Indicates the search should be a prefix expression
+    bool use_prefix = 5;
 }

@@ -110,7 +110,7 @@ func (s *Store) PartitionList(
 	any []*pb.PartitionFilter,
 ) (abstract.Cursor, error) {
 	if len(any) == 0 {
-		return s.partitionGetAll()
+		return s.partitionsGetAll()
 	}
 
 	// OK, we've got some filters so we need to process each filter, OR'ing
@@ -208,7 +208,7 @@ func (s *Store) partitionUuidsGetByName(
 	return res, nil
 }
 
-func (s *Store) partitionGetAll() (abstract.Cursor, error) {
+func (s *Store) partitionsGetAll() (abstract.Cursor, error) {
 	ctx, cancel := s.requestCtx()
 	defer cancel()
 

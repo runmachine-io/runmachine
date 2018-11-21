@@ -54,10 +54,9 @@ func (s *Server) PartitionList(
 		return err
 	}
 	defer cur.Close()
-	var key string
 	var msg pb.Partition
 	for cur.Next() {
-		if err = cur.Scan(&key, &msg); err != nil {
+		if err = cur.Scan(&msg); err != nil {
 			return err
 		}
 		if err = stream.Send(&msg); err != nil {

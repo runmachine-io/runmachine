@@ -147,7 +147,7 @@ func (s *Store) objectTypesGetByCode(
 		return nil, err
 	}
 
-	return cursor.NewEtcdPBCursor(resp), nil
+	return cursor.NewFromEtcdGetResponse(resp), nil
 }
 
 // objectTypeCreate writes the supplied ObjectType object to the key at

@@ -107,7 +107,7 @@ func (s *Store) propertySchemaGetFilteredByPartition(
 		return nil, err
 	}
 
-	return cursor.NewEtcdPBCursor(resp), nil
+	return cursor.NewFromEtcdGetResponse(resp), nil
 }
 
 // PropertySchemaCreate writes the supplied PropertySchema object to the key at

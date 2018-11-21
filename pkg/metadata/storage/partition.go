@@ -114,5 +114,5 @@ func (s *Store) PartitionList(
 		return nil, err
 	}
 
-	return cursor.NewEtcdPBCursor(resp), nil
+	return cursor.NewFromEtcdGetResponse(resp), nil
 }

@@ -107,15 +107,7 @@ message PartitionListRequest {
 
 message ObjectTypeGetRequest {
     Session session = 1;
-    // An exact-match search term on the object type's string code
-    string code = 2;
-}
-
-message ObjectTypeFilter {
-    // A search term on the object type's string code
-    string code = 1;
-    // Indicates the search should be a prefix expression
-    bool use_prefix = 2;
+    ObjectTypeFilter filter = 2;
 }
 
 message ObjectTypeListRequest {

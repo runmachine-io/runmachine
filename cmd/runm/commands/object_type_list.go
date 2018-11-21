@@ -56,7 +56,7 @@ func buildObjectTypeFilters() []*pb.ObjectTypeFilter {
 		filters = append(
 			filters,
 			&pb.ObjectTypeFilter{
-				Code:      f,
+				Search:    f,
 				UsePrefix: usePrefix,
 			},
 		)

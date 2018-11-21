@@ -8,3 +8,11 @@ message ObjectType {
     string code = 1;
     string description = 2;
 }
+
+// Used in matching object type records
+message ObjectTypeFilter {
+    // A search term on the object type's string code
+    string search = 1;
+    // Indicates the search should be a prefix expression
+    bool use_prefix = 2;
+}

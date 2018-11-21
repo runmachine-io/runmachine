@@ -120,7 +120,7 @@ func (s *Store) ObjectTypeList(
 	}
 	for _, filter := range any {
 		// TODO(jaypipes): Merge all returned getters into a single cursor
-		return s.objectTypesGetByCode(filter.Code, filter.UsePrefix)
+		return s.objectTypesGetByCode(filter.Search, filter.UsePrefix)
 	}
 	return nil, nil
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/runmachine-io/runmachine/pkg/abstract"
 	"github.com/runmachine-io/runmachine/pkg/cursor"
 	"github.com/runmachine-io/runmachine/pkg/errors"
+	"github.com/runmachine-io/runmachine/pkg/util"
 	pb "github.com/runmachine-io/runmachine/proto"
 )
 
@@ -31,6 +32,28 @@ func (s *Store) kvPartition(partUuid string) etcd.KV {
 	return etcd_namespace.NewKV(s.kv, key)
 }
 
+// partitionGetByUuid returns a Partition protobuffer object with the supplied UUID
+func (s *Store) partitionGetByUuid(
+	uuid string,
+) (*pb.Partition, error) {
+	ctx, cancel := s.requestCtx()
+	defer cancel()
+	key := _PARTITIONS_BY_UUID_KEY + util.NormalizeUuid(uuid)
+	resp, err := s.kv.Get(ctx, key)
+	if err != nil {
+		s.log.ERR("error getting partition by UUID(%s): %v", key, err)
+		return nil, err
+	}
+	if resp.Count == 0 {
+		return nil, errors.ErrNotFound
+	}
+	obj := &pb.Partition{}
+	if err = proto.Unmarshal(resp.Kvs[0].Value, obj); err != nil {
+		return nil, err
+	}
+	return obj, nil
+}
+
 // PartitionGet returns a Partition protobuffer message that has the UUID or
 // name of the supplied search string
 func (s *Store) PartitionGet(
@@ -45,46 +68,40 @@ func (s *Store) PartitionGet(
 
 	// First try looking up the partition by UUID. If not, match, then we try
 	// the by-name index...
-	byUuidKey := _PARTITIONS_BY_UUID_KEY + search
-	var resp *etcd.GetResponse
-	resp, err := s.kv.Get(ctx, byUuidKey)
-	if err != nil {
-		s.log.ERR("error getting key %s: %v", byUuidKey, err)
-		return nil, err
+	if util.IsUuidLike(search) {
+		p, err := s.partitionGetByUuid(search)
+		if p != nil {
+			return p, nil
+		}
+		if err != nil && err != errors.ErrNotFound {
+			return nil, err
+		}
 	}
 
+	byNameKey := _PARTITIONS_BY_NAME_KEY + search
+	resp, err := s.kv.Get(ctx, byNameKey)
+	if err != nil {
+		s.log.ERR("error getting key %s: %v", byNameKey, err)
+		return nil, err
+	}
 	if resp.Count == 0 {
-		byNameKey := _PARTITIONS_BY_NAME_KEY + search
-		resp, err = s.kv.Get(ctx, byNameKey)
-		if err != nil {
-			s.log.ERR("error getting key %s: %v", byNameKey, err)
-			return nil, err
-		}
-		if resp.Count == 0 {
-			return nil, errors.ErrNotFound
-		}
-		partUuid := resp.Kvs[0].Value
-		byUuidKey = _PARTITIONS_BY_UUID_KEY + string(partUuid)
-		resp, err = s.kv.Get(ctx, byUuidKey)
-		if err != nil {
-			s.log.ERR("error getting key %s: %v", byUuidKey, err)
-			return nil, err
-		}
-
-		if resp.Count == 0 {
+		return nil, errors.ErrNotFound
+	}
+	partUuid := string(resp.Kvs[0].Value)
+	p, err := s.partitionGetByUuid(partUuid)
+	if p != nil {
+		return p, nil
+	}
+	if err != nil {
+		if err == errors.ErrNotFound {
 			// NOTE(jaypipes): This is a major data corruption, since we have
 			// an index record by the partition name pointing to this UUID but
 			// no data record for the UUID...
-			s.log.ERR("DATA CORRUPTION! %s exists but no data record at %s", byNameKey, byUuidKey)
-			return nil, errors.ErrNotFound
+			s.log.ERR("DATA CORRUPTION! %s exists but no data record at partitions/by-uuid/%s", byNameKey, partUuid)
 		}
-	}
-	obj := &pb.Partition{}
-	if err = proto.Unmarshal(resp.Kvs[0].Value, obj); err != nil {
 		return nil, err
 	}
-
-	return obj, nil
+	return nil, nil
 }
 
 // PartitionList returns a cursor that may be used to iterate over Partition

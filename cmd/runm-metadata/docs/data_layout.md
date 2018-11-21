@@ -80,20 +80,37 @@ $ROOT
     runm.machine -> serialized ObjectType Protobuffer message
     runm.provider -> serialized ObjectType Protobuffer message
     runm.provider_group -> serialized ObjectType Protobuffer message
+  objects/
+    by-uuid/
+      54b8d8d7e24c43799bbf70c16e921e52 -> serialized Object protobuffer message
+      60b53edd16764f6abc081ddb0a73e69c -> serialized Object protobuffer message
+      3bf3e700f11b4a7cb99244c554b3a856 -> serialized Object protobuffer message
   partitions/
     by-name/
       us-east.example.com -> d3873f99a21f45f5bce156c1f8b84b03
       us-west.example.com -> d79706e01fbd4e48aae89209061cdb71
     by-uuid/
-      d3873f99a21f45f5bce156c1f8b84b03
-      d79706e01fbd4e48aae89209061cdb71
+      d3873f99a21f45f5bce156c1f8b84b03 -> serialized Partition protobuffer message
+      d79706e01fbd4e48aae89209061cdb71 -> serialized Partition protobuffer message
 ```
 
-Above, you can see that `$ROOT` has two key namespaces, one called
-`object-types` and another called `partitions`.
+Above, you can see that `$ROOT` has three key namespaces, one called
+`object-types/`, one called `objects/by-uuid/` and another called `partitions/`.
 
-The `$ROOT/object-types` key namespace has a set of [valued keys](#Valued keys)
+The `$ROOT/object-types/` key namespace has a set of [valued keys](#Valued keys)
 describing the object types known to the system.
+
+The `$ROOT/objects/by-uuid/` key namespace has a set of valued keys describing
+the objects known to the system.
+
+The valued keys in the `$ROOT/objects/by-uuid/` key namespace have the UUID of
+the object as the key and a serialized Google Protobuffer message of the
+[Object](../../../proto/defs/object.proto) itself as the value.
+
+**NOTE**: Having the serialized Object protobuffer message as the value of the
+`$ROOT/objects/by-uuid/` key namespace's valued keys allows the `runm-metadata`
+service to answer queries like "get me the tags on this object" with an
+efficient single key fetch operation.
 
 The `$ROOT/partitions/` key namespace has two key namespaces below it, called
 `by-name` and `by-uuid`.
@@ -151,8 +168,8 @@ in detail in the following sections.
 ### The `$OBJECTS` key namespace
 
 Let's first take a look at what is contained in the `$OBJECTS` key
-namespace. Similar to the `$ROOT/partitions/` key namespace, the `$OBJECTS` key
-namespace contains two key namespaces called `by-type` and `by-uuid`:
+namespace. The `$OBJECTS` key namespace contains a sub key namespaces called
+`by-type` that contains indexes into objects by type.
 
 ```
 $OBJECTS (e.g. $ROOT/partitions/by-uuid/d79706e01fbd4e48aae89209061cdb71/objects/)
@@ -168,10 +185,6 @@ $OBJECTS (e.g. $ROOT/partitions/by-uuid/d79706e01fbd4e48aae89209061cdb71/objects
         eff883565999408dbec3eb5070d5ecf5/
           by-name/
             instance0-appgroupA -> 3bf3e700f11b4a7cb99244c554b3a856
-  by-uuid/
-    54b8d8d7e24c43799bbf70c16e921e52 -> serialized Object protobuffer message
-    60b53edd16764f6abc081ddb0a73e69c -> serialized Object protobuffer message
-    3bf3e700f11b4a7cb99244c554b3a856 -> serialized Object protobuffer message
 ```
 
 As you see above, the `$OBJECTS/by-type/` key namespace contains additional key
@@ -183,15 +196,6 @@ The example key layout above shows a partition that has two image objects named
 `rhel7.5.2` and `debian-sid` in a project with the UUID
 `eff883565999408dbec3eb5070d5ecf5`. There is also a machine object named
 `instance0-appgroupA` with the UUID of `3bf3e700f11b4a7cb99244c554b3a856`.
-
-The valued keys in the `$OBJECTS/by-uuid/` key namespace have the UUID of the
-object as the key and a serialized Google Protobuffer message of the
-[Object](../../../proto/defs/object.proto) itself as the value.
-
-**NOTE**: Having the serialized Object protobuffer message as the value of the
-`%OBJECTS/by-uuid/` key namespace's valued keys allows the `runm-metadata`
-service to answer queries like "get me the tags on this object" with an
-efficient single key fetch operation.
 
 ### The `$PROPERTY_SCHEMAS` key namespace
 

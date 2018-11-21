@@ -11,6 +11,9 @@ import (
 )
 
 const (
+	// $ROOT/object-types/ is a key namespace containing valued keys where the
+	// key is the object type's code and the value is the serialized ObjectType
+	// protobuffer message
 	_OBJECT_TYPES_KEY = "object-types/"
 )
 

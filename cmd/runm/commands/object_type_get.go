@@ -34,5 +34,6 @@ func objectTypeGet(cmd *cobra.Command, args []string) {
 	obj, err := client.ObjectTypeGet(context.Background(), req)
 	exitIfError(err)
 	fmt.Printf("Code:        %s\n", obj.Code)
+	fmt.Printf("Scope:       %s\n", obj.Scope.String())
 	fmt.Printf("Description: %s\n", obj.Description)
 }

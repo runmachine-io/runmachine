@@ -21,24 +21,24 @@ var (
 	// The collection of well-known runm object types
 	runmObjectTypes = []*pb.ObjectType{
 		&pb.ObjectType{
-			Code:        "runm.partition",
-			Description: "A division of resources. A deployment unit for runm",
-		},
-		&pb.ObjectType{
-			Code:        "runm.image",
-			Description: "A bootable bunch of bits",
-		},
-		&pb.ObjectType{
 			Code:        "runm.provider",
 			Description: "A provider of some resources, e.g. a compute node or an SR-IOV NIC",
+			Scope:       pb.ObjectTypeScope_PARTITION,
 		},
 		&pb.ObjectType{
 			Code:        "runm.provider_group",
 			Description: "A group of providers",
+			Scope:       pb.ObjectTypeScope_PARTITION,
+		},
+		&pb.ObjectType{
+			Code:        "runm.image",
+			Description: "A bootable bunch of bits",
+			Scope:       pb.ObjectTypeScope_PROJECT,
 		},
 		&pb.ObjectType{
 			Code:        "runm.machine",
 			Description: "Created by a user, a machine consumes compute resources from one of more providers",
+			Scope:       pb.ObjectTypeScope_PROJECT,
 		},
 	}
 )

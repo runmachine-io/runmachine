@@ -180,22 +180,25 @@ $OBJECTS (e.g. $ROOT/partitions/by-uuid/d79706e01fbd4e48aae89209061cdb71/objects
           by-name/
             rhel7.5.2 -> 54b8d8d7e24c43799bbf70c16e921e52
             debian-sid -> 60b53edd16764f6abc081ddb0a73e69c
-    runm.machine/
-      by-project/
-        eff883565999408dbec3eb5070d5ecf5/
-          by-name/
-            instance0-appgroupA -> 3bf3e700f11b4a7cb99244c554b3a856
+    runm.provider_group/
+      by-name/
+        us-east1-row1-rack2 -> 3bf3e700f11b4a7cb99244c554b3a856
 ```
 
 As you see above, the `$OBJECTS/by-type/` key namespace contains additional key
 namespaces, arranged in an a series of indexes so that `runm-metadata` can look
-up UUIDs of various objects of that type that belong to a project and have a
-particular name.
+up UUIDs of various objects of that type that have a particular name and
+optionally belong to a specific project.
 
 The example key layout above shows a partition that has two image objects named
 `rhel7.5.2` and `debian-sid` in a project with the UUID
-`eff883565999408dbec3eb5070d5ecf5`. There is also a machine object named
-`instance0-appgroupA` with the UUID of `3bf3e700f11b4a7cb99244c554b3a856`.
+`eff883565999408dbec3eb5070d5ecf5`. There is also a `runm.provider_group` object named
+`us-east1-row1-rack2` with the UUID of `3bf3e700f11b4a7cb99244c554b3a856`.
+Provider groups are objects with an object type scope of `PARTITION` which
+means that these objects are not specific to a project, and therefore the
+`$OBJECTS/by-type/runm.provider_group/by-name` is the only index key namespace
+for these types of objects (there is no `by-project/` sub key namespace under
+the object type).
 
 ### The `$PROPERTY_SCHEMAS` key namespace
 

@@ -49,7 +49,7 @@ func (s *Server) PartitionList(
 	req *pb.PartitionListRequest,
 	stream pb.RunmMetadata_PartitionListServer,
 ) error {
-	cur, err := s.store.PartitionList(req)
+	cur, err := s.store.PartitionList(req.Any)
 	if err != nil {
 		return err
 	}

@@ -2,7 +2,7 @@ package storage
 
 import (
 	etcd "github.com/coreos/etcd/clientv3"
-	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 
 	"github.com/runmachine-io/runmachine/pkg/abstract"
 	"github.com/runmachine-io/runmachine/pkg/cursor"

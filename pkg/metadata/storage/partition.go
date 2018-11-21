@@ -3,7 +3,7 @@ package storage
 import (
 	etcd "github.com/coreos/etcd/clientv3"
 	etcd_namespace "github.com/coreos/etcd/clientv3/namespace"
-	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 
 	"github.com/runmachine-io/runmachine/pkg/abstract"
 	"github.com/runmachine-io/runmachine/pkg/cursor"
@@ -107,10 +107,111 @@ func (s *Store) PartitionGet(
 // PartitionList returns a cursor that may be used to iterate over Partition
 // protobuffer objects stored in etcd
 func (s *Store) PartitionList(
-	req *pb.PartitionListRequest,
+	any []*pb.PartitionFilter,
 ) (abstract.Cursor, error) {
+	if len(any) == 0 {
+		return s.partitionGetAll()
+	}
+
+	// OK, we've got some filters so we need to process each filter, OR'ing
+	// them together to form a result. For each filter, we evaluate whether the
+	// user has specified a UUID for the search term, in which case we just
+	// grab the partition by UUID. If not, we look up partitions by name,
+	// optionally using a prefix if the supplied filter indicates to use
+	// prefixing.
+	uuids := make(map[string]bool, 0)
+
+	for _, filter := range any {
+		// If the filter specifies a UUID search term, then just add it to our
+		// list of partitions to grab by UUID. If not, look up any partitions
+		// having the supplied name, with optional prefix.
+		if util.IsUuidLike(filter.Search) {
+			uuids[filter.Search] = true
+			continue
+		}
+
+		uuidsByName, err := s.partitionUuidsGetByName(
+			filter.Search,
+			filter.UsePrefix,
+		)
+		if err != nil {
+			if err == errors.ErrNotFound {
+				continue
+			}
+			return nil, err
+		}
+		for _, uuid := range uuidsByName {
+			uuids[uuid] = true
+		}
+
+	}
+	if len(uuids) == 0 {
+		return cursor.Empty(), nil
+	}
+
+	// Now we have our set of object UUIDs that we will fetch objects from the
+	// primary index. I suppose we could do a single read on a range of UUID
+	// keys and then ignore keys that aren't in our set of object UUIDs. Not
+	// sure what would be faster... probably depend on the length of the key
+	// range resulting from doing a min/max on the object UUID set.
+	objs := make([]proto.Message, len(uuids))
+	x := 0
+	for uuid := range uuids {
+		obj, err := s.partitionGetByUuid(uuid)
+		if err != nil {
+			if err == errors.ErrNotFound {
+				continue
+			}
+			return nil, err
+		}
+		objs[x] = obj
+		x += 1
+	}
+	return cursor.NewFromSlicePBMessages(objs[:x]), nil
+}
+
+// partitionUuidsGetByName returns a slice of strings with all partition UUIDs
+// have a supplied name
+func (s *Store) partitionUuidsGetByName(
+	search string,
+	usePrefix bool,
+) ([]string, error) {
 	ctx, cancel := s.requestCtx()
 	defer cancel()
+
+	key := _PARTITIONS_BY_NAME_KEY + search
+
+	opts := []etcd.OpOption{
+		// TODO(jaypipes): Factor the sorting/limiting/pagination out into a
+		// separate utility
+		etcd.WithSort(etcd.SortByKey, etcd.SortAscend),
+	}
+
+	if usePrefix {
+		opts = append(opts, etcd.WithPrefix())
+	}
+
+	resp, err := s.kv.Get(ctx, key, opts...)
+	if err != nil {
+		s.log.ERR("error listing partitions by name: %v", err)
+		return nil, err
+	}
+
+	if resp.Count == 0 {
+		return nil, errors.ErrNotFound
+	}
+
+	res := make([]string, resp.Count)
+	for x := int64(0); x < resp.Count; x++ {
+		res[x] = string(resp.Kvs[x].Value)
+	}
+	return res, nil
+}
+
+func (s *Store) partitionGetAll() (abstract.Cursor, error) {
+	ctx, cancel := s.requestCtx()
+	defer cancel()
+
 	resp, err := s.kv.Get(
 		ctx,
 		_PARTITIONS_BY_UUID_KEY,
@@ -129,7 +230,7 @@ func (s *Store) PartitionList(
 	)
 
 	if err != nil {
-		s.log.ERR("error listing partitions: %v", err)
+		s.log.ERR("error listing all partitions: %v", err)
 		return nil, err
 	}
 

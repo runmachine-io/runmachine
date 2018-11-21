@@ -18,14 +18,14 @@ var partitionListCommand = &cobra.Command{
 }
 
 func partitionList(cmd *cobra.Command, args []string) {
-	filters := &pb.PartitionListFilters{}
 	conn := connect()
 	defer conn.Close()
 
 	client := pb.NewRunmMetadataClient(conn)
 	req := &pb.PartitionListRequest{
 		Session: getSession(),
-		Filters: filters,
+		// TODO(jaypipes): Allow filtering on name/UUID of partition (with name
+		// prefix?)
 	}
 	stream, err := client.PartitionList(context.Background(), req)
 	exitIfConnectErr(err)

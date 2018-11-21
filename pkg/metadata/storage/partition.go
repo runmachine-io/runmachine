@@ -46,39 +46,41 @@ func (s *Store) PartitionGet(
 	// First try looking up the partition by UUID. If not, match, then we try
 	// the by-name index...
 	byUuidKey := _PARTITIONS_BY_UUID_KEY + search
-	grByUuid, err := s.kv.Get(ctx, byUuidKey)
+	var resp *etcd.GetResponse
+	resp, err := s.kv.Get(ctx, byUuidKey)
 	if err != nil {
 		s.log.ERR("error getting key %s: %v", byUuidKey, err)
 		return nil, err
 	}
 
-	if grByUuid.Count == 0 {
+	if resp.Count == 0 {
 		byNameKey := _PARTITIONS_BY_NAME_KEY + search
-		grByName, err := s.kv.Get(ctx, byNameKey)
+		resp, err = s.kv.Get(ctx, byNameKey)
 		if err != nil {
 			s.log.ERR("error getting key %s: %v", byNameKey, err)
 			return nil, err
 		}
-		if grByName.Count == 0 {
+		if resp.Count == 0 {
 			return nil, errors.ErrNotFound
 		}
-		partUuid := grByName.Kvs[0].Value
+		partUuid := resp.Kvs[0].Value
 		byUuidKey = _PARTITIONS_BY_UUID_KEY + string(partUuid)
-		grByUuid, err = s.kv.Get(ctx, byUuidKey)
+		resp, err = s.kv.Get(ctx, byUuidKey)
 		if err != nil {
 			s.log.ERR("error getting key %s: %v", byUuidKey, err)
 			return nil, err
 		}
 
-		if grByUuid.Count == 0 {
+		if resp.Count == 0 {
 			// NOTE(jaypipes): This is a major data corruption, since we have
 			// an index record by the partition name pointing to this UUID but
 			// no data record for the UUID...
 			s.log.ERR("DATA CORRUPTION! %s exists but no data record at %s", byNameKey, byUuidKey)
+			return nil, errors.ErrNotFound
 		}
 	}
 	obj := &pb.Partition{}
-	if err = proto.Unmarshal(grByUuid.Kvs[0].Value, obj); err != nil {
+	if err = proto.Unmarshal(resp.Kvs[0].Value, obj); err != nil {
 		return nil, err
 	}
 

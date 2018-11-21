@@ -11,3 +11,8 @@ message Partition {
     string uuid = 1;
     string name = 2;
 }
+
+message PartitionFilter {
+    // UUID or human-readable name of the partition
+    string search = 1;
+}

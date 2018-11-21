@@ -96,19 +96,13 @@ message BootstrapResponse {
 
 message PartitionGetRequest {
     Session session = 1;
-    string search = 2;
-}
-
-message PartitionListFilters {
-    // May be a UUID or a human-readable name. List multiple identifiers to
-    // filter on any of the supplied identifiers.
-    repeated string identifiers = 1;
+    PartitionFilter filter = 2;
 }
 
 message PartitionListRequest {
     Session session = 1;
-    PartitionListFilters filters = 2;
-    SearchOptions options = 3;
+    SearchOptions options = 2;
+    repeated PartitionFilter any = 3;
 }
 
 message ObjectTypeGetRequest {

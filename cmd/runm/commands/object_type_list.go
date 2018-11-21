@@ -56,7 +56,7 @@ func buildObjectTypeFilters() []*pb.ObjectTypeFilter {
 		filters = append(
 			filters,
 			&pb.ObjectTypeFilter{
-				Code:      f,
+				Search:    f,
 				UsePrefix: usePrefix,
 			},
 		)
@@ -90,12 +90,14 @@ func objectTypeList(cmd *cobra.Command, args []string) {
 	}
 	headers := []string{
 		"Code",
+		"Scope",
 		"Description",
 	}
 	rows := make([][]string, len(msgs))
 	for x, obj := range msgs {
 		rows[x] = []string{
 			obj.Code,
+			obj.Scope.String(),
 			obj.Description,
 		}
 	}

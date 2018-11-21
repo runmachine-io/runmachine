@@ -96,32 +96,18 @@ message BootstrapResponse {
 
 message PartitionGetRequest {
     Session session = 1;
-    string search = 2;
-}
-
-message PartitionListFilters {
-    // May be a UUID or a human-readable name. List multiple identifiers to
-    // filter on any of the supplied identifiers.
-    repeated string identifiers = 1;
+    PartitionFilter filter = 2;
 }
 
 message PartitionListRequest {
     Session session = 1;
-    PartitionListFilters filters = 2;
-    SearchOptions options = 3;
+    SearchOptions options = 2;
+    repeated PartitionFilter any = 3;
 }
 
 message ObjectTypeGetRequest {
     Session session = 1;
-    // An exact-match search term on the object type's string code
-    string code = 2;
-}
-
-message ObjectTypeFilter {
-    // A search term on the object type's string code
-    string code = 1;
-    // Indicates the search should be a prefix expression
-    bool use_prefix = 2;
+    ObjectTypeFilter filter = 2;
 }
 
 message ObjectTypeListRequest {
@@ -154,19 +140,12 @@ message ObjectSetResponse {
     Object object = 2;
 }
 
-message ObjectListFilters {
-    repeated Partition partitions = 1;
-    repeated ObjectType object_types = 2;
-    repeated string uuids = 3;
-    repeated string names = 4;
-}
-
 message ObjectListRequest {
     Session session = 1;
-    ObjectListFilters filters = 2;
-    SearchOptions options = 3;
-    // When grabbing object information, fetch the object's properties
-    bool fetch_properties = 50;
+    SearchOptions options = 2;
+    // A set of filter expressions that are OR'd together when determining
+    // matches
+    repeated ObjectFilter any = 3;
 }
 
 message ObjectDeleteRequest {

@@ -2,7 +2,7 @@ package storage
 
 import (
 	etcd "github.com/coreos/etcd/clientv3"
-	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 
 	"github.com/runmachine-io/runmachine/pkg/abstract"
 	"github.com/runmachine-io/runmachine/pkg/cursor"
@@ -11,6 +11,9 @@ import (
 )
 
 const (
+	// $ROOT/object-types/ is a key namespace containing valued keys where the
+	// key is the object type's code and the value is the serialized ObjectType
+	// protobuffer message
 	_OBJECT_TYPES_KEY = "object-types/"
 )
 
@@ -18,24 +21,24 @@ var (
 	// The collection of well-known runm object types
 	runmObjectTypes = []*pb.ObjectType{
 		&pb.ObjectType{
-			Code:        "runm.partition",
-			Description: "A division of resources. A deployment unit for runm",
-		},
-		&pb.ObjectType{
-			Code:        "runm.image",
-			Description: "A bootable bunch of bits",
-		},
-		&pb.ObjectType{
 			Code:        "runm.provider",
 			Description: "A provider of some resources, e.g. a compute node or an SR-IOV NIC",
+			Scope:       pb.ObjectTypeScope_PARTITION,
 		},
 		&pb.ObjectType{
 			Code:        "runm.provider_group",
 			Description: "A group of providers",
+			Scope:       pb.ObjectTypeScope_PARTITION,
+		},
+		&pb.ObjectType{
+			Code:        "runm.image",
+			Description: "A bootable bunch of bits",
+			Scope:       pb.ObjectTypeScope_PROJECT,
 		},
 		&pb.ObjectType{
 			Code:        "runm.machine",
 			Description: "Created by a user, a machine consumes compute resources from one of more providers",
+			Scope:       pb.ObjectTypeScope_PROJECT,
 		},
 	}
 )
@@ -117,7 +120,7 @@ func (s *Store) ObjectTypeList(
 	}
 	for _, filter := range any {
 		// TODO(jaypipes): Merge all returned getters into a single cursor
-		return s.objectTypesGetByCode(filter.Code, filter.UsePrefix)
+		return s.objectTypesGetByCode(filter.Search, filter.UsePrefix)
 	}
 	return nil, nil
 }
@@ -147,7 +150,7 @@ func (s *Store) objectTypesGetByCode(
 		return nil, err
 	}
 
-	return cursor.NewEtcdPBCursor(resp), nil
+	return cursor.NewFromEtcdGetResponse(resp), nil
 }
 
 // objectTypeCreate writes the supplied ObjectType object to the key at

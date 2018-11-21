@@ -4,9 +4,11 @@ import (
 	"context"
 
 	"github.com/google/uuid"
-	pb "github.com/runmachine-io/runmachine/proto"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	"github.com/runmachine-io/runmachine/pkg/util"
+	pb "github.com/runmachine-io/runmachine/proto"
 )
 
 var (
@@ -39,7 +41,7 @@ func (s *Server) Bootstrap(
 	} else {
 		partUuid = req.PartitionUuid.Value
 	}
-	partUuid = normalizeUuid(partUuid)
+	partUuid = util.NormalizeUuid(partUuid)
 
 	if err := s.store.Bootstrap(token, partName, partUuid); err != nil {
 		return nil, err

@@ -26,7 +26,9 @@ func partitionGet(cmd *cobra.Command, args []string) {
 
 	req := &pb.PartitionGetRequest{
 		Session: session,
-		Search:  args[0],
+		Filter: &pb.PartitionFilter{
+			Search: args[0],
+		},
 	}
 	obj, err := client.PartitionGet(context.Background(), req)
 	exitIfError(err)

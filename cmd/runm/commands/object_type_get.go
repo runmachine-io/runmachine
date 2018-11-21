@@ -26,10 +26,14 @@ func objectTypeGet(cmd *cobra.Command, args []string) {
 
 	req := &pb.ObjectTypeGetRequest{
 		Session: session,
-		Code:    args[0],
+		Filter: &pb.ObjectTypeFilter{
+			Search:    args[0],
+			UsePrefix: false,
+		},
 	}
 	obj, err := client.ObjectTypeGet(context.Background(), req)
 	exitIfError(err)
 	fmt.Printf("Code:        %s\n", obj.Code)
+	fmt.Printf("Scope:       %s\n", obj.Scope.String())
 	fmt.Printf("Description: %s\n", obj.Description)
 }

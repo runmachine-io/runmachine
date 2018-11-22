@@ -67,4 +67,4 @@ print_if_verbose "Running \`runm $EXEC_COMMAND\` in single-use docker container.
 print_if_verbose "*********************************************************************"
 print_if_verbose ""
 
-docker run --rm --network host runm/runm:$VERSION $EXEC_COMMAND
+docker run --rm --network host -v $ROOT_DIR/tests/data/:/tests/data runm/runm:$VERSION $EXEC_COMMAND

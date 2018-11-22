@@ -220,12 +220,7 @@ func (s *Store) ObjectCreate(
 		s.log.ERR("object_create: failed to create txn in etcd: %v", err)
 		return nil, errors.ErrUnknown
 	} else if resp.Succeeded == false {
-		s.log.L3(
-			"object_create: another thread already created object %s:%s",
-			"partition="+obj.Partition,
-			obj.Name,
-		)
-		return nil, errors.ErrUnknown
+		return nil, errors.ErrDuplicate
 	}
 	return obj, nil
 }

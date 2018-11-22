@@ -3,18 +3,8 @@ package metadata
 import (
 	"context"
 
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
 	"github.com/runmachine-io/runmachine/pkg/errors"
 	pb "github.com/runmachine-io/runmachine/proto"
-)
-
-var (
-	ErrCodeRequired = status.Errorf(
-		codes.FailedPrecondition,
-		"A code to search for is required.",
-	)
 )
 
 func (s *Server) ObjectTypeGet(

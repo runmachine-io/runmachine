@@ -3,22 +3,8 @@ package metadata
 import (
 	"context"
 
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
 	"github.com/runmachine-io/runmachine/pkg/util"
 	pb "github.com/runmachine-io/runmachine/proto"
-)
-
-var (
-	ErrBootstrapTokenRequired = status.Errorf(
-		codes.FailedPrecondition,
-		"bootstrap token is required.",
-	)
-	ErrPartitionNameRequired = status.Errorf(
-		codes.FailedPrecondition,
-		"partition name is required.",
-	)
 )
 
 func (s *Server) Bootstrap(

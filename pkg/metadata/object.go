@@ -3,27 +3,10 @@ package metadata
 import (
 	"context"
 
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
 	"github.com/runmachine-io/runmachine/pkg/errors"
 	"github.com/runmachine-io/runmachine/pkg/metadata/storage"
 	pb "github.com/runmachine-io/runmachine/proto"
 )
-
-func errPartitionNotFound(partition string) error {
-	return status.Errorf(
-		codes.FailedPrecondition,
-		"Partition %s not found", partition,
-	)
-}
-
-func errObjectTypeNotFound(objectType string) error {
-	return status.Errorf(
-		codes.FailedPrecondition,
-		"Object type %s not found", objectType,
-	)
-}
 
 func (s *Server) ObjectDelete(
 	ctx context.Context,

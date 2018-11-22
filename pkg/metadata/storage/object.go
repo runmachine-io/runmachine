@@ -186,12 +186,12 @@ func (s *Store) ObjectCreate(
 	switch objType.Scope {
 	case pb.ObjectTypeScope_PARTITION:
 		// $PARTITION/objects/by-type/{type}/by-name/{name}
-		objByNameKey = _PARTITIONS_BY_UUID_KEY + obj.Partition + "/" +
+		objByNameKey = _PARTITIONS_KEY + obj.Partition + "/" +
 			_OBJECTS_BY_TYPE_KEY + objType.Code + "/" +
 			_BY_NAME_KEY + obj.Name
 	case pb.ObjectTypeScope_PROJECT:
 		// $PARTITION/objects/by-type/{type}/by-project/{project}/by-name/{name}
-		objByNameKey = _PARTITIONS_BY_UUID_KEY + obj.Partition + "/" +
+		objByNameKey = _PARTITIONS_KEY + obj.Partition + "/" +
 			_OBJECTS_BY_TYPE_KEY + objType.Code + "/" +
 			_BY_PROJECT_KEY + obj.Project + "/" +
 			_BY_NAME_KEY + obj.Name

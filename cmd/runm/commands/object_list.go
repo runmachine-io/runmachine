@@ -91,7 +91,7 @@ func buildObjectFilters() []*pb.ObjectFilter {
 		fieldExprs := strings.Fields(f)
 		filter := &pb.ObjectFilter{}
 		for _, fieldExpr := range fieldExprs {
-			kvs := strings.SplitN(fieldExpr, "=", 1)
+			kvs := strings.SplitN(fieldExpr, "=", 2)
 			if len(kvs) != 2 {
 				fmt.Fprintf(os.Stderr, errMsgFieldExprFormat, fieldExpr)
 				os.Exit(1)

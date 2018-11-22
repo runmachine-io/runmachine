@@ -17,6 +17,8 @@ const (
 	// namespaces, one is an index on the partition's name with valued keys
 	// pointing to UUIDs of that partition. The other is a set of valued keys
 	// listed by UUID with values containing Partition protobuffer records.
+	// In addition to the indexes, each partition's objects are contained in
+	// the $ROOT/partitions/{uuid}/ key namespace.
 	_PARTITIONS_KEY = "partitions/"
 	// The index into partition UUIDs by name
 	_PARTITIONS_BY_NAME_KEY = "partitions/by-name/"
@@ -24,11 +26,11 @@ const (
 	_PARTITIONS_BY_UUID_KEY = "partitions/by-uuid/"
 )
 
-// kvPartition returns an etcd.KV that is nahespaced to a specific partition.
+// kvPartition returns an etcd.KV that is namespaced to a specific partition.
 // We use the nomenclature $PARTITION to refer to this key namespace.
-// $PARTITION refers to $ROOT/partitions/by-uuid/{partition_uuid}/
+// $PARTITION refers to $ROOT/partitions/{partition_uuid}/
 func (s *Store) kvPartition(partUuid string) etcd.KV {
-	key := _PARTITIONS_BY_UUID_KEY + partUuid + "/"
+	key := _PARTITIONS_KEY + partUuid + "/"
 	return etcd_namespace.NewKV(s.kv, key)
 }
 
@@ -216,21 +218,13 @@ func (s *Store) partitionsGetAll() (abstract.Cursor, error) {
 		ctx,
 		_PARTITIONS_BY_UUID_KEY,
 		etcd.WithPrefix(),
-		// Since each partition will have a key namespace equal to
-		// (_PARTITIONS_BY_UUID_KEY + {UUID} + "/") we need to limit our search
-		// range to end with only the fixed 32 characters that all UUID values
-		// comprise. This allows $ROOT/partitions/by-uuid/{UUID} to be returned
-		// but prevents $ROOT/partitions/by-uuid/{UUID}/ from being returned.
-		// The latter is the partition key namespace. The former is the
-		// partition key that contains a serialized Protobuffer object.
-		etcd.WithRange(_PARTITIONS_BY_UUID_KEY+_MAX_UUID),
 		// TODO(jaypipes): Factor the sorting/limiting/pagination out into a
 		// separate utility
 		etcd.WithSort(etcd.SortByKey, etcd.SortAscend),
 	)
 
 	if err != nil {
-		s.log.ERR("error listing all partitions: %v", err)
+		s.log.ERR("error listing partitions: %v", err)
 		return nil, err
 	}
 

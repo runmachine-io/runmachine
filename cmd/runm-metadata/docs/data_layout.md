@@ -92,6 +92,8 @@ $ROOT
     by-uuid/
       d3873f99a21f45f5bce156c1f8b84b03 -> serialized Partition protobuffer message
       d79706e01fbd4e48aae89209061cdb71 -> serialized Partition protobuffer message
+    d3873f99a21f45f5bce156c1f8b84b03/
+    d79706e01fbd4e48aae89209061cdb71/
 ```
 
 Above, you can see that `$ROOT` has three key namespaces, one called
@@ -112,15 +114,17 @@ the object as the key and a serialized Google Protobuffer message of the
 service to answer queries like "get me the tags on this object" with an
 efficient single key fetch operation.
 
-The `$ROOT/partitions/` key namespace has two key namespaces below it, called
-`by-name` and `by-uuid`.
+The `$ROOT/partitions/` key namespace has two key namespaces below it that
+implement indexes into partitions, called `by-name` and `by-uuid`. In addition
+to those index key namespaces, each partition's objects are contained in a key
+namespace `$ROOT/partitions/{uuid}/`.
 
 The `$ROOT/partitions/by-name/` key namespace contains valued keys, with the
 key being the human-readable name of the partition and the value being the UUID
 of that partition.
 
 Each UUID value listed in `$ROOT/partitions/by-name/` will be a key namespace
-under `$ROOT/partitions/by-uuid/` that contains *all* objects known to that
+under `$ROOT/partitions/{uuid}/` that contains *all* objects known to that
 partition. We call these key namespaces "partition key namespaces".
 
 **NOTE**: Typically, clients interacting with `runm-metadata` automatically
@@ -132,7 +136,7 @@ the user is communicating with.
 
 Therefore, the partition key namespace for the partition with UUID
 `d79706e01fbd4e48aae89209061cdb71` will always be
-`$ROOT/partitions/by-uuid/d79706e01fbd4e48aae89209061cdb71/`.
+`$ROOT/partitions/d79706e01fbd4e48aae89209061cdb71/`.
 
 We will refer to an **individual partition key namespace** as `$PARTITION` from
 here on.
@@ -140,7 +144,7 @@ here on.
 **NOTE**: It is important to point out that the following keys are *different*:
 
 * `$ROOT/partitions/by-uuid/d79706e01fbd4e48aae89209061cdb71`
-* `$ROOT/partitions/by-uuid/d79706e01fbd4e48aae89209061cdb71/`
+* `$ROOT/partitions/d79706e01fbd4e48aae89209061cdb71/`
 
 The former is a valued key that will have as its value a serialized `Partition`
 protobuffer object. The latter is the partition key namespace for the partition
@@ -152,7 +156,7 @@ Under `$PARTITION`, we store information about the objects, property schemas,
 and the object metadata (properties and tags) in the partition:
 
 ```
-$PARTITION (e.g. $ROOT/partitions/by-uuid/d79706e01fbd4e48aae89209061cdb71/)
+$PARTITION (e.g. $ROOT/partitions/d79706e01fbd4e48aae89209061cdb71/)
   objects/
   property-schemas/
   properties/
@@ -172,7 +176,7 @@ namespace. The `$OBJECTS` key namespace contains a sub key namespaces called
 `by-type` that contains indexes into objects by type.
 
 ```
-$OBJECTS (e.g. $ROOT/partitions/by-uuid/d79706e01fbd4e48aae89209061cdb71/objects/)
+$OBJECTS (e.g. $ROOT/partitions/d79706e01fbd4e48aae89209061cdb71/objects/)
   by-type/
     runm.image/
       by-project/
@@ -207,7 +211,7 @@ schemas defined within a partition. The key namespace itself has a very simple
 layout:
 
 ```
-$PROPERTY_SCHEMAS (e.g. $ROOT/partitions/by-uuid/d79706e01fbd4e48aae89209061cdb71/property-schemas/)
+$PROPERTY_SCHEMAS (e.g. $ROOT/partitions/d79706e01fbd4e48aae89209061cdb71/property-schemas/)
   by-type/
     runm.image/
       architecture -> serialized PropertySchema protobuffer message
@@ -237,7 +241,7 @@ property associated with them and the machine object having an "appgroup"
 property associated with it:
 
 ```
-$PROPERTIES (e.g. $ROOT/partitions/by-uuid/d79706e01fbd4e48aae89209061cdb71/properties/)
+$PROPERTIES (e.g. $ROOT/partitions/d79706e01fbd4e48aae89209061cdb71/properties/)
   by-type/
     runm.image/
       architecture/
@@ -262,7 +266,7 @@ Finally, the `$TAGS` namespace contains all the simple string tags for objects
 in a partition. The structure of this key namespace looks like this:
 
 ```
-$TAGS (e.g. $ROOT/partitions/by-uuid/d79706e01fbd4e48aae89209061cdb71/tags/)
+$TAGS (e.g. $ROOT/partitions/d79706e01fbd4e48aae89209061cdb71/tags/)
   unicorn/
     54b8d8d7e24c43799bbf70c16e921e52
     60b53edd16764f6abc081ddb0a73e69c

@@ -66,7 +66,7 @@ func (s *Store) ObjectList(
 				return nil, err
 			} else if obj != nil {
 				if filter.PartitionUuid != "" {
-					if obj.PartitionUuid != filter.PartitionUuid {
+					if obj.Partition != filter.PartitionUuid {
 						continue
 					}
 				}
@@ -76,7 +76,7 @@ func (s *Store) ObjectList(
 					}
 				}
 				if filter.ObjectTypeCode != "" {
-					if obj.ObjectTypeCode != filter.ObjectTypeCode {
+					if obj.ObjectType != filter.ObjectTypeCode {
 						continue
 					}
 				}
@@ -186,12 +186,12 @@ func (s *Store) ObjectCreate(
 	switch objType.Scope {
 	case pb.ObjectTypeScope_PARTITION:
 		// $PARTITION/objects/by-type/{type}/by-name/{name}
-		objByNameKey = _PARTITIONS_BY_UUID_KEY + obj.PartitionUuid + "/" +
+		objByNameKey = _PARTITIONS_BY_UUID_KEY + obj.Partition + "/" +
 			_OBJECTS_BY_TYPE_KEY + objType.Code + "/" +
 			_BY_NAME_KEY + obj.Name
 	case pb.ObjectTypeScope_PROJECT:
 		// $PARTITION/objects/by-type/{type}/by-project/{project}/by-name/{name}
-		objByNameKey = _PARTITIONS_BY_UUID_KEY + obj.PartitionUuid + "/" +
+		objByNameKey = _PARTITIONS_BY_UUID_KEY + obj.Partition + "/" +
 			_OBJECTS_BY_TYPE_KEY + objType.Code + "/" +
 			_BY_PROJECT_KEY + obj.Project + "/" +
 			_BY_NAME_KEY + obj.Name
@@ -222,7 +222,7 @@ func (s *Store) ObjectCreate(
 	} else if resp.Succeeded == false {
 		s.log.L3(
 			"object_create: another thread already created object %s:%s",
-			"partition="+obj.PartitionUuid,
+			"partition="+obj.Partition,
 			obj.Name,
 		)
 		return nil, errors.ErrUnknown

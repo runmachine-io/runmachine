@@ -11,17 +11,6 @@ import (
 	pb "github.com/runmachine-io/runmachine/proto"
 )
 
-var (
-	ErrObjectTypeCodeRequired = status.Errorf(
-		codes.FailedPrecondition,
-		"Object type code is required.",
-	)
-	ErrPartitionUuidRequired = status.Errorf(
-		codes.FailedPrecondition,
-		"Partition UUID is required.",
-	)
-)
-
 func errPartitionNotFound(partition string) error {
 	return status.Errorf(
 		codes.FailedPrecondition,
@@ -195,35 +184,35 @@ func (s *Server) validateObjectSetRequest(
 	after := req.After
 
 	// Simple input data validations
-	if after.ObjectTypeCode == "" {
-		return nil, ErrObjectTypeCodeRequired
+	if after.ObjectType == "" {
+		return nil, ErrObjectTypeRequired
 	}
-	if after.PartitionUuid == "" {
-		return nil, ErrPartitionUuidRequired
+	if after.Partition == "" {
+		return nil, ErrPartitionRequired
 	}
 
 	// Validate the referred to type, partition and project actually exist
-	p, err := s.store.PartitionGet(after.PartitionUuid)
+	p, err := s.store.PartitionGet(after.Partition)
 	if err != nil {
 		if err == errors.ErrNotFound {
-			return nil, errPartitionNotFound(after.PartitionUuid)
+			return nil, errPartitionNotFound(after.Partition)
 		}
 		// We don't want to leak internal implementation errors...
 		s.log.ERR("failed when validating partition in object set: %s", err)
 		return nil, errors.ErrUnknown
 	}
-	after.PartitionUuid = p.Uuid
+	after.Partition = p.Uuid
 
-	ot, err := s.store.ObjectTypeGet(after.ObjectTypeCode)
+	ot, err := s.store.ObjectTypeGet(after.ObjectType)
 	if err != nil {
 		if err == errors.ErrNotFound {
-			return nil, errObjectTypeNotFound(after.ObjectTypeCode)
+			return nil, errObjectTypeNotFound(after.ObjectType)
 		}
 		// We don't want to leak internal implementation errors...
 		s.log.ERR("failed when validating object type in object set: %s", err)
 		return nil, errors.ErrUnknown
 	}
-	after.ObjectTypeCode = ot.Code
+	after.ObjectType = ot.Code
 
 	if req.Before == nil {
 		// TODO(jaypipes): User expects to create a new object with the after
@@ -256,8 +245,8 @@ func (s *Server) ObjectSet(
 	if req.Before == nil {
 		s.log.L3(
 			"creating new object of type %s in partition %s with name %s...",
-			req.After.ObjectTypeCode,
-			req.After.PartitionUuid,
+			req.After.ObjectType,
+			req.After.Partition,
 			req.After.Name,
 		)
 		changed, err = s.store.ObjectCreate(req.After, ot)
@@ -267,8 +256,8 @@ func (s *Server) ObjectSet(
 		s.log.L1(
 			"created new object with UUID %s of type %s in partition %s with name %s",
 			changed.Uuid,
-			req.After.ObjectTypeCode,
-			req.After.PartitionUuid,
+			req.After.ObjectType,
+			req.After.Partition,
 			req.After.Name,
 		)
 	}

@@ -168,8 +168,8 @@ func objectList(cmd *cobra.Command, args []string) {
 	rows := make([][]string, len(msgs))
 	for x, obj := range msgs {
 		rows[x] = []string{
-			obj.PartitionUuid,
-			obj.ObjectTypeCode,
+			obj.Partition,
+			obj.ObjectType,
 			obj.Uuid,
 			obj.Name,
 			obj.Project,

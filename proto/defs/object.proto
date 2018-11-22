@@ -25,9 +25,9 @@ import "property.proto";
 // the object type would be "runm.provider") to the external UUID identifier.
 message Object {
     // The UUID of the partition this object is in
-    string partition_uuid = 1;
+    string partition = 1;
     // The object type code this object is
-    string object_type_code = 2;
+    string object_type = 2;
     // The external identifier of the project this object is owned by. Can be
     // empty if the type of object isn't ownable by a project (for instance, a
     // `runm.provider` isn't ownable by a project, but a `runm.machine` is)

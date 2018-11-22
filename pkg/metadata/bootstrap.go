@@ -3,7 +3,6 @@ package metadata
 import (
 	"context"
 
-	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -37,11 +36,10 @@ func (s *Server) Bootstrap(
 
 	var partUuid string
 	if req.PartitionUuid == nil {
-		partUuid = uuid.New().String()
+		partUuid = util.NewNormalizedUuid()
 	} else {
-		partUuid = req.PartitionUuid.Value
+		partUuid = util.NormalizeUuid(req.PartitionUuid.Value)
 	}
-	partUuid = util.NormalizeUuid(partUuid)
 
 	if err := s.store.Bootstrap(token, partName, partUuid); err != nil {
 		return nil, err

@@ -3,10 +3,38 @@ package metadata
 import (
 	"context"
 
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	"github.com/runmachine-io/runmachine/pkg/errors"
 	"github.com/runmachine-io/runmachine/pkg/metadata/storage"
 	pb "github.com/runmachine-io/runmachine/proto"
 )
+
+var (
+	ErrObjectTypeCodeRequired = status.Errorf(
+		codes.FailedPrecondition,
+		"Object type code is required.",
+	)
+	ErrPartitionUuidRequired = status.Errorf(
+		codes.FailedPrecondition,
+		"Partition UUID is required.",
+	)
+)
+
+func errPartitionNotFound(partition string) error {
+	return status.Errorf(
+		codes.FailedPrecondition,
+		"Partition %s not found", partition,
+	)
+}
+
+func errObjectTypeNotFound(objectType string) error {
+	return status.Errorf(
+		codes.FailedPrecondition,
+		"Object type %s not found", objectType,
+	)
+}
 
 func (s *Server) ObjectDelete(
 	ctx context.Context,
@@ -115,7 +143,7 @@ func (s *Server) ObjectList(
 				// which is why we don't just return nil here
 				continue
 			}
-			return ErrUnknown
+			return errors.ErrUnknown
 		} else if len(pfs) > 0 {
 			for _, pf := range pfs {
 				any = append(any, pf)
@@ -131,7 +159,7 @@ func (s *Server) ObjectList(
 				// property schemas matching an unknown partition
 				return nil
 			}
-			return ErrUnknown
+			return errors.ErrUnknown
 		}
 		any = append(
 			any,
@@ -157,11 +185,97 @@ func (s *Server) ObjectList(
 	return nil
 }
 
+// validateObjectSetRequest ensures that the data the user sent in the
+// request's Before and After elements makes sense and meets things like
+// property schema validation checks. Returns the object type for the new
+// object.
+func (s *Server) validateObjectSetRequest(
+	req *pb.ObjectSetRequest,
+) (*pb.ObjectType, error) {
+	after := req.After
+
+	// Simple input data validations
+	if after.ObjectTypeCode == "" {
+		return nil, ErrObjectTypeCodeRequired
+	}
+	if after.PartitionUuid == "" {
+		return nil, ErrPartitionUuidRequired
+	}
+
+	// Validate the referred to type, partition and project actually exist
+	p, err := s.store.PartitionGet(after.PartitionUuid)
+	if err != nil {
+		if err == errors.ErrNotFound {
+			return nil, errPartitionNotFound(after.PartitionUuid)
+		}
+		// We don't want to leak internal implementation errors...
+		s.log.ERR("failed when validating partition in object set: %s", err)
+		return nil, errors.ErrUnknown
+	}
+	after.PartitionUuid = p.Uuid
+
+	ot, err := s.store.ObjectTypeGet(after.ObjectTypeCode)
+	if err != nil {
+		if err == errors.ErrNotFound {
+			return nil, errObjectTypeNotFound(after.ObjectTypeCode)
+		}
+		// We don't want to leak internal implementation errors...
+		s.log.ERR("failed when validating object type in object set: %s", err)
+		return nil, errors.ErrUnknown
+	}
+	after.ObjectTypeCode = ot.Code
+
+	if req.Before == nil {
+		// TODO(jaypipes): User expects to create a new object with the after
+		// image. Ensure we don't have an existing object with the supplied
+		// UUID, or if UUID is empty (indicating the user wants the UUID to be
+		// auto-created), no existing object with the supplied name exists in
+		// the partition or project scope.
+		switch ot.Scope {
+		case pb.ObjectTypeScope_PROJECT:
+		case pb.ObjectTypeScope_PARTITION:
+		}
+	}
+
+	// TODO(jaypipes): property schema validation checks
+	return ot, nil
+}
+
 func (s *Server) ObjectSet(
 	ctx context.Context,
 	req *pb.ObjectSetRequest,
 ) (*pb.ObjectSetResponse, error) {
-	return nil, nil
+	// TODO(jaypipes): AUTHZ check if user can write objects
+
+	ot, err := s.validateObjectSetRequest(req)
+	if err != nil {
+		return nil, err
+	}
+
+	var changed *pb.Object
+	if req.Before == nil {
+		s.log.L3(
+			"creating new object of type %s in partition %s with name %s...",
+			req.After.ObjectTypeCode,
+			req.After.PartitionUuid,
+			req.After.Name,
+		)
+		changed, err = s.store.ObjectCreate(req.After, ot)
+		if err != nil {
+			return nil, err
+		}
+		s.log.L1(
+			"created new object with UUID %s of type %s in partition %s with name %s",
+			changed.Uuid,
+			req.After.ObjectTypeCode,
+			req.After.PartitionUuid,
+			req.After.Name,
+		)
+	}
+
+	return &pb.ObjectSetResponse{
+		Object: changed,
+	}, nil
 }
 
 func (s *Server) ObjectPropertiesList(

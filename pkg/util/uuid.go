@@ -3,6 +3,8 @@ package util
 import (
 	"regexp"
 	"strings"
+
+	"github.com/google/uuid"
 )
 
 var (
@@ -10,6 +12,11 @@ var (
 	// this regex, which is why this is nice and simple
 	regexUuid = regexp.MustCompile("^[0-9a-f]{32}$")
 )
+
+// NewNormalizedUuid returns a newly-generated, stripped to 32 hex digits UUID4
+func NewNormalizedUuid() string {
+	return NormalizeUuid(uuid.New().String())
+}
 
 // NormalizeUuid simple lowecases and removes all non-alphanumeric characters
 // from the supplied string

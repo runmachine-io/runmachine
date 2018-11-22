@@ -13,11 +13,13 @@ import (
 
 const (
 	// $PARTITION/objects/ is a key namespace that has sub key namespaces that
-	// index objects by project+name and by UUID
-	_OBJECTS_KEY = "objects/"
-	// $PARTITION/objects/by-uuid/ is a key namespace that stores valued keys
-	// where the key is the object's UUID and the value is the serialized
-	// Object protobuffer message
+	// index objects by name or project+name
+	_OBJECTS_BY_TYPE_KEY = "objects/by-type/"
+	_BY_NAME_KEY         = "by-name/"
+	_BY_PROJECT_KEY      = "by-project/"
+	// $ROOT/objects/by-uuid/ is a key namespace that stores valued keys where
+	// the key is the object's UUID and the value is the serialized Object
+	// protobuffer message
 	_OBJECTS_BY_UUID_KEY = "objects/by-uuid/"
 )
 
@@ -64,7 +66,7 @@ func (s *Store) ObjectList(
 				return nil, err
 			} else if obj != nil {
 				if filter.PartitionUuid != "" {
-					if obj.PartitionUuid != filter.PartitionUuid {
+					if obj.Partition != filter.PartitionUuid {
 						continue
 					}
 				}
@@ -74,7 +76,7 @@ func (s *Store) ObjectList(
 					}
 				}
 				if filter.ObjectTypeCode != "" {
-					if obj.ObjectTypeCode != filter.ObjectTypeCode {
+					if obj.ObjectType != filter.ObjectTypeCode {
 						continue
 					}
 				}
@@ -159,4 +161,71 @@ func (s *Store) objectsGetAll() (abstract.Cursor, error) {
 	}
 
 	return cursor.NewFromEtcdGetResponse(resp), nil
+}
+
+// ObjectCreate puts the supplied object into backend storage, adding all the
+// appropriate indexes. It returns the newly-created object.
+func (s *Store) ObjectCreate(
+	obj *pb.Object,
+	objType *pb.ObjectType,
+) (*pb.Object, error) {
+	if obj.Uuid == "" {
+		obj.Uuid = util.NewNormalizedUuid()
+	} else {
+		obj.Uuid = util.NormalizeUuid(obj.Uuid)
+	}
+
+	objValue, err := proto.Marshal(obj)
+	if err != nil {
+		s.log.ERR("failed to serialize object: %v", err)
+		return nil, errors.ErrUnknown
+	}
+
+	objByUuidKey := _OBJECTS_BY_UUID_KEY + obj.Uuid
+	var objByNameKey string
+	switch objType.Scope {
+	case pb.ObjectTypeScope_PARTITION:
+		// $PARTITION/objects/by-type/{type}/by-name/{name}
+		objByNameKey = _PARTITIONS_BY_UUID_KEY + obj.Partition + "/" +
+			_OBJECTS_BY_TYPE_KEY + objType.Code + "/" +
+			_BY_NAME_KEY + obj.Name
+	case pb.ObjectTypeScope_PROJECT:
+		// $PARTITION/objects/by-type/{type}/by-project/{project}/by-name/{name}
+		objByNameKey = _PARTITIONS_BY_UUID_KEY + obj.Partition + "/" +
+			_OBJECTS_BY_TYPE_KEY + objType.Code + "/" +
+			_BY_PROJECT_KEY + obj.Project + "/" +
+			_BY_NAME_KEY + obj.Name
+	}
+
+	ctx, cancel := s.requestCtx()
+	defer cancel()
+
+	// creates all the indexes and the objects/by-uuid/ entry using a
+	// transaction that ensures if another thread modified anything underneath
+	// us, we return an error
+	then := []etcd.Op{
+		// Add the entry for the index by object name
+		etcd.OpPut(objByNameKey, obj.Uuid),
+		// Add the entry for the primary index by object UUID
+		etcd.OpPut(objByUuidKey, string(objValue)),
+	}
+	compare := []etcd.Cmp{
+		// Ensure the object value and index by name don't yet exist
+		etcd.Compare(etcd.Version(objByNameKey), "=", 0),
+		etcd.Compare(etcd.Version(objByUuidKey), "=", 0),
+	}
+	resp, err := s.kv.Txn(ctx).If(compare...).Then(then...).Commit()
+
+	if err != nil {
+		s.log.ERR("object_create: failed to create txn in etcd: %v", err)
+		return nil, errors.ErrUnknown
+	} else if resp.Succeeded == false {
+		s.log.L3(
+			"object_create: another thread already created object %s:%s",
+			"partition="+obj.Partition,
+			obj.Name,
+		)
+		return nil, errors.ErrUnknown
+	}
+	return obj, nil
 }

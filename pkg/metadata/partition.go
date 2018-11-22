@@ -3,18 +3,8 @@ package metadata
 import (
 	"context"
 
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
 	"github.com/runmachine-io/runmachine/pkg/errors"
 	pb "github.com/runmachine-io/runmachine/proto"
-)
-
-var (
-	ErrSearchRequired = status.Errorf(
-		codes.FailedPrecondition,
-		"Either UUID or name to search for is required.",
-	)
 )
 
 // PartitionGet looks up a partition by UUID or name and returns a Partition

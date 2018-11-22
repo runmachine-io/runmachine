@@ -35,4 +35,9 @@ var (
 		Code:     409003,
 		Message:  "encountered generation conflict.",
 	}
+	ErrUnknown = &Error{
+		HTTPCode: 500,
+		Code:     500,
+		Message:  "unknown error.",
+	}
 )

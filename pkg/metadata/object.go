@@ -92,12 +92,28 @@ func (s *Server) buildPartitionObjectFilters(
 		}
 	}
 
-	// Now that we've expanded our partitions and object types, add in the
-	// original ObjectFilter's Search and UsePrefix for each
-	// PartitionObjectFilter we've created
-	for _, pf := range res {
-		pf.Search = filter.Search
-		pf.UsePrefix = filter.UsePrefix
+	// If we've expanded the supplied partition filters into multiple
+	// PartitionObjectFilters, then we need to add our supplied ObjectFilter's
+	// search and use prefix for the object's UUID/name. If we supplied no
+	// partition filters, then go ahead and just return a single
+	// PartitionObjectFilter with the search term and prefix indicator for the
+	// object.
+	if len(res) > 0 {
+		// Now that we've expanded our partitions and object types, add in the
+		// original ObjectFilter's Search and UsePrefix for each
+		// PartitionObjectFilter we've created
+		for _, pf := range res {
+			pf.Search = filter.Search
+			pf.UsePrefix = filter.UsePrefix
+		}
+	} else {
+		res = append(
+			res,
+			&storage.PartitionObjectFilter{
+				Search:    filter.Search,
+				UsePrefix: filter.UsePrefix,
+			},
+		)
 	}
 	return res, nil
 }
@@ -122,6 +138,7 @@ func (s *Server) ObjectList(
 			}
 		}
 	}
+
 	if len(any) == 0 {
 		// By default, filter by the session's partition
 		part, err := s.store.PartitionGet(req.Session.Partition)

@@ -69,7 +69,11 @@ func (s *Store) ObjectList(
 				filter.Project,
 			)
 		} else {
-			filterObjs, err = s.objectsGetBySearch(filter)
+			filterObjs, err = s.objectsGetBySearch(
+				filter.ObjectTypeCode,
+				filter.PartitionUuid,
+				filter.Project,
+			)
 		}
 		if err != nil {
 			if err == errors.ErrNotFound {
@@ -150,9 +154,43 @@ func (s *Store) objectsGetByObjectSearch(
 }
 
 func (s *Store) objectsGetBySearch(
-	filter *PartitionObjectFilter,
+	matchObjectTypeCode string,
+	matchPartitionUuid string,
+	matchProject string,
 ) ([]*pb.Object, error) {
-	return []*pb.Object{}, nil
+	// This is called when we have no filter on object UUID/name. We will get
+	// all objects and filter out any objects that don't meet the supplied
+	// partition UUID, project and object type code filters.
+	cur, err := s.objectsGetAll()
+	if err != nil {
+		return nil, err
+	}
+
+	res := make([]*pb.Object, 0)
+	for cur.Next() {
+		obj := &pb.Object{}
+		if err = cur.Scan(obj); err != nil {
+			return nil, err
+		}
+		if matchPartitionUuid != "" {
+			if obj.Partition != matchPartitionUuid {
+				continue
+			}
+		}
+		if matchProject != "" {
+			if obj.Project != matchProject {
+				continue
+			}
+		}
+		if matchObjectTypeCode != "" {
+			if obj.ObjectType != matchObjectTypeCode {
+				continue
+			}
+		}
+		res = append(res, obj)
+	}
+
+	return res, nil
 }
 
 // objectGetByUuid returns an Object protobuffer message with the supplied

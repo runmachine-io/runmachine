@@ -1,0 +1,3 @@
+partition: part0
+type: runm.provider
+name: row1-rack1-compute23

@@ -1,6 +1,8 @@
 package storage
 
 import (
+	"strings"
+
 	etcd "github.com/coreos/etcd/clientv3"
 	"github.com/golang/protobuf/proto"
 
@@ -63,7 +65,8 @@ func (s *Store) ensureObjectTypes() error {
 	}
 	all := make(map[string]bool, 0)
 	for _, k := range resp.Kvs {
-		all[string(k.Key)] = true
+		otCode := strings.TrimPrefix(string(k.Key), _OBJECT_TYPES_KEY)
+		all[otCode] = true
 	}
 
 	for _, ot := range runmObjectTypes {
@@ -177,8 +180,7 @@ func (s *Store) objectTypeCreate(
 		s.log.ERR("failed to create txn in etcd: %v", err)
 		return err
 	} else if resp.Succeeded == false {
-		s.log.L3("another thread already created key %s", key)
-		return errors.ErrGenerationConflict
+		return errors.ErrDuplicate
 	}
 	return nil
 }

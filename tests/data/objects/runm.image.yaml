@@ -1,0 +1,4 @@
+partition: part0
+type: runm.image
+project: proj0
+name: db-server

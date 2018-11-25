@@ -108,22 +108,26 @@ func (s *Server) buildPartitionObjectFilters(
 	// partition filters, then go ahead and just return a single
 	// PartitionObjectFilter with the search term and prefix indicator for the
 	// object.
-	if len(res) > 0 {
-		// Now that we've expanded our partitions and object types, add in the
-		// original ObjectFilter's Search and UsePrefix for each
-		// PartitionObjectFilter we've created
-		for _, pf := range res {
-			pf.Search = filter.Search
-			pf.UsePrefix = filter.UsePrefix
+	if filter.Search != "" || filter.Project != "" {
+		if len(res) > 0 {
+			// Now that we've expanded our partitions and object types, add in the
+			// original ObjectFilter's Search and UsePrefix for each
+			// PartitionObjectFilter we've created
+			for _, pf := range res {
+				pf.Project = filter.Project
+				pf.Search = filter.Search
+				pf.UsePrefix = filter.UsePrefix
+			}
+		} else {
+			res = append(
+				res,
+				&storage.PartitionObjectFilter{
+					Project:   filter.Project,
+					Search:    filter.Search,
+					UsePrefix: filter.UsePrefix,
+				},
+			)
 		}
-	} else {
-		res = append(
-			res,
-			&storage.PartitionObjectFilter{
-				Search:    filter.Search,
-				UsePrefix: filter.UsePrefix,
-			},
-		)
 	}
 	return res, nil
 }

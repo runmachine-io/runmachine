@@ -86,6 +86,10 @@ func (s *Store) ObjectList(
 	objs := make(map[string]*pb.Object, 0)
 
 	for _, filter := range any {
+		if filter.IsEmpty() {
+			s.log.ERR("received empty PartitionObjectFilter in ObjectList()")
+			continue
+		}
 		// If the PartitionObjectFilter contains a value for the Search field,
 		// that means we need to look up objects by UUID or name (with an
 		// optional prefix for the name). If no Search field is present, that

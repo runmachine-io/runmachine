@@ -23,7 +23,6 @@ if [ $? -ne 0 ]; then
     make build
 fi
 
-EXEC_COMMAND="$@"
 ETCD_CONTAINER_NAME=${ETCD_CONTAINER_NAME:-"runm-test-etcd"}
 METADATA_CONTAINER_NAME=${METADATA_CONTAINER_NAME:-"runm-test-metadata"}
 
@@ -63,8 +62,8 @@ fi
 
 print_if_verbose ""
 print_if_verbose "*********************************************************************"
-print_if_verbose "Running \`runm $EXEC_COMMAND\` in single-use docker container..."
+print_if_verbose "Running \`runm $*\` in single-use docker container..."
 print_if_verbose "*********************************************************************"
 print_if_verbose ""
 
-docker run --rm --network host -v $ROOT_DIR/tests/data/:/tests/data runm/runm:$VERSION $EXEC_COMMAND
+docker run --rm --network host -v $ROOT_DIR/tests/data/:/tests/data runm/runm:$VERSION "$@"

@@ -44,12 +44,12 @@ func (s *Server) PartitionList(
 		return err
 	}
 	defer cur.Close()
-	var msg pb.Partition
 	for cur.Next() {
-		if err = cur.Scan(&msg); err != nil {
+		msg := &pb.Partition{}
+		if err = cur.Scan(msg); err != nil {
 			return err
 		}
-		if err = stream.Send(&msg); err != nil {
+		if err = stream.Send(msg); err != nil {
 			return err
 		}
 	}

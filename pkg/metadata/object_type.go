@@ -40,12 +40,12 @@ func (s *Server) ObjectTypeList(
 		return err
 	}
 	defer cur.Close()
-	var msg pb.ObjectType
 	for cur.Next() {
-		if err = cur.Scan(&msg); err != nil {
+		msg := &pb.ObjectType{}
+		if err = cur.Scan(msg); err != nil {
 			return err
 		}
-		if err = stream.Send(&msg); err != nil {
+		if err = stream.Send(msg); err != nil {
 			return err
 		}
 	}

@@ -120,12 +120,12 @@ func (s *Server) PropertySchemaList(
 		return err
 	}
 	defer cur.Close()
-	var msg pb.PropertySchema
 	for cur.Next() {
-		if err = cur.Scan(&msg); err != nil {
+		msg := &pb.PropertySchema{}
+		if err = cur.Scan(msg); err != nil {
 			return err
 		}
-		if err = stream.Send(&msg); err != nil {
+		if err = stream.Send(msg); err != nil {
 			return err
 		}
 	}

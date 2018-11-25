@@ -50,10 +50,10 @@ func (s *Server) buildPartitionObjectFilters(
 		}
 		defer cur.Close()
 
-		var part pb.Partition
 		nParts := 0
 		for cur.Next() {
-			if err = cur.Scan(&part); err != nil {
+			part := &pb.Partition{}
+			if err = cur.Scan(part); err != nil {
 				return nil, err
 			}
 			partUuids[part.Uuid] = true
@@ -71,10 +71,10 @@ func (s *Server) buildPartitionObjectFilters(
 		}
 		defer cur.Close()
 
-		var ot pb.ObjectType
 		nTypes := 0
 		for cur.Next() {
-			if err = cur.Scan(&ot); err != nil {
+			ot := &pb.ObjectType{}
+			if err = cur.Scan(ot); err != nil {
 				return nil, err
 			}
 			otCodes[ot.Code] = true
@@ -188,12 +188,12 @@ func (s *Server) ObjectList(
 		return err
 	}
 	defer cur.Close()
-	var msg pb.Object
 	for cur.Next() {
-		if err = cur.Scan(&msg); err != nil {
+		msg := &pb.Object{}
+		if err = cur.Scan(msg); err != nil {
 			return err
 		}
-		if err = stream.Send(&msg); err != nil {
+		if err = stream.Send(msg); err != nil {
 			return err
 		}
 	}

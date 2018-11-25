@@ -51,11 +51,16 @@ func (s *Server) buildPartitionObjectFilters(
 		defer cur.Close()
 
 		var part pb.Partition
+		nParts := 0
 		for cur.Next() {
 			if err = cur.Scan(&part); err != nil {
 				return nil, err
 			}
 			partUuids[part.Uuid] = true
+			nParts += 1
+		}
+		if nParts == 0 {
+			return nil, errors.ErrNotFound
 		}
 	}
 	if filter.ObjectType != nil {
@@ -67,11 +72,16 @@ func (s *Server) buildPartitionObjectFilters(
 		defer cur.Close()
 
 		var ot pb.ObjectType
+		nTypes := 0
 		for cur.Next() {
 			if err = cur.Scan(&ot); err != nil {
 				return nil, err
 			}
 			otCodes[ot.Code] = true
+			nTypes += 1
+		}
+		if nTypes == 0 {
+			return nil, errors.ErrNotFound
 		}
 	}
 
@@ -140,7 +150,18 @@ func (s *Server) ObjectList(
 	}
 
 	if len(any) == 0 {
-		// By default, filter by the session's partition
+		if len(req.Any) > 0 {
+			// If the user specified filters but due to specifying unknown
+			// partitions or object types, there were no non-empty filters
+			// produced, we return nil to indicate no records were found
+			s.log.L3(
+				"object_list: no partition object filters created from %s",
+				req.Any,
+			)
+			return nil
+		}
+		// By default, filter by the session's partition if the user didn't
+		// specify any filtering.
 		part, err := s.store.PartitionGet(req.Session.Partition)
 		if err != nil {
 			if err == errors.ErrNotFound {
@@ -157,6 +178,7 @@ func (s *Server) ObjectList(
 			},
 		)
 	}
+
 	cur, err := s.store.ObjectList(any)
 	if err != nil {
 		return err

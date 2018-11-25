@@ -1,6 +1,9 @@
 package storage
 
 import (
+	"fmt"
+	"strconv"
+
 	etcd "github.com/coreos/etcd/clientv3"
 	"github.com/golang/protobuf/proto"
 
@@ -37,6 +40,36 @@ type PartitionObjectFilter struct {
 	Search         string
 	UsePrefix      bool
 	// TODO(jaypipes): Add support for property and tag filters
+}
+
+func (f *PartitionObjectFilter) IsEmpty() bool {
+	return f.PartitionUuid == "" && f.ObjectTypeCode == "" && f.Project == "" && f.Search == ""
+}
+
+func (f *PartitionObjectFilter) String() string {
+	attrMap := make(map[string]string, 0)
+	if f.PartitionUuid != "" {
+		attrMap["partition"] = f.PartitionUuid
+	}
+	if f.ObjectTypeCode != "" {
+		attrMap["object_type"] = f.ObjectTypeCode
+	}
+	if f.Project != "" {
+		attrMap["project"] = f.Project
+	}
+	if f.Search != "" {
+		attrMap["search"] = f.Search
+		attrMap["use_prefix"] = strconv.FormatBool(f.UsePrefix)
+	}
+	attrs := ""
+	x := 0
+	for k, v := range attrMap {
+		if x > 0 {
+			attrs += ","
+		}
+		attrs += k + "=" + v
+	}
+	return fmt.Sprintf("PartitionObjectFilter(%s)", attrs)
 }
 
 // ObjectTypeList returns a cursor over zero or more ObjectType

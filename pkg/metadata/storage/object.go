@@ -27,33 +27,34 @@ const (
 	_OBJECTS_BY_UUID_KEY = "objects/by-uuid/"
 )
 
-// A specialized filter class that has pre-determined specific partition UUIDs
-// and object type codes. Users pass pb.ObjectFilter messages which contain
-// optional pb.PartitionFilter and pb.ObjectTypeFilter messages. Those may be
-// expanded (due to UsePrefix = true) to a set of partition UUIDs and/or object
-// type codes. We then create zero or more of these PartitionObjectFilter
-// structs that represent a specific filter on partition UUID and object type,
-// along with the the object's name/UUID and UsePrefix flag.
+// A specialized filter class that has already looked up specific partition and
+// object types (expanded from user-supplied partition and type filter
+// strings). Users pass pb.ObjectFilter messages which contain optional
+// pb.PartitionFilter and pb.ObjectTypeFilter messages. Those may be expanded
+// (due to UsePrefix = true) to a set of partition UUIDs and/or object type
+// codes. We then create zero or more of these PartitionObjectFilter structs
+// that represent a specific filter on partition UUID and object type, along
+// with the the object's name/UUID and UsePrefix flag.
 type PartitionObjectFilter struct {
-	PartitionUuid  string
-	Project        string
-	ObjectTypeCode string
-	Search         string
-	UsePrefix      bool
+	Partition  *pb.Partition
+	ObjectType *pb.ObjectType
+	Project    string
+	Search     string
+	UsePrefix  bool
 	// TODO(jaypipes): Add support for property and tag filters
 }
 
 func (f *PartitionObjectFilter) IsEmpty() bool {
-	return f.PartitionUuid == "" && f.ObjectTypeCode == "" && f.Project == "" && f.Search == ""
+	return f.Partition == nil && f.ObjectType == nil && f.Project == "" && f.Search == ""
 }
 
 func (f *PartitionObjectFilter) String() string {
 	attrMap := make(map[string]string, 0)
-	if f.PartitionUuid != "" {
-		attrMap["partition"] = f.PartitionUuid
+	if f.Partition != nil {
+		attrMap["partition"] = f.Partition.Uuid
 	}
-	if f.ObjectTypeCode != "" {
-		attrMap["object_type"] = f.ObjectTypeCode
+	if f.ObjectType != nil {
+		attrMap["object_type"] = f.ObjectType.Code
 	}
 	if f.Project != "" {
 		attrMap["project"] = f.Project
@@ -96,13 +97,7 @@ func (s *Store) ObjectList(
 		// optional prefix for the name). If no Search field is present, that
 		// means that in order to evaluate this PartitionObjectFilter we'll be
 		// searching on ranges of objects by type, partition or project.
-		filterObjs, err := s.objectsGetBySearch(
-			filter.ObjectTypeCode,
-			filter.PartitionUuid,
-			filter.Project,
-			filter.Search,
-			filter.UsePrefix,
-		)
+		filterObjs, err := s.objectsGetByFilter(filter)
 		if err != nil {
 			if err == errors.ErrNotFound {
 				continue // Remember, we need to OR together the filters
@@ -131,36 +126,32 @@ func (s *Store) ObjectList(
 	return cursor.NewFromSlicePBMessages(msgs[:x]), nil
 }
 
-func (s *Store) objectsGetBySearch(
-	matchObjectTypeCode string,
-	matchPartitionUuid string,
-	matchProject string,
-	matchObjectSearch string,
-	matchUsePrefix bool,
+func (s *Store) objectsGetByFilter(
+	filter *PartitionObjectFilter,
 ) ([]*pb.Object, error) {
-	if matchObjectSearch != "" {
-		if util.IsUuidLike(matchObjectSearch) {
+	if filter.Search != "" {
+		if util.IsUuidLike(filter.Search) {
 			// If the filter specifies a Search and it looks like a UUID, then
 			// all we need to do is grab the object from the primary
 			// objects/by-uuid/ index and check that any other fields match the
 			// object's fields. If so, just return the UUID
-			normUuid := util.NormalizeUuid(matchObjectSearch)
+			normUuid := util.NormalizeUuid(filter.Search)
 			obj, err := s.objectGetByUuid(normUuid)
 			if err != nil {
 				return nil, err
 			}
-			if matchPartitionUuid != "" {
-				if obj.Partition != matchPartitionUuid {
+			if filter.Partition != nil {
+				if obj.Partition != filter.Partition.Uuid {
 					return nil, errors.ErrNotFound
 				}
 			}
-			if matchProject != "" {
-				if obj.Project != matchProject {
+			if filter.ObjectType != nil {
+				if obj.ObjectType != filter.ObjectType.Code {
 					return nil, errors.ErrNotFound
 				}
 			}
-			if matchObjectTypeCode != "" {
-				if obj.ObjectType != matchObjectTypeCode {
+			if filter.Project != "" {
+				if obj.Project != filter.Project {
 					return nil, errors.ErrNotFound
 				}
 			}
@@ -178,7 +169,7 @@ func (s *Store) objectsGetBySearch(
 			// scan on all objects by the primary objects/by-uuid/ index and
 			// manually check to see if the deserialized Object's name has the
 			// requested name...
-			if matchObjectTypeCode != "" {
+			if filter.ObjectType != nil {
 				// TODO(jaypipes)
 				return []*pb.Object{}, nil
 			}
@@ -200,28 +191,30 @@ func (s *Store) objectsGetBySearch(
 		if err = cur.Scan(obj); err != nil {
 			return nil, err
 		}
-		if matchPartitionUuid != "" {
-			if obj.Partition != matchPartitionUuid {
+		// Use a sieve pattern, only adding the object to our results if it
+		// passes all match expressions
+		if filter.Partition != nil {
+			if obj.Partition != filter.Partition.Uuid {
 				continue
 			}
 		}
-		if matchProject != "" {
-			if obj.Project != matchProject {
+		if filter.ObjectType != nil {
+			if obj.ObjectType != filter.ObjectType.Code {
 				continue
 			}
 		}
-		if matchObjectTypeCode != "" {
-			if obj.ObjectType != matchObjectTypeCode {
+		if filter.Project != "" {
+			if obj.Project != filter.Project {
 				continue
 			}
 		}
-		if matchObjectSearch != "" {
-			if matchUsePrefix {
-				if !strings.HasPrefix(obj.Name, matchObjectSearch) {
+		if filter.Search != "" {
+			if filter.UsePrefix {
+				if !strings.HasPrefix(obj.Name, filter.Search) {
 					continue
 				}
 			} else {
-				if obj.Name != matchObjectSearch {
+				if obj.Name != filter.Search {
 					continue
 				}
 			}

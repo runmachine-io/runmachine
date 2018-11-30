@@ -34,11 +34,11 @@ func (s *Server) expandObjectFilter(
 	// A set of partition UUIDs that we'll create PartitionObjectFilters with.
 	// These are the UUIDs of any partitions that match the PartitionFilter in
 	// the supplied pb.ObjectFilter
-	partUuids := make(map[string]bool, 0)
+	partitions := make([]*pb.Partition, 0)
 	// A set of object type codes that we'll create PartitionObjectFilters
 	// with. These are the codes of object types that match the
 	// ObjectTypeFilter in the supplied ObjectFilter
-	otCodes := make(map[string]bool, 0)
+	objTypes := make([]*pb.ObjectType, 0)
 
 	if filter.Partition != nil {
 		// Verify that the requested partition(s) exist(s) and for each
@@ -49,16 +49,14 @@ func (s *Server) expandObjectFilter(
 		}
 		defer cur.Close()
 
-		nParts := 0
 		for cur.Next() {
 			part := &pb.Partition{}
 			if err = cur.Scan(part); err != nil {
 				return nil, err
 			}
-			partUuids[part.Uuid] = true
-			nParts += 1
+			partitions = append(partitions, part)
 		}
-		if nParts == 0 {
+		if len(partitions) == 0 {
 			return nil, errors.ErrNotFound
 		}
 	}
@@ -70,34 +68,44 @@ func (s *Server) expandObjectFilter(
 		}
 		defer cur.Close()
 
-		nTypes := 0
 		for cur.Next() {
 			ot := &pb.ObjectType{}
 			if err = cur.Scan(ot); err != nil {
 				return nil, err
 			}
-			otCodes[ot.Code] = true
-			nTypes += 1
+			objTypes = append(objTypes, ot)
 		}
-		if nTypes == 0 {
+		if len(objTypes) == 0 {
 			return nil, errors.ErrNotFound
 		}
 	}
 
-	for partUuid := range partUuids {
-		if len(otCodes) == 0 {
-			f := &storage.PartitionObjectFilter{
-				PartitionUuid: partUuid,
-			}
-			res = append(res, f)
-		} else {
-			for otCode := range otCodes {
+	// OK, if we've expanded partition or object type, we need to construct
+	// PartitionObjectFilter objects containing the combination of all the
+	// expanded partitions and object types.
+	if len(partitions) > 0 {
+		for _, p := range partitions {
+			if len(objTypes) == 0 {
 				f := &storage.PartitionObjectFilter{
-					PartitionUuid:  partUuid,
-					ObjectTypeCode: otCode,
+					Partition: p,
 				}
 				res = append(res, f)
+			} else {
+				for _, ot := range objTypes {
+					f := &storage.PartitionObjectFilter{
+						Partition:  p,
+						ObjectType: ot,
+					}
+					res = append(res, f)
+				}
 			}
+		}
+	} else if len(objTypes) > 0 {
+		for _, ot := range objTypes {
+			f := &storage.PartitionObjectFilter{
+				ObjectType: ot,
+			}
+			res = append(res, f)
 		}
 	}
 
@@ -186,7 +194,7 @@ func (s *Server) ObjectList(
 		any = append(
 			any,
 			&storage.PartitionObjectFilter{
-				PartitionUuid: part.Uuid,
+				Partition: part,
 			},
 		)
 	}

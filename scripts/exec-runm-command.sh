@@ -67,7 +67,7 @@ print_if_verbose "**************************************************************
 print_if_verbose ""
 
 runm_user=${RUNM_USER:-admin}
-runm_project=${RUNM_PROJECT:-project0}
+runm_project=${RUNM_PROJECT:-proj0}
 runm_partition=${RUNM_PARTITION:-part0}
 
 docker run --rm --network host -v $ROOT_DIR/tests/data/:/tests/data \

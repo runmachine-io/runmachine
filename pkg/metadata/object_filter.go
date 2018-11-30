@@ -28,6 +28,7 @@ func (s *Server) defaultObjectFilter(
 	}
 	return &storage.PartitionObjectFilter{
 		Partition: part,
+		Project:   session.Project,
 	}, nil
 }
 
@@ -107,6 +108,15 @@ func (s *Server) expandObjectFilter(
 		if len(objTypes) == 0 {
 			return nil, errors.ErrNotFound
 		}
+	}
+
+	// Default the object list to filtering by the session's project if the
+	// user didn't specify a specific project to filter on
+	if filter.Project == "" {
+		filter.Project = session.Project
+	} else {
+		// TODO(jaypipes): Determine if the user has the ability to list
+		// objects in other projects...
 	}
 
 	// OK, if we've expanded partition or object type, we need to construct

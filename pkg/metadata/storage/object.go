@@ -169,7 +169,7 @@ func (s *Store) objectsGetByFilter(
 			// scan on all objects by the primary objects/by-uuid/ index and
 			// manually check to see if the deserialized Object's name has the
 			// requested name...
-			if filter.ObjectType != nil {
+			if filter.ObjectType != nil && filter.Partition != nil {
 				// TODO(jaypipes)
 				return []*pb.Object{}, nil
 			}

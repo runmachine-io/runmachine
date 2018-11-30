@@ -26,6 +26,10 @@ var (
 		codes.FailedPrecondition,
 		"project is required in session.",
 	)
+	ErrFailedExpandObjectFilters = status.Errorf(
+		codes.FailedPrecondition,
+		"failed to expand object filters.",
+	)
 	ErrPartitionUnknown = status.Errorf(
 		codes.FailedPrecondition,
 		"unknown partition.",

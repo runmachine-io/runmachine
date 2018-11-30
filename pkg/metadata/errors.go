@@ -14,6 +14,18 @@ var (
 		codes.NotFound,
 		"object could not be found.",
 	)
+	ErrSessionUserRequired = status.Errorf(
+		codes.FailedPrecondition,
+		"user is required in session.",
+	)
+	ErrSessionPartitionRequired = status.Errorf(
+		codes.FailedPrecondition,
+		"partition is required in session.",
+	)
+	ErrSessionProjectRequired = status.Errorf(
+		codes.FailedPrecondition,
+		"project is required in session.",
+	)
 	ErrPartitionUnknown = status.Errorf(
 		codes.FailedPrecondition,
 		"unknown partition.",

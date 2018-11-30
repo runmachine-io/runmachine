@@ -22,13 +22,12 @@ func (s *Server) ObjectGet(
 	return nil, nil
 }
 
-// buildPartitionObjectFilters is used to expand an ObjectFilter, which may
-// contain PartitionFilter and ObjectTypeFilter objects that themselves may
-// resolve to multiple partitions or object types, to a set of
-// PartitionObjectFilter objects. A PartitionObjectFilter is used to describe a
-// filter on objects in a *specific* partition and having a *specific* object
-// type.
-func (s *Server) buildPartitionObjectFilters(
+// expandObjectFilter is used to expand an ObjectFilter, which may contain
+// PartitionFilter and ObjectTypeFilter objects that themselves may resolve to
+// multiple partitions or object types, to a set of PartitionObjectFilter
+// objects. A PartitionObjectFilter is used to describe a filter on objects in
+// a *specific* partition and having a *specific* object type.
+func (s *Server) expandObjectFilter(
 	filter *pb.ObjectFilter,
 ) ([]*storage.PartitionObjectFilter, error) {
 	res := make([]*storage.PartitionObjectFilter, 0)
@@ -136,9 +135,12 @@ func (s *Server) ObjectList(
 	req *pb.ObjectListRequest,
 	stream pb.RunmMetadata_ObjectListServer,
 ) error {
+	if err := checkSession(req.Session); err != nil {
+		return err
+	}
 	any := make([]*storage.PartitionObjectFilter, 0)
 	for _, filter := range req.Any {
-		if pfs, err := s.buildPartitionObjectFilters(filter); err != nil {
+		if pfs, err := s.expandObjectFilter(filter); err != nil {
 			if err == errors.ErrNotFound {
 				// Just continue since clearly we can have no objects matching
 				// an unknown partition but we need to OR together all filters,
@@ -171,6 +173,12 @@ func (s *Server) ObjectList(
 			if err == errors.ErrNotFound {
 				// Just return nil since clearly we can have no
 				// property schemas matching an unknown partition
+				s.log.L3(
+					"object_list: user %s listed objects with no filters "+
+						"and supplied unknown partition '%s' in the session",
+					req.Session.User,
+					req.Session.Partition,
+				)
 				return nil
 			}
 			return errors.ErrUnknown

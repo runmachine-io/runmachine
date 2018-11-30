@@ -174,7 +174,7 @@ func (s *Server) ObjectList(
 				// Just return nil since clearly we can have no
 				// property schemas matching an unknown partition
 				s.log.L3(
-					"object_list: user %s listed objects with no filters "+
+					"object_list: '%s' listed objects with no filters "+
 						"and supplied unknown partition '%s' in the session",
 					req.Session.User,
 					req.Session.Partition,

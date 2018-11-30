@@ -3,6 +3,7 @@ package storage
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	etcd "github.com/coreos/etcd/clientv3"
 	"github.com/golang/protobuf/proto"
@@ -95,23 +96,13 @@ func (s *Store) ObjectList(
 		// optional prefix for the name). If no Search field is present, that
 		// means that in order to evaluate this PartitionObjectFilter we'll be
 		// searching on ranges of objects by type, partition or project.
-		var filterObjs []*pb.Object
-		var err error
-		if filter.Search != "" {
-			filterObjs, err = s.objectsGetByObjectSearch(
-				filter.Search,
-				filter.UsePrefix,
-				filter.ObjectTypeCode,
-				filter.PartitionUuid,
-				filter.Project,
-			)
-		} else {
-			filterObjs, err = s.objectsGetBySearch(
-				filter.ObjectTypeCode,
-				filter.PartitionUuid,
-				filter.Project,
-			)
-		}
+		filterObjs, err := s.objectsGetBySearch(
+			filter.ObjectTypeCode,
+			filter.PartitionUuid,
+			filter.Project,
+			filter.Search,
+			filter.UsePrefix,
+		)
 		if err != nil {
 			if err == errors.ErrNotFound {
 				continue // Remember, we need to OR together the filters
@@ -140,64 +131,64 @@ func (s *Store) ObjectList(
 	return cursor.NewFromSlicePBMessages(msgs[:x]), nil
 }
 
-func (s *Store) objectsGetByObjectSearch(
-	objSearch string,
-	objUsePrefix bool,
-	matchObjectTypeCode string,
-	matchPartitionUuid string,
-	matchProject string,
-) ([]*pb.Object, error) {
-	if util.IsUuidLike(objSearch) {
-		// If the filter specifies a Search and it looks like a UUID, then all
-		// we need to do is grab the object from the primary objects/by-uuid/
-		// index and check that any other fields match the object's fields. If
-		// so, just return the UUID
-		normUuid := util.NormalizeUuid(objSearch)
-		obj, err := s.objectGetByUuid(normUuid)
-		if err != nil {
-			return nil, err
-		}
-		if matchPartitionUuid != "" {
-			if obj.Partition != matchPartitionUuid {
-				return nil, errors.ErrNotFound
-			}
-		}
-		if matchProject != "" {
-			if obj.Project != matchProject {
-				return nil, errors.ErrNotFound
-			}
-		}
-		if matchObjectTypeCode != "" {
-			if obj.ObjectType != matchObjectTypeCode {
-				return nil, errors.ErrNotFound
-			}
-		}
-		return []*pb.Object{obj}, nil
-	} else {
-		// TODO(jaypipes): OK, we were asked to search for one or more objects
-		// having a supplied name (optionally have the name as a prefix).
-		//
-		// If the object type has been specified, things are a bit easier
-		// because if the object type's scope will tell us whether the name
-		// index for the object is going to be be object type and name or
-		// object type, project and name.
-		//
-		// If no object type was specified, we will need to do a range scan on
-		// all objects by the primary objects/by-uuid/ index and manually check
-		// to see if the deserialized Object's name has the requested name...
-	}
-	// Should never get here...
-	return nil, nil
-}
-
 func (s *Store) objectsGetBySearch(
 	matchObjectTypeCode string,
 	matchPartitionUuid string,
 	matchProject string,
+	matchObjectSearch string,
+	matchUsePrefix bool,
 ) ([]*pb.Object, error) {
-	// This is called when we have no filter on object UUID/name. We will get
-	// all objects and filter out any objects that don't meet the supplied
-	// partition UUID, project and object type code filters.
+	if matchObjectSearch != "" {
+		if util.IsUuidLike(matchObjectSearch) {
+			// If the filter specifies a Search and it looks like a UUID, then
+			// all we need to do is grab the object from the primary
+			// objects/by-uuid/ index and check that any other fields match the
+			// object's fields. If so, just return the UUID
+			normUuid := util.NormalizeUuid(matchObjectSearch)
+			obj, err := s.objectGetByUuid(normUuid)
+			if err != nil {
+				return nil, err
+			}
+			if matchPartitionUuid != "" {
+				if obj.Partition != matchPartitionUuid {
+					return nil, errors.ErrNotFound
+				}
+			}
+			if matchProject != "" {
+				if obj.Project != matchProject {
+					return nil, errors.ErrNotFound
+				}
+			}
+			if matchObjectTypeCode != "" {
+				if obj.ObjectType != matchObjectTypeCode {
+					return nil, errors.ErrNotFound
+				}
+			}
+			return []*pb.Object{obj}, nil
+		} else {
+			// OK, we were asked to search for one or more objects having a
+			// supplied name (optionally have the name as a prefix).
+			//
+			// If the object type has been specified, things can be searched
+			// more efficiently because the object type's scope will tell us
+			// whether the name index for the object is going to be be object
+			// type and name or object type, project and name.
+			//
+			// If no object type was specified, we will need to do a full range
+			// scan on all objects by the primary objects/by-uuid/ index and
+			// manually check to see if the deserialized Object's name has the
+			// requested name...
+			if matchObjectTypeCode != "" {
+				// TODO(jaypipes)
+				return []*pb.Object{}, nil
+			}
+		}
+	}
+
+	// This is called when we have no filter on object UUID/name or we have a
+	// filter on name but not object type. We will get all objects and filter
+	// out any objects that don't meet the supplied partition UUID, project and
+	// object type code filters.
 	cur, err := s.objectsGetAll()
 	if err != nil {
 		return nil, err
@@ -222,6 +213,17 @@ func (s *Store) objectsGetBySearch(
 		if matchObjectTypeCode != "" {
 			if obj.ObjectType != matchObjectTypeCode {
 				continue
+			}
+		}
+		if matchObjectSearch != "" {
+			if matchUsePrefix {
+				if !strings.HasPrefix(obj.Name, matchObjectSearch) {
+					continue
+				}
+			} else {
+				if obj.Name != matchObjectSearch {
+					continue
+				}
 			}
 		}
 		res = append(res, obj)

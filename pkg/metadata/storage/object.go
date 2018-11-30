@@ -112,11 +112,7 @@ func (s *Store) ObjectList(
 		return cursor.Empty(), nil
 	}
 
-	// Now we have our set of object UUIDs that we will fetch objects from the
-	// primary index. I suppose we could do a single read on a range of UUID
-	// keys and then ignore keys that aren't in our set of object UUIDs. Not
-	// sure what would be faster... probably depend on the length of the key
-	// range resulting from doing a min/max on the object UUID set.
+	// Convert the map values into an array of proto.Message interfaces
 	msgs := make([]proto.Message, len(objs))
 	x := 0
 	for _, obj := range objs {
@@ -170,8 +166,29 @@ func (s *Store) objectsGetByFilter(
 			// manually check to see if the deserialized Object's name has the
 			// requested name...
 			if filter.ObjectType != nil && filter.Partition != nil {
-				// TODO(jaypipes)
-				return []*pb.Object{}, nil
+				if filter.ObjectType.Scope == pb.ObjectTypeScope_PROJECT {
+					if filter.Project != "" {
+						// Just drop through if we don't have a project because
+						// we won't be able to look up a project-scoped object
+						// type when no project was specified, so we'll do the
+						// less efficient range-scan sieve pattern to solve
+						// this filter
+						return s.objectsGetByProjectNameIndex(
+							filter.Partition.Uuid,
+							filter.ObjectType.Code,
+							filter.Project,
+							filter.Search,
+							filter.UsePrefix,
+						)
+					}
+				} else {
+					return s.objectsGetByNameIndex(
+						filter.Partition.Uuid,
+						filter.ObjectType.Code,
+						filter.Search,
+						filter.UsePrefix,
+					)
+				}
 			}
 		}
 	}
@@ -250,6 +267,102 @@ func (s *Store) objectGetByUuid(
 	}
 
 	return obj, nil
+}
+
+// objectsGetByProjectNameIndex returns Object messages that have a specified
+// project and name (with optional prefix) in the supplied partition.
+func (s *Store) objectsGetByProjectNameIndex(
+	partUuid string,
+	objTypeCode string,
+	project string,
+	objName string,
+	usePrefix bool,
+) ([]*pb.Object, error) {
+	ctx, cancel := s.requestCtx()
+	defer cancel()
+
+	kv := s.kvPartition(partUuid)
+	key := _OBJECTS_BY_TYPE_KEY + objTypeCode + "/" +
+		_BY_PROJECT_KEY + project + "/" +
+		_BY_NAME_KEY + objName
+
+	opts := []etcd.OpOption{}
+	if usePrefix {
+		opts = append(opts, etcd.WithPrefix())
+	}
+
+	resp, err := kv.Get(ctx, key, opts...)
+	if resp.Count == 0 {
+		return nil, errors.ErrNotFound
+	}
+	if err != nil {
+		s.log.ERR(
+			"error getting objects of type %s by project and name(%s:%s): %v",
+			objTypeCode,
+			project,
+			objName,
+			err,
+		)
+		return nil, err
+	}
+
+	res := make([]*pb.Object, resp.Count)
+
+	for x, entry := range resp.Kvs {
+		obj, err := s.objectGetByUuid(string(entry.Value))
+		if err != nil {
+			return nil, err
+		}
+		res[x] = obj
+	}
+
+	return res, nil
+}
+
+// objectsGetByNameIndex returns Object messages that have a specified name
+// (with optional prefix) in the supplied partition.
+func (s *Store) objectsGetByNameIndex(
+	partUuid string,
+	objTypeCode string,
+	objName string,
+	usePrefix bool,
+) ([]*pb.Object, error) {
+	ctx, cancel := s.requestCtx()
+	defer cancel()
+
+	kv := s.kvPartition(partUuid)
+	key := _OBJECTS_BY_TYPE_KEY + objTypeCode + "/" + _BY_NAME_KEY + objName
+
+	opts := []etcd.OpOption{}
+	if usePrefix {
+		opts = append(opts, etcd.WithPrefix())
+	}
+
+	resp, err := kv.Get(ctx, key, opts...)
+	if resp.Count == 0 {
+		return nil, errors.ErrNotFound
+	}
+	if err != nil {
+		s.log.ERR(
+			"error getting objects of type %s by name(%s): %v",
+			objTypeCode,
+			objName,
+			err,
+		)
+		return nil, err
+	}
+
+	res := make([]*pb.Object, resp.Count)
+
+	for x, entry := range resp.Kvs {
+		obj, err := s.objectGetByUuid(string(entry.Value))
+		if err != nil {
+			return nil, err
+		}
+		res[x] = obj
+	}
+
+	return res, nil
 }
 
 func (s *Store) objectsGetAll() (abstract.Cursor, error) {

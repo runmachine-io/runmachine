@@ -22,123 +22,16 @@ func (s *Server) ObjectGet(
 	return nil, nil
 }
 
-// buildPartitionObjectFilters is used to expand an ObjectFilter, which may
-// contain PartitionFilter and ObjectTypeFilter objects that themselves may
-// resolve to multiple partitions or object types, to a set of
-// PartitionObjectFilter objects. A PartitionObjectFilter is used to describe a
-// filter on objects in a *specific* partition and having a *specific* object
-// type.
-func (s *Server) buildPartitionObjectFilters(
-	filter *pb.ObjectFilter,
-) ([]*storage.PartitionObjectFilter, error) {
-	res := make([]*storage.PartitionObjectFilter, 0)
-	// A set of partition UUIDs that we'll create PartitionObjectFilters with.
-	// These are the UUIDs of any partitions that match the PartitionFilter in
-	// the supplied pb.ObjectFilter
-	partUuids := make(map[string]bool, 0)
-	// A set of object type codes that we'll create PartitionObjectFilters
-	// with. These are the codes of object types that match the
-	// ObjectTypeFilter in the supplied ObjectFilter
-	otCodes := make(map[string]bool, 0)
-
-	if filter.Partition != nil {
-		// Verify that the requested partition(s) exist(s) and for each
-		// requested partition match, construct a new PartitionObjectFilter
-		cur, err := s.store.PartitionList([]*pb.PartitionFilter{filter.Partition})
-		if err != nil {
-			return nil, err
-		}
-		defer cur.Close()
-
-		nParts := 0
-		for cur.Next() {
-			part := &pb.Partition{}
-			if err = cur.Scan(part); err != nil {
-				return nil, err
-			}
-			partUuids[part.Uuid] = true
-			nParts += 1
-		}
-		if nParts == 0 {
-			return nil, errors.ErrNotFound
-		}
-	}
-	if filter.ObjectType != nil {
-		// Verify that the object type even exists
-		cur, err := s.store.ObjectTypeList([]*pb.ObjectTypeFilter{filter.ObjectType})
-		if err != nil {
-			return nil, err
-		}
-		defer cur.Close()
-
-		nTypes := 0
-		for cur.Next() {
-			ot := &pb.ObjectType{}
-			if err = cur.Scan(ot); err != nil {
-				return nil, err
-			}
-			otCodes[ot.Code] = true
-			nTypes += 1
-		}
-		if nTypes == 0 {
-			return nil, errors.ErrNotFound
-		}
-	}
-
-	for partUuid := range partUuids {
-		if len(otCodes) == 0 {
-			f := &storage.PartitionObjectFilter{
-				PartitionUuid: partUuid,
-			}
-			res = append(res, f)
-		} else {
-			for otCode := range otCodes {
-				f := &storage.PartitionObjectFilter{
-					PartitionUuid:  partUuid,
-					ObjectTypeCode: otCode,
-				}
-				res = append(res, f)
-			}
-		}
-	}
-
-	// If we've expanded the supplied partition filters into multiple
-	// PartitionObjectFilters, then we need to add our supplied ObjectFilter's
-	// search and use prefix for the object's UUID/name. If we supplied no
-	// partition filters, then go ahead and just return a single
-	// PartitionObjectFilter with the search term and prefix indicator for the
-	// object.
-	if filter.Search != "" || filter.Project != "" {
-		if len(res) > 0 {
-			// Now that we've expanded our partitions and object types, add in the
-			// original ObjectFilter's Search and UsePrefix for each
-			// PartitionObjectFilter we've created
-			for _, pf := range res {
-				pf.Project = filter.Project
-				pf.Search = filter.Search
-				pf.UsePrefix = filter.UsePrefix
-			}
-		} else {
-			res = append(
-				res,
-				&storage.PartitionObjectFilter{
-					Project:   filter.Project,
-					Search:    filter.Search,
-					UsePrefix: filter.UsePrefix,
-				},
-			)
-		}
-	}
-	return res, nil
-}
-
 func (s *Server) ObjectList(
 	req *pb.ObjectListRequest,
 	stream pb.RunmMetadata_ObjectListServer,
 ) error {
+	if err := checkSession(req.Session); err != nil {
+		return err
+	}
 	any := make([]*storage.PartitionObjectFilter, 0)
 	for _, filter := range req.Any {
-		if pfs, err := s.buildPartitionObjectFilters(filter); err != nil {
+		if pfs, err := s.expandObjectFilter(req.Session, filter); err != nil {
 			if err == errors.ErrNotFound {
 				// Just continue since clearly we can have no objects matching
 				// an unknown partition but we need to OR together all filters,
@@ -154,33 +47,18 @@ func (s *Server) ObjectList(
 	}
 
 	if len(any) == 0 {
-		if len(req.Any) > 0 {
-			// If the user specified filters but due to specifying unknown
-			// partitions or object types, there were no non-empty filters
-			// produced, we return nil to indicate no records were found
-			s.log.L3(
-				"object_list: no partition object filters created from %s",
-				req.Any,
-			)
+		if len(req.Any) == 0 {
+			// At least one filter should have been expanded
+			defFilter, err := s.defaultObjectFilter(req.Session)
+			if err != nil {
+				return ErrFailedExpandObjectFilters
+			}
+			any = append(any, defFilter)
+		} else {
+			// The user asked for object types that don't exist, partitions
+			// that don't exist, etc.
 			return nil
 		}
-		// By default, filter by the session's partition if the user didn't
-		// specify any filtering.
-		part, err := s.store.PartitionGet(req.Session.Partition)
-		if err != nil {
-			if err == errors.ErrNotFound {
-				// Just return nil since clearly we can have no
-				// property schemas matching an unknown partition
-				return nil
-			}
-			return errors.ErrUnknown
-		}
-		any = append(
-			any,
-			&storage.PartitionObjectFilter{
-				PartitionUuid: part.Uuid,
-			},
-		)
 	}
 
 	cur, err := s.store.ObjectList(any)

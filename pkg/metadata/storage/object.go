@@ -3,6 +3,7 @@ package storage
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	etcd "github.com/coreos/etcd/clientv3"
 	"github.com/golang/protobuf/proto"
@@ -26,33 +27,34 @@ const (
 	_OBJECTS_BY_UUID_KEY = "objects/by-uuid/"
 )
 
-// A specialized filter class that has pre-determined specific partition UUIDs
-// and object type codes. Users pass pb.ObjectFilter messages which contain
-// optional pb.PartitionFilter and pb.ObjectTypeFilter messages. Those may be
-// expanded (due to UsePrefix = true) to a set of partition UUIDs and/or object
-// type codes. We then create zero or more of these PartitionObjectFilter
-// structs that represent a specific filter on partition UUID and object type,
-// along with the the object's name/UUID and UsePrefix flag.
+// A specialized filter class that has already looked up specific partition and
+// object types (expanded from user-supplied partition and type filter
+// strings). Users pass pb.ObjectFilter messages which contain optional
+// pb.PartitionFilter and pb.ObjectTypeFilter messages. Those may be expanded
+// (due to UsePrefix = true) to a set of partition UUIDs and/or object type
+// codes. We then create zero or more of these PartitionObjectFilter structs
+// that represent a specific filter on partition UUID and object type, along
+// with the the object's name/UUID and UsePrefix flag.
 type PartitionObjectFilter struct {
-	PartitionUuid  string
-	Project        string
-	ObjectTypeCode string
-	Search         string
-	UsePrefix      bool
+	Partition  *pb.Partition
+	ObjectType *pb.ObjectType
+	Project    string
+	Search     string
+	UsePrefix  bool
 	// TODO(jaypipes): Add support for property and tag filters
 }
 
 func (f *PartitionObjectFilter) IsEmpty() bool {
-	return f.PartitionUuid == "" && f.ObjectTypeCode == "" && f.Project == "" && f.Search == ""
+	return f.Partition == nil && f.ObjectType == nil && f.Project == "" && f.Search == ""
 }
 
 func (f *PartitionObjectFilter) String() string {
 	attrMap := make(map[string]string, 0)
-	if f.PartitionUuid != "" {
-		attrMap["partition"] = f.PartitionUuid
+	if f.Partition != nil {
+		attrMap["partition"] = f.Partition.Uuid
 	}
-	if f.ObjectTypeCode != "" {
-		attrMap["object_type"] = f.ObjectTypeCode
+	if f.ObjectType != nil {
+		attrMap["object_type"] = f.ObjectType.Code
 	}
 	if f.Project != "" {
 		attrMap["project"] = f.Project
@@ -95,23 +97,7 @@ func (s *Store) ObjectList(
 		// optional prefix for the name). If no Search field is present, that
 		// means that in order to evaluate this PartitionObjectFilter we'll be
 		// searching on ranges of objects by type, partition or project.
-		var filterObjs []*pb.Object
-		var err error
-		if filter.Search != "" {
-			filterObjs, err = s.objectsGetByObjectSearch(
-				filter.Search,
-				filter.UsePrefix,
-				filter.ObjectTypeCode,
-				filter.PartitionUuid,
-				filter.Project,
-			)
-		} else {
-			filterObjs, err = s.objectsGetBySearch(
-				filter.ObjectTypeCode,
-				filter.PartitionUuid,
-				filter.Project,
-			)
-		}
+		filterObjs, err := s.objectsGetByFilter(filter)
 		if err != nil {
 			if err == errors.ErrNotFound {
 				continue // Remember, we need to OR together the filters
@@ -126,11 +112,7 @@ func (s *Store) ObjectList(
 		return cursor.Empty(), nil
 	}
 
-	// Now we have our set of object UUIDs that we will fetch objects from the
-	// primary index. I suppose we could do a single read on a range of UUID
-	// keys and then ignore keys that aren't in our set of object UUIDs. Not
-	// sure what would be faster... probably depend on the length of the key
-	// range resulting from doing a min/max on the object UUID set.
+	// Convert the map values into an array of proto.Message interfaces
 	msgs := make([]proto.Message, len(objs))
 	x := 0
 	for _, obj := range objs {
@@ -140,64 +122,81 @@ func (s *Store) ObjectList(
 	return cursor.NewFromSlicePBMessages(msgs[:x]), nil
 }
 
-func (s *Store) objectsGetByObjectSearch(
-	objSearch string,
-	objUsePrefix bool,
-	matchObjectTypeCode string,
-	matchPartitionUuid string,
-	matchProject string,
+func (s *Store) objectsGetByFilter(
+	filter *PartitionObjectFilter,
 ) ([]*pb.Object, error) {
-	if util.IsUuidLike(objSearch) {
-		// If the filter specifies a Search and it looks like a UUID, then all
-		// we need to do is grab the object from the primary objects/by-uuid/
-		// index and check that any other fields match the object's fields. If
-		// so, just return the UUID
-		normUuid := util.NormalizeUuid(objSearch)
-		obj, err := s.objectGetByUuid(normUuid)
-		if err != nil {
-			return nil, err
-		}
-		if matchPartitionUuid != "" {
-			if obj.Partition != matchPartitionUuid {
-				return nil, errors.ErrNotFound
+	if filter.Search != "" {
+		if util.IsUuidLike(filter.Search) {
+			// If the filter specifies a Search and it looks like a UUID, then
+			// all we need to do is grab the object from the primary
+			// objects/by-uuid/ index and check that any other fields match the
+			// object's fields. If so, just return the UUID
+			normUuid := util.NormalizeUuid(filter.Search)
+			obj, err := s.objectGetByUuid(normUuid)
+			if err != nil {
+				return nil, err
+			}
+			if filter.Partition != nil {
+				if obj.Partition != filter.Partition.Uuid {
+					return nil, errors.ErrNotFound
+				}
+			}
+			if filter.ObjectType != nil {
+				if obj.ObjectType != filter.ObjectType.Code {
+					return nil, errors.ErrNotFound
+				}
+			}
+			if filter.Project != "" {
+				if obj.Project != filter.Project {
+					return nil, errors.ErrNotFound
+				}
+			}
+			return []*pb.Object{obj}, nil
+		} else {
+			// OK, we were asked to search for one or more objects having a
+			// supplied name (optionally have the name as a prefix).
+			//
+			// If the object type has been specified, things can be searched
+			// more efficiently because the object type's scope will tell us
+			// whether the name index for the object is going to be be object
+			// type and name or object type, project and name.
+			//
+			// If no object type was specified, we will need to do a full range
+			// scan on all objects by the primary objects/by-uuid/ index and
+			// manually check to see if the deserialized Object's name has the
+			// requested name...
+			if filter.ObjectType != nil && filter.Partition != nil {
+				if filter.ObjectType.Scope == pb.ObjectTypeScope_PROJECT {
+					if filter.Project != "" {
+						// Just drop through if we don't have a project because
+						// we won't be able to look up a project-scoped object
+						// type when no project was specified, so we'll do the
+						// less efficient range-scan sieve pattern to solve
+						// this filter
+						return s.objectsGetByProjectNameIndex(
+							filter.Partition.Uuid,
+							filter.ObjectType.Code,
+							filter.Project,
+							filter.Search,
+							filter.UsePrefix,
+						)
+					}
+				} else {
+					return s.objectsGetByNameIndex(
+						filter.Partition.Uuid,
+						filter.ObjectType.Code,
+						filter.Search,
+						filter.UsePrefix,
+					)
+				}
 			}
 		}
-		if matchProject != "" {
-			if obj.Project != matchProject {
-				return nil, errors.ErrNotFound
-			}
-		}
-		if matchObjectTypeCode != "" {
-			if obj.ObjectType != matchObjectTypeCode {
-				return nil, errors.ErrNotFound
-			}
-		}
-		return []*pb.Object{obj}, nil
-	} else {
-		// TODO(jaypipes): OK, we were asked to search for one or more objects
-		// having a supplied name (optionally have the name as a prefix).
-		//
-		// If the object type has been specified, things are a bit easier
-		// because if the object type's scope will tell us whether the name
-		// index for the object is going to be be object type and name or
-		// object type, project and name.
-		//
-		// If no object type was specified, we will need to do a range scan on
-		// all objects by the primary objects/by-uuid/ index and manually check
-		// to see if the deserialized Object's name has the requested name...
 	}
-	// Should never get here...
-	return nil, nil
-}
 
-func (s *Store) objectsGetBySearch(
-	matchObjectTypeCode string,
-	matchPartitionUuid string,
-	matchProject string,
-) ([]*pb.Object, error) {
-	// This is called when we have no filter on object UUID/name. We will get
-	// all objects and filter out any objects that don't meet the supplied
-	// partition UUID, project and object type code filters.
+	// This is called when we have no filter on object UUID/name or we have a
+	// filter on name but not object type. We will get all objects and filter
+	// out any objects that don't meet the supplied partition UUID, project and
+	// object type code filters.
 	cur, err := s.objectsGetAll()
 	if err != nil {
 		return nil, err
@@ -209,19 +208,32 @@ func (s *Store) objectsGetBySearch(
 		if err = cur.Scan(obj); err != nil {
 			return nil, err
 		}
-		if matchPartitionUuid != "" {
-			if obj.Partition != matchPartitionUuid {
+		// Use a sieve pattern, only adding the object to our results if it
+		// passes all match expressions
+		if filter.Partition != nil {
+			if obj.Partition != filter.Partition.Uuid {
 				continue
 			}
 		}
-		if matchProject != "" {
-			if obj.Project != matchProject {
+		if filter.ObjectType != nil {
+			if obj.ObjectType != filter.ObjectType.Code {
 				continue
 			}
 		}
-		if matchObjectTypeCode != "" {
-			if obj.ObjectType != matchObjectTypeCode {
+		if filter.Project != "" {
+			if obj.Project != filter.Project {
 				continue
+			}
+		}
+		if filter.Search != "" {
+			if filter.UsePrefix {
+				if !strings.HasPrefix(obj.Name, filter.Search) {
+					continue
+				}
+			} else {
+				if obj.Name != filter.Search {
+					continue
+				}
 			}
 		}
 		res = append(res, obj)
@@ -255,6 +267,102 @@ func (s *Store) objectGetByUuid(
 	}
 
 	return obj, nil
+}
+
+// objectsGetByProjectNameIndex returns Object messages that have a specified
+// project and name (with optional prefix) in the supplied partition.
+func (s *Store) objectsGetByProjectNameIndex(
+	partUuid string,
+	objTypeCode string,
+	project string,
+	objName string,
+	usePrefix bool,
+) ([]*pb.Object, error) {
+	ctx, cancel := s.requestCtx()
+	defer cancel()
+
+	kv := s.kvPartition(partUuid)
+	key := _OBJECTS_BY_TYPE_KEY + objTypeCode + "/" +
+		_BY_PROJECT_KEY + project + "/" +
+		_BY_NAME_KEY + objName
+
+	opts := []etcd.OpOption{}
+	if usePrefix {
+		opts = append(opts, etcd.WithPrefix())
+	}
+
+	resp, err := kv.Get(ctx, key, opts...)
+	if resp.Count == 0 {
+		return nil, errors.ErrNotFound
+	}
+	if err != nil {
+		s.log.ERR(
+			"error getting objects of type %s by project and name(%s:%s): %v",
+			objTypeCode,
+			project,
+			objName,
+			err,
+		)
+		return nil, err
+	}
+
+	res := make([]*pb.Object, resp.Count)
+
+	for x, entry := range resp.Kvs {
+		obj, err := s.objectGetByUuid(string(entry.Value))
+		if err != nil {
+			return nil, err
+		}
+		res[x] = obj
+	}
+
+	return res, nil
+}
+
+// objectsGetByNameIndex returns Object messages that have a specified name
+// (with optional prefix) in the supplied partition.
+func (s *Store) objectsGetByNameIndex(
+	partUuid string,
+	objTypeCode string,
+	objName string,
+	usePrefix bool,
+) ([]*pb.Object, error) {
+	ctx, cancel := s.requestCtx()
+	defer cancel()
+
+	kv := s.kvPartition(partUuid)
+	key := _OBJECTS_BY_TYPE_KEY + objTypeCode + "/" + _BY_NAME_KEY + objName
+
+	opts := []etcd.OpOption{}
+	if usePrefix {
+		opts = append(opts, etcd.WithPrefix())
+	}
+
+	resp, err := kv.Get(ctx, key, opts...)
+	if resp.Count == 0 {
+		return nil, errors.ErrNotFound
+	}
+	if err != nil {
+		s.log.ERR(
+			"error getting objects of type %s by name(%s): %v",
+			objTypeCode,
+			objName,
+			err,
+		)
+		return nil, err
+	}
+
+	res := make([]*pb.Object, resp.Count)
+
+	for x, entry := range resp.Kvs {
+		obj, err := s.objectGetByUuid(string(entry.Value))
+		if err != nil {
+			return nil, err
+		}
+		res[x] = obj
+	}
+
+	return res, nil
 }
 
 func (s *Store) objectsGetAll() (abstract.Cursor, error) {

@@ -66,4 +66,12 @@ print_if_verbose "Running \`runm $*\` in single-use docker container..."
 print_if_verbose "*********************************************************************"
 print_if_verbose ""
 
-docker run --rm --network host -v $ROOT_DIR/tests/data/:/tests/data runm/runm:$VERSION "$@"
+runm_user=${RUNM_USER:-admin}
+runm_project=${RUNM_PROJECT:-proj0}
+runm_partition=${RUNM_PARTITION:-part0}
+
+docker run --rm --network host -v $ROOT_DIR/tests/data/:/tests/data \
+    -e RUNM_USER="$runm_user" \
+    -e RUNM_PROJECT="$runm_project" \
+    -e RUNM_PARTITION="$runm_partition" \
+    runm/runm:$VERSION "$@"

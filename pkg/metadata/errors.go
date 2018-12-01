@@ -30,6 +30,14 @@ var (
 		codes.FailedPrecondition,
 		"failed to expand object filters.",
 	)
+	ErrObjectFilterRequired = status.Errorf(
+		codes.FailedPrecondition,
+		"object filter is required when fetching object.",
+	)
+	ErrMultipleRecordsFound = status.Errorf(
+		codes.FailedPrecondition,
+		"multiple records found (expected single record match).",
+	)
 	ErrPartitionUnknown = status.Errorf(
 		codes.FailedPrecondition,
 		"unknown partition.",

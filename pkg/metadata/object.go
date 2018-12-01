@@ -19,7 +19,49 @@ func (s *Server) ObjectGet(
 	ctx context.Context,
 	req *pb.ObjectGetRequest,
 ) (*pb.Object, error) {
-	return nil, nil
+	if err := checkSession(req.Session); err != nil {
+		return nil, err
+	}
+	if req.Search == nil {
+		return nil, ErrObjectFilterRequired
+	}
+	pfs, err := s.expandObjectFilter(req.Session, req.Search)
+	if err != nil {
+		if err == errors.ErrNotFound {
+			return nil, ErrNotFound
+		}
+		// We don't want to expose internal errors to the user, so just return
+		// an unknown error after logging it.
+		s.log.ERR(
+			"failed to retrieve object with search filter %s: %s",
+			req.Search,
+			err,
+		)
+		return nil, ErrUnknown
+	}
+
+	if len(pfs) == 0 {
+		return nil, ErrFailedExpandObjectFilters
+	}
+
+	cur, err := s.store.ObjectList(pfs)
+	if err != nil {
+		return nil, err
+	}
+	defer cur.Close()
+
+	found := false
+	obj := &pb.Object{}
+	for cur.Next() {
+		if found {
+			return nil, ErrMultipleRecordsFound
+		}
+		if err = cur.Scan(obj); err != nil {
+			return nil, err
+		}
+		found = true
+	}
+	return obj, nil
 }
 
 func (s *Server) ObjectList(
@@ -67,11 +109,11 @@ func (s *Server) ObjectList(
 	}
 	defer cur.Close()
 	for cur.Next() {
-		msg := &pb.Object{}
-		if err = cur.Scan(msg); err != nil {
+		obj := &pb.Object{}
+		if err = cur.Scan(obj); err != nil {
 			return err
 		}
-		if err = stream.Send(msg); err != nil {
+		if err = stream.Send(obj); err != nil {
 			return err
 		}
 	}

@@ -68,7 +68,7 @@ func exitIfConnectErr(err error) {
 func exitIfError(err error) {
 	if s, ok := status.FromError(err); ok {
 		if s.Code() != codes.OK {
-			fmt.Printf("Error: %s\n", s.Message())
+			fmt.Fprintf(os.Stderr, "Error: %s\n", s.Message())
 			os.Exit(int(s.Code()))
 		}
 	}

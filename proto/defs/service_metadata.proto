@@ -120,7 +120,7 @@ message ObjectTypeListRequest {
 
 message ObjectGetRequest {
     Session session = 1;
-    string search = 2;
+    ObjectFilter search = 2;
 }
 
 message ObjectSetFields {

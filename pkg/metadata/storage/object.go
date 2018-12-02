@@ -146,7 +146,7 @@ func (s *Store) objectsGetByFilter(
 					return nil, errors.ErrNotFound
 				}
 			}
-			if filter.Project != "" {
+			if filter.Project != "" && obj.Project != "" {
 				if obj.Project != filter.Project {
 					return nil, errors.ErrNotFound
 				}
@@ -220,7 +220,7 @@ func (s *Store) objectsGetByFilter(
 				continue
 			}
 		}
-		if filter.Project != "" {
+		if filter.Project != "" && obj.Project != "" {
 			if obj.Project != filter.Project {
 				continue
 			}

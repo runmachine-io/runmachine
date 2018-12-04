@@ -71,7 +71,7 @@ func (s *Server) ObjectList(
 	if err := checkSession(req.Session); err != nil {
 		return err
 	}
-	any := make([]*storage.PartitionObjectFilter, 0)
+	any := make([]*storage.ObjectListFilter, 0)
 	for _, filter := range req.Any {
 		if pfs, err := s.expandObjectFilter(req.Session, filter); err != nil {
 			if err == errors.ErrNotFound {

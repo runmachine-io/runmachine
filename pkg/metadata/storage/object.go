@@ -74,6 +74,14 @@ func (f *ObjectListFilter) String() string {
 	return fmt.Sprintf("ObjectListFilter(%s)", attrs)
 }
 
+// ObjectDelete removes an object from storage along with any index records the
+// object may have had
+func (s *Store) ObjectDelete(
+	obj *pb.Object,
+) error {
+	return nil
+}
+
 // ObjectTypeList returns a cursor over zero or more ObjectType
 // protobuffer objects matching a set of supplied filters.
 func (s *Store) ObjectList(

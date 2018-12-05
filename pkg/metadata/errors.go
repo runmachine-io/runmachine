@@ -78,6 +78,14 @@ var (
 		codes.FailedPrecondition,
 		"partition name is required.",
 	)
+	ErrAtLeastOneObjectFilterRequired = status.Errorf(
+		codes.FailedPrecondition,
+		"at least one object filter is required.",
+	)
+	ErrObjectDeleteFailed = status.Errorf(
+		codes.FailedPrecondition,
+		"failed to delete object (check response errors collection).",
+	)
 )
 
 func errPartitionNotFound(partition string) error {

@@ -32,10 +32,10 @@ const (
 // strings). Users pass pb.ObjectFilter messages which contain optional
 // pb.PartitionFilter and pb.ObjectTypeFilter messages. Those may be expanded
 // (due to UsePrefix = true) to a set of partition UUIDs and/or object type
-// codes. We then create zero or more of these PartitionObjectFilter structs
+// codes. We then create zero or more of these ObjectListFilter structs
 // that represent a specific filter on partition UUID and object type, along
 // with the the object's name/UUID and UsePrefix flag.
-type PartitionObjectFilter struct {
+type ObjectListFilter struct {
 	Partition  *pb.Partition
 	ObjectType *pb.ObjectType
 	Project    string
@@ -44,11 +44,11 @@ type PartitionObjectFilter struct {
 	// TODO(jaypipes): Add support for property and tag filters
 }
 
-func (f *PartitionObjectFilter) IsEmpty() bool {
+func (f *ObjectListFilter) IsEmpty() bool {
 	return f.Partition == nil && f.ObjectType == nil && f.Project == "" && f.Search == ""
 }
 
-func (f *PartitionObjectFilter) String() string {
+func (f *ObjectListFilter) String() string {
 	attrMap := make(map[string]string, 0)
 	if f.Partition != nil {
 		attrMap["partition"] = f.Partition.Uuid
@@ -71,13 +71,13 @@ func (f *PartitionObjectFilter) String() string {
 		}
 		attrs += k + "=" + v
 	}
-	return fmt.Sprintf("PartitionObjectFilter(%s)", attrs)
+	return fmt.Sprintf("ObjectListFilter(%s)", attrs)
 }
 
 // ObjectTypeList returns a cursor over zero or more ObjectType
 // protobuffer objects matching a set of supplied filters.
 func (s *Store) ObjectList(
-	any []*PartitionObjectFilter,
+	any []*ObjectListFilter,
 ) (abstract.Cursor, error) {
 	if len(any) == 0 {
 		return s.objectsGetAll()
@@ -89,13 +89,13 @@ func (s *Store) ObjectList(
 
 	for _, filter := range any {
 		if filter.IsEmpty() {
-			s.log.ERR("received empty PartitionObjectFilter in ObjectList()")
+			s.log.ERR("received empty ObjectListFilter in ObjectList()")
 			continue
 		}
-		// If the PartitionObjectFilter contains a value for the Search field,
+		// If the ObjectListFilter contains a value for the Search field,
 		// that means we need to look up objects by UUID or name (with an
 		// optional prefix for the name). If no Search field is present, that
-		// means that in order to evaluate this PartitionObjectFilter we'll be
+		// means that in order to evaluate this ObjectListFilter we'll be
 		// searching on ranges of objects by type, partition or project.
 		filterObjs, err := s.objectsGetByFilter(filter)
 		if err != nil {
@@ -123,7 +123,7 @@ func (s *Store) ObjectList(
 }
 
 func (s *Store) objectsGetByFilter(
-	filter *PartitionObjectFilter,
+	filter *ObjectListFilter,
 ) ([]*pb.Object, error) {
 	if filter.Search != "" {
 		if util.IsUuidLike(filter.Search) {

@@ -13,4 +13,5 @@ func init() {
 	objectCommand.AddCommand(objectListCommand)
 	objectCommand.AddCommand(objectGetCommand)
 	objectCommand.AddCommand(objectCreateCommand)
+	objectCommand.AddCommand(objectDeleteCommand)
 }

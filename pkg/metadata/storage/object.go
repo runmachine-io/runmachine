@@ -74,13 +74,11 @@ func (f *ObjectListFilter) String() string {
 	return fmt.Sprintf("ObjectListFilter(%s)", attrs)
 }
 
-// ObjectDelete removes an object from storage along with any index records the
-// object may have had. The supplied Object message is expected to have already
-// been pulled from etcd storage and therefore contain an already-normalized
-// UUID, a valid object type and partition, etc.
-func (s *Store) ObjectDelete(
-	obj *pb.Object,
-) error {
+// objectByNameKey returns a string for the key to use for the object's name
+// index. Depending on whether the supplied object's object type is
+// project-scoped or not, the object's name index will contain the object's
+// project along with the object type and name.
+func (s *Store) objectByNameIndexKey(obj *pb.Object) (string, error) {
 	objType, err := s.ObjectTypeGet(obj.ObjectType)
 	if err != nil {
 		s.log.ERR(
@@ -88,24 +86,37 @@ func (s *Store) ObjectDelete(
 				"UUID '%s' was not valid: %s",
 			obj.ObjectType, obj.Uuid, err,
 		)
-		return errors.ErrUnknown
+		return "", errors.ErrUnknown
 	}
 
-	objByUuidKey := _OBJECTS_BY_UUID_KEY + obj.Uuid
-	var objByNameKey string
 	switch objType.Scope {
 	case pb.ObjectTypeScope_PARTITION:
 		// $PARTITION/objects/by-type/{type}/by-name/{name}
-		objByNameKey = _PARTITIONS_KEY + obj.Partition + "/" +
+		return _PARTITIONS_KEY + obj.Partition + "/" +
 			_OBJECTS_BY_TYPE_KEY + objType.Code + "/" +
-			_BY_NAME_KEY + obj.Name
+			_BY_NAME_KEY + obj.Name, nil
 	case pb.ObjectTypeScope_PROJECT:
 		// $PARTITION/objects/by-type/{type}/by-project/{project}/by-name/{name}
-		objByNameKey = _PARTITIONS_KEY + obj.Partition + "/" +
+		return _PARTITIONS_KEY + obj.Partition + "/" +
 			_OBJECTS_BY_TYPE_KEY + objType.Code + "/" +
 			_BY_PROJECT_KEY + obj.Project + "/" +
-			_BY_NAME_KEY + obj.Name
+			_BY_NAME_KEY + obj.Name, nil
 	}
+	return "", fmt.Errorf("Unknown object type scope: %s", objType.Scope)
+}
+
+// ObjectDelete removes an object from storage along with any index records the
+// object may have had. The supplied Object message is expected to have already
+// been pulled from etcd storage and therefore contain an already-normalized
+// UUID, a valid object type and partition, etc.
+func (s *Store) ObjectDelete(
+	obj *pb.Object,
+) error {
+	objByNameKey, err := s.objectByNameIndexKey(obj)
+	if err != nil {
+		return errors.ErrUnknown
+	}
+	objByUuidKey := _OBJECTS_BY_UUID_KEY + obj.Uuid
 
 	ctx, cancel := s.requestCtx()
 	defer cancel()
@@ -450,7 +461,6 @@ func (s *Store) objectsGetAll() (abstract.Cursor, error) {
 // appropriate indexes. It returns the newly-created object.
 func (s *Store) ObjectCreate(
 	obj *pb.Object,
-	objType *pb.ObjectType,
 ) (*pb.Object, error) {
 	if obj.Uuid == "" {
 		obj.Uuid = util.NewNormalizedUuid()
@@ -464,21 +474,11 @@ func (s *Store) ObjectCreate(
 		return nil, errors.ErrUnknown
 	}
 
-	objByUuidKey := _OBJECTS_BY_UUID_KEY + obj.Uuid
-	var objByNameKey string
-	switch objType.Scope {
-	case pb.ObjectTypeScope_PARTITION:
-		// $PARTITION/objects/by-type/{type}/by-name/{name}
-		objByNameKey = _PARTITIONS_KEY + obj.Partition + "/" +
-			_OBJECTS_BY_TYPE_KEY + objType.Code + "/" +
-			_BY_NAME_KEY + obj.Name
-	case pb.ObjectTypeScope_PROJECT:
-		// $PARTITION/objects/by-type/{type}/by-project/{project}/by-name/{name}
-		objByNameKey = _PARTITIONS_KEY + obj.Partition + "/" +
-			_OBJECTS_BY_TYPE_KEY + objType.Code + "/" +
-			_BY_PROJECT_KEY + obj.Project + "/" +
-			_BY_NAME_KEY + obj.Name
+	objByNameKey, err := s.objectByNameIndexKey(obj)
+	if err != nil {
+		return nil, errors.ErrUnknown
 	}
+	objByUuidKey := _OBJECTS_BY_UUID_KEY + obj.Uuid
 
 	ctx, cancel := s.requestCtx()
 	defer cancel()

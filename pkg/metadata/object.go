@@ -137,41 +137,40 @@ func (s *Server) ObjectList(
 
 // validateObjectSetRequest ensures that the data the user sent in the
 // request's Before and After elements makes sense and meets things like
-// property schema validation checks. Returns the object type for the new
-// object.
+// property schema validation checks.
 func (s *Server) validateObjectSetRequest(
 	req *pb.ObjectSetRequest,
-) (*pb.ObjectType, error) {
+) error {
 	after := req.After
 
 	// Simple input data validations
 	if after.ObjectType == "" {
-		return nil, ErrObjectTypeRequired
+		return ErrObjectTypeRequired
 	}
 	if after.Partition == "" {
-		return nil, ErrPartitionRequired
+		return ErrPartitionRequired
 	}
 
 	// Validate the referred to type, partition and project actually exist
 	p, err := s.store.PartitionGet(after.Partition)
 	if err != nil {
 		if err == errors.ErrNotFound {
-			return nil, errPartitionNotFound(after.Partition)
+			return errPartitionNotFound(after.Partition)
 		}
 		// We don't want to leak internal implementation errors...
 		s.log.ERR("failed when validating partition in object set: %s", err)
-		return nil, errors.ErrUnknown
+		return errors.ErrUnknown
 	}
 	after.Partition = p.Uuid
 
 	ot, err := s.store.ObjectTypeGet(after.ObjectType)
 	if err != nil {
 		if err == errors.ErrNotFound {
-			return nil, errObjectTypeNotFound(after.ObjectType)
+			return errObjectTypeNotFound(after.ObjectType)
 		}
 		// We don't want to leak internal implementation errors...
 		s.log.ERR("failed when validating object type in object set: %s", err)
-		return nil, errors.ErrUnknown
+		return errors.ErrUnknown
 	}
 	after.ObjectType = ot.Code
 
@@ -188,7 +187,7 @@ func (s *Server) validateObjectSetRequest(
 	}
 
 	// TODO(jaypipes): property schema validation checks
-	return ot, nil
+	return nil
 }
 
 func (s *Server) ObjectSet(
@@ -197,7 +196,7 @@ func (s *Server) ObjectSet(
 ) (*pb.ObjectSetResponse, error) {
 	// TODO(jaypipes): AUTHZ check if user can write objects
 
-	ot, err := s.validateObjectSetRequest(req)
+	err := s.validateObjectSetRequest(req)
 	if err != nil {
 		return nil, err
 	}
@@ -210,7 +209,7 @@ func (s *Server) ObjectSet(
 			req.After.Partition,
 			req.After.Name,
 		)
-		changed, err = s.store.ObjectCreate(req.After, ot)
+		changed, err = s.store.ObjectCreate(req.After)
 		if err != nil {
 			return nil, err
 		}

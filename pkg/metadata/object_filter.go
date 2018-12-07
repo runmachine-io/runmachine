@@ -177,3 +177,48 @@ func (s *Server) expandObjectFilter(
 	}
 	return res, nil
 }
+
+// normalizeObjectFilters is passed a Session object and a slice of
+// ObjectFilter messages. It then expands those supplied ObjectFilter messages
+// if they contain partition or object type filters that have a prefix. If no
+// ObjectFilter messages are passed to this method, it returns the default
+// ObjectListFilter which will return all objects for the Session's partition
+// and project.
+func (s *Server) normalizeObjectFilters(
+	session *pb.Session,
+	any []*pb.ObjectFilter,
+) ([]*storage.ObjectListFilter, error) {
+	res := make([]*storage.ObjectListFilter, 0)
+	for _, filter := range any {
+		if pfs, err := s.expandObjectFilter(session, filter); err != nil {
+			if err == errors.ErrNotFound {
+				// Just continue since clearly we can have no objects matching
+				// an unknown partition but we need to OR together all filters,
+				// which is why we don't just return nil here
+				continue
+			}
+			s.log.ERR("normalizeObjectFilters: failed to expand object filter %s: %s", filter, err)
+			return nil, errors.ErrUnknown
+		} else if len(pfs) > 0 {
+			for _, pf := range pfs {
+				res = append(res, pf)
+			}
+		}
+	}
+
+	if len(res) == 0 {
+		if len(any) == 0 {
+			// At least one filter should have been expanded
+			defFilter, err := s.defaultObjectFilter(session)
+			if err != nil {
+				return nil, ErrFailedExpandObjectFilters
+			}
+			res = append(res, defFilter)
+		} else {
+			// The user asked for object types that don't exist, partitions
+			// that don't exist, etc.
+			return nil, nil
+		}
+	}
+	return res, nil
+}

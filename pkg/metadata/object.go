@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/runmachine-io/runmachine/pkg/errors"
-	"github.com/runmachine-io/runmachine/pkg/metadata/storage"
 	pb "github.com/runmachine-io/runmachine/proto"
 )
 
@@ -12,7 +11,51 @@ func (s *Server) ObjectDelete(
 	ctx context.Context,
 	req *pb.ObjectDeleteRequest,
 ) (*pb.ObjectDeleteResponse, error) {
-	return nil, nil
+	if err := checkSession(req.Session); err != nil {
+		return nil, err
+	}
+	if len(req.Any) == 0 {
+		return nil, ErrAtLeastOneObjectFilterRequired
+	}
+
+	filters, err := s.normalizeObjectFilters(req.Session, req.Any)
+	if err != nil {
+		return nil, err
+	}
+	// Be extra-careful not to pass empty filters since that will delete all
+	// objects...
+	if len(filters) == 0 {
+		return nil, ErrAtLeastOneObjectFilterRequired
+	}
+
+	cur, err := s.store.ObjectList(filters)
+	if err != nil {
+		return nil, err
+	}
+	defer cur.Close()
+
+	resErrors := make([]string, 0)
+	numDeleted := uint64(0)
+	for cur.Next() {
+		obj := &pb.Object{}
+		if err = cur.Scan(obj); err != nil {
+			return nil, err
+		}
+		if err = s.store.ObjectDelete(obj); err != nil {
+			resErrors = append(resErrors, err.Error())
+		}
+		// TODO(jaypipes): Send an event notification
+		s.log.L1("user %s deleted object with UUID %s", req.Session.User, obj.Uuid)
+		numDeleted += 1
+	}
+	resp := &pb.ObjectDeleteResponse{
+		Errors:     resErrors,
+		NumDeleted: numDeleted,
+	}
+	if len(resErrors) > 0 {
+		return resp, ErrObjectDeleteFailed
+	}
+	return resp, nil
 }
 
 func (s *Server) ObjectGet(
@@ -25,6 +68,7 @@ func (s *Server) ObjectGet(
 	if req.Search == nil {
 		return nil, ErrObjectFilterRequired
 	}
+
 	pfs, err := s.expandObjectFilter(req.Session, req.Search)
 	if err != nil {
 		if err == errors.ErrNotFound {
@@ -39,7 +83,6 @@ func (s *Server) ObjectGet(
 		)
 		return nil, ErrUnknown
 	}
-
 	if len(pfs) == 0 {
 		return nil, ErrFailedExpandObjectFilters
 	}
@@ -71,39 +114,13 @@ func (s *Server) ObjectList(
 	if err := checkSession(req.Session); err != nil {
 		return err
 	}
-	any := make([]*storage.ObjectListFilter, 0)
-	for _, filter := range req.Any {
-		if pfs, err := s.expandObjectFilter(req.Session, filter); err != nil {
-			if err == errors.ErrNotFound {
-				// Just continue since clearly we can have no objects matching
-				// an unknown partition but we need to OR together all filters,
-				// which is why we don't just return nil here
-				continue
-			}
-			return errors.ErrUnknown
-		} else if len(pfs) > 0 {
-			for _, pf := range pfs {
-				any = append(any, pf)
-			}
-		}
+
+	filters, err := s.normalizeObjectFilters(req.Session, req.Any)
+	if err != nil {
+		return err
 	}
 
-	if len(any) == 0 {
-		if len(req.Any) == 0 {
-			// At least one filter should have been expanded
-			defFilter, err := s.defaultObjectFilter(req.Session)
-			if err != nil {
-				return ErrFailedExpandObjectFilters
-			}
-			any = append(any, defFilter)
-		} else {
-			// The user asked for object types that don't exist, partitions
-			// that don't exist, etc.
-			return nil
-		}
-	}
-
-	cur, err := s.store.ObjectList(any)
+	cur, err := s.store.ObjectList(filters)
 	if err != nil {
 		return err
 	}
@@ -122,41 +139,40 @@ func (s *Server) ObjectList(
 
 // validateObjectSetRequest ensures that the data the user sent in the
 // request's Before and After elements makes sense and meets things like
-// property schema validation checks. Returns the object type for the new
-// object.
+// property schema validation checks.
 func (s *Server) validateObjectSetRequest(
 	req *pb.ObjectSetRequest,
-) (*pb.ObjectType, error) {
+) error {
 	after := req.After
 
 	// Simple input data validations
 	if after.ObjectType == "" {
-		return nil, ErrObjectTypeRequired
+		return ErrObjectTypeRequired
 	}
 	if after.Partition == "" {
-		return nil, ErrPartitionRequired
+		return ErrPartitionRequired
 	}
 
 	// Validate the referred to type, partition and project actually exist
 	p, err := s.store.PartitionGet(after.Partition)
 	if err != nil {
 		if err == errors.ErrNotFound {
-			return nil, errPartitionNotFound(after.Partition)
+			return errPartitionNotFound(after.Partition)
 		}
 		// We don't want to leak internal implementation errors...
 		s.log.ERR("failed when validating partition in object set: %s", err)
-		return nil, errors.ErrUnknown
+		return errors.ErrUnknown
 	}
 	after.Partition = p.Uuid
 
 	ot, err := s.store.ObjectTypeGet(after.ObjectType)
 	if err != nil {
 		if err == errors.ErrNotFound {
-			return nil, errObjectTypeNotFound(after.ObjectType)
+			return errObjectTypeNotFound(after.ObjectType)
 		}
 		// We don't want to leak internal implementation errors...
 		s.log.ERR("failed when validating object type in object set: %s", err)
-		return nil, errors.ErrUnknown
+		return errors.ErrUnknown
 	}
 	after.ObjectType = ot.Code
 
@@ -173,7 +189,7 @@ func (s *Server) validateObjectSetRequest(
 	}
 
 	// TODO(jaypipes): property schema validation checks
-	return ot, nil
+	return nil
 }
 
 func (s *Server) ObjectSet(
@@ -182,7 +198,7 @@ func (s *Server) ObjectSet(
 ) (*pb.ObjectSetResponse, error) {
 	// TODO(jaypipes): AUTHZ check if user can write objects
 
-	ot, err := s.validateObjectSetRequest(req)
+	err := s.validateObjectSetRequest(req)
 	if err != nil {
 		return nil, err
 	}
@@ -195,7 +211,7 @@ func (s *Server) ObjectSet(
 			req.After.Partition,
 			req.After.Name,
 		)
-		changed, err = s.store.ObjectCreate(req.After, ot)
+		changed, err = s.store.ObjectCreate(req.After)
 		if err != nil {
 			return nil, err
 		}

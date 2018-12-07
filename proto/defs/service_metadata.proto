@@ -153,11 +153,13 @@ message ObjectListRequest {
 
 message ObjectDeleteRequest {
     Session session = 1;
-    repeated Object object = 2;
+    // A set of filter expressions that are OR'd together when determining
+    // matches for deletion
+    repeated ObjectFilter any = 3;
 }
 
 message ObjectDeleteResponse {
-    repeated Error errors = 1;
+    repeated string errors = 1;
     uint64 num_deleted = 2;
 }
 

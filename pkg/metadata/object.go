@@ -44,13 +44,15 @@ func (s *Server) ObjectDelete(
 		if err = s.store.ObjectDelete(obj); err != nil {
 			resErrors = append(resErrors, err.Error())
 		}
+		// TODO(jaypipes): Send an event notification
+		s.log.L1("user %s deleted object with UUID %s", req.Session.User, obj.Uuid)
 		numDeleted += 1
 	}
 	resp := &pb.ObjectDeleteResponse{
 		Errors:     resErrors,
 		NumDeleted: numDeleted,
 	}
-	if len(resErrors) == 0 {
+	if len(resErrors) > 0 {
 		return resp, ErrObjectDeleteFailed
 	}
 	return resp, nil

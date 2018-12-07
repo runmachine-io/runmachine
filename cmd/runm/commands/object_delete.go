@@ -53,4 +53,11 @@ func objectDelete(cmd *cobra.Command, args []string) {
 			os.Exit(int(s.Code()))
 		}
 	}
+	if !quiet {
+		if verbose {
+			fmt.Fprintf(os.Stdout, "deleted %d object(s)\n", resp.NumDeleted)
+		} else {
+			fmt.Fprintf(os.Stdout, "ok\n")
+		}
+	}
 }

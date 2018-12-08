@@ -2,15 +2,13 @@ package storage
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
 	etcd "github.com/coreos/etcd/clientv3"
 	"github.com/golang/protobuf/proto"
 
-	"github.com/runmachine-io/runmachine/pkg/abstract"
-	"github.com/runmachine-io/runmachine/pkg/cursor"
 	"github.com/runmachine-io/runmachine/pkg/errors"
+	"github.com/runmachine-io/runmachine/pkg/metadata/types"
 	"github.com/runmachine-io/runmachine/pkg/util"
 	pb "github.com/runmachine-io/runmachine/proto"
 )
@@ -27,82 +25,25 @@ const (
 	_OBJECTS_BY_UUID_KEY = "objects/by-uuid/"
 )
 
-// A specialized filter class that has already looked up specific partition and
-// object types (expanded from user-supplied partition and type filter
-// strings). Users pass pb.ObjectFilter messages which contain optional
-// pb.PartitionFilter and pb.ObjectTypeFilter messages. Those may be expanded
-// (due to UsePrefix = true) to a set of partition UUIDs and/or object type
-// codes. We then create zero or more of these ObjectListFilter structs
-// that represent a specific filter on partition UUID and object type, along
-// with the the object's name/UUID and UsePrefix flag.
-type ObjectListFilter struct {
-	Partition  *pb.Partition
-	ObjectType *pb.ObjectType
-	Project    string
-	Search     string
-	UsePrefix  bool
-	// TODO(jaypipes): Add support for property and tag filters
-}
-
-func (f *ObjectListFilter) IsEmpty() bool {
-	return f.Partition == nil && f.ObjectType == nil && f.Project == "" && f.Search == ""
-}
-
-func (f *ObjectListFilter) String() string {
-	attrMap := make(map[string]string, 0)
-	if f.Partition != nil {
-		attrMap["partition"] = f.Partition.Uuid
-	}
-	if f.ObjectType != nil {
-		attrMap["object_type"] = f.ObjectType.Code
-	}
-	if f.Project != "" {
-		attrMap["project"] = f.Project
-	}
-	if f.Search != "" {
-		attrMap["search"] = f.Search
-		attrMap["use_prefix"] = strconv.FormatBool(f.UsePrefix)
-	}
-	attrs := ""
-	x := 0
-	for k, v := range attrMap {
-		if x > 0 {
-			attrs += ","
-		}
-		attrs += k + "=" + v
-	}
-	return fmt.Sprintf("ObjectListFilter(%s)", attrs)
-}
-
 // objectByNameKey returns a string for the key to use for the object's name
 // index. Depending on whether the supplied object's object type is
 // project-scoped or not, the object's name index will contain the object's
 // project along with the object type and name.
-func (s *Store) objectByNameIndexKey(obj *pb.Object) (string, error) {
-	objType, err := s.ObjectTypeGet(obj.ObjectType)
-	if err != nil {
-		s.log.ERR(
-			"storage.ObjectDelete: object type '%s' for object with "+
-				"UUID '%s' was not valid: %s",
-			obj.ObjectType, obj.Uuid, err,
-		)
-		return "", errors.ErrUnknown
-	}
-
-	switch objType.Scope {
+func (s *Store) objectByNameIndexKey(owr *types.ObjectWithReferences) (string, error) {
+	switch owr.Type.Scope {
 	case pb.ObjectTypeScope_PARTITION:
 		// $PARTITION/objects/by-type/{type}/by-name/{name}
-		return _PARTITIONS_KEY + obj.Partition + "/" +
-			_OBJECTS_BY_TYPE_KEY + objType.Code + "/" +
-			_BY_NAME_KEY + obj.Name, nil
+		return _PARTITIONS_KEY + owr.Partition.Uuid + "/" +
+			_OBJECTS_BY_TYPE_KEY + owr.Type.Code + "/" +
+			_BY_NAME_KEY + owr.Object.Name, nil
 	case pb.ObjectTypeScope_PROJECT:
 		// $PARTITION/objects/by-type/{type}/by-project/{project}/by-name/{name}
-		return _PARTITIONS_KEY + obj.Partition + "/" +
-			_OBJECTS_BY_TYPE_KEY + objType.Code + "/" +
-			_BY_PROJECT_KEY + obj.Project + "/" +
-			_BY_NAME_KEY + obj.Name, nil
+		return _PARTITIONS_KEY + owr.Partition.Uuid + "/" +
+			_OBJECTS_BY_TYPE_KEY + owr.Type.Code + "/" +
+			_BY_PROJECT_KEY + owr.Object.Project + "/" +
+			_BY_NAME_KEY + owr.Object.Name, nil
 	}
-	return "", fmt.Errorf("Unknown object type scope: %s", objType.Scope)
+	return "", fmt.Errorf("Unknown object type scope: %s", owr.Type.Scope)
 }
 
 // ObjectDelete removes an object from storage along with any index records the
@@ -110,13 +51,14 @@ func (s *Store) objectByNameIndexKey(obj *pb.Object) (string, error) {
 // been pulled from etcd storage and therefore contain an already-normalized
 // UUID, a valid object type and partition, etc.
 func (s *Store) ObjectDelete(
-	obj *pb.Object,
+	owr *types.ObjectWithReferences,
 ) error {
-	objByNameKey, err := s.objectByNameIndexKey(obj)
+	objByNameKey, err := s.objectByNameIndexKey(owr)
 	if err != nil {
 		return errors.ErrUnknown
 	}
-	objByUuidKey := _OBJECTS_BY_UUID_KEY + obj.Uuid
+	objUuid := owr.Object.Uuid
+	objByUuidKey := _OBJECTS_BY_UUID_KEY + objUuid
 
 	ctx, cancel := s.requestCtx()
 	defer cancel()
@@ -145,11 +87,11 @@ func (s *Store) ObjectDelete(
 	return nil
 }
 
-// ObjectTypeList returns a cursor over zero or more ObjectType
-// protobuffer objects matching a set of supplied filters.
+// ObjectList returns a slice of pointers to Object protobuffer messages
+// matching a set of supplied filters.
 func (s *Store) ObjectList(
-	any []*ObjectListFilter,
-) (abstract.Cursor, error) {
+	any []*types.ObjectListFilter,
+) ([]*pb.Object, error) {
 	if len(any) == 0 {
 		return s.objectsGetAll()
 	}
@@ -160,13 +102,13 @@ func (s *Store) ObjectList(
 
 	for _, filter := range any {
 		if filter.IsEmpty() {
-			s.log.ERR("received empty ObjectListFilter in ObjectList()")
+			s.log.ERR("received empty types.ObjectListFilter in ObjectList()")
 			continue
 		}
-		// If the ObjectListFilter contains a value for the Search field,
+		// If the types.ObjectListFilter contains a value for the Search field,
 		// that means we need to look up objects by UUID or name (with an
 		// optional prefix for the name). If no Search field is present, that
-		// means that in order to evaluate this ObjectListFilter we'll be
+		// means that in order to evaluate this types.ObjectListFilter we'll be
 		// searching on ranges of objects by type, partition or project.
 		filterObjs, err := s.objectsGetByFilter(filter)
 		if err != nil {
@@ -180,21 +122,79 @@ func (s *Store) ObjectList(
 		}
 	}
 	if len(objs) == 0 {
-		return cursor.Empty(), nil
+		return nil, nil
 	}
 
-	// Convert the map values into an array of proto.Message interfaces
-	msgs := make([]proto.Message, len(objs))
+	res := make([]*pb.Object, len(objs))
 	x := 0
 	for _, obj := range objs {
-		msgs[x] = obj
+		res[x] = obj
 		x += 1
 	}
-	return cursor.NewFromSlicePBMessages(msgs[:x]), nil
+	return res, nil
+}
+
+// ObjectListWithReferences returns a slice of pointers to ObjectWithReference
+// structs that have had Partition and ObjectType relations expanded inline.
+func (s *Store) ObjectListWithReferences(
+	any []*types.ObjectListFilter,
+) ([]*types.ObjectWithReferences, error) {
+	objects, err := s.ObjectList(any)
+	if err != nil {
+		return nil, err
+	}
+
+	// NOTE(jaypipes): store.ObjectDelete() accepts a single argument of type
+	// ObjectWithReferences. Here, we have two maps for Partition and
+	// ObjectType messages that we fetch by partition UUID or object type code
+	// while iterating over the objects to delete. These Partition and
+	// ObjectType messages are included in the ObjectWithReferences structs
+	// that are passed to ObjectDelete. Gotta love implementing joins in
+	// Golang/memory... :(
+	partitions := make(map[string]*pb.Partition, 0)
+	objTypes := make(map[string]*pb.ObjectType, 0)
+	res := make([]*types.ObjectWithReferences, len(objects))
+	for x, obj := range objects {
+		part, ok := partitions[obj.Partition]
+		if !ok {
+			part, err = s.PartitionGet(obj.Partition)
+			if err != nil {
+				msg := fmt.Sprintf(
+					"failed to find partition %s while attempting to delete "+
+						"object with UUID %s",
+					obj.Partition,
+					obj.Uuid,
+				)
+				s.log.ERR(msg)
+				return nil, errors.ErrPartitionNotFound(obj.Partition)
+			}
+		}
+		ot, ok := objTypes[obj.Type]
+		if !ok {
+			ot, err = s.ObjectTypeGet(obj.Type)
+			if err != nil {
+				msg := fmt.Sprintf(
+					"failed to find object type %s while attempting to delete "+
+						"object with UUID %s",
+					obj.Type,
+					obj.Uuid,
+				)
+				s.log.ERR(msg)
+				return nil, errors.ErrObjectTypeNotFound(obj.Type)
+			}
+		}
+		owr := &types.ObjectWithReferences{
+			Partition: part,
+			Type:      ot,
+			Object:    obj,
+		}
+		res[x] = owr
+	}
+	return res, nil
 }
 
 func (s *Store) objectsGetByFilter(
-	filter *ObjectListFilter,
+	filter *types.ObjectListFilter,
 ) ([]*pb.Object, error) {
 	if filter.Search != "" {
 		if util.IsUuidLike(filter.Search) {
@@ -212,8 +212,8 @@ func (s *Store) objectsGetByFilter(
 					return nil, errors.ErrNotFound
 				}
 			}
-			if filter.ObjectType != nil {
-				if obj.ObjectType != filter.ObjectType.Code {
+			if filter.Type != nil {
+				if obj.Type != filter.Type.Code {
 					return nil, errors.ErrNotFound
 				}
 			}
@@ -236,8 +236,8 @@ func (s *Store) objectsGetByFilter(
 			// scan on all objects by the primary objects/by-uuid/ index and
 			// manually check to see if the deserialized Object's name has the
 			// requested name...
-			if filter.ObjectType != nil && filter.Partition != nil {
-				if filter.ObjectType.Scope == pb.ObjectTypeScope_PROJECT {
+			if filter.Type != nil && filter.Partition != nil {
+				if filter.Type.Scope == pb.ObjectTypeScope_PROJECT {
 					if filter.Project != "" {
 						// Just drop through if we don't have a project because
 						// we won't be able to look up a project-scoped object
@@ -246,7 +246,7 @@ func (s *Store) objectsGetByFilter(
 						// this filter
 						return s.objectsGetByProjectNameIndex(
 							filter.Partition.Uuid,
-							filter.ObjectType.Code,
+							filter.Type.Code,
 							filter.Project,
 							filter.Search,
 							filter.UsePrefix,
@@ -255,7 +255,7 @@ func (s *Store) objectsGetByFilter(
 				} else {
 					return s.objectsGetByNameIndex(
 						filter.Partition.Uuid,
-						filter.ObjectType.Code,
+						filter.Type.Code,
 						filter.Search,
 						filter.UsePrefix,
 					)
@@ -268,17 +268,13 @@ func (s *Store) objectsGetByFilter(
 	// filter on name but not object type. We will get all objects and filter
 	// out any objects that don't meet the supplied partition UUID, project and
 	// object type code filters.
-	cur, err := s.objectsGetAll()
+	objects, err := s.objectsGetAll()
 	if err != nil {
 		return nil, err
 	}
 
 	res := make([]*pb.Object, 0)
-	for cur.Next() {
-		obj := &pb.Object{}
-		if err = cur.Scan(obj); err != nil {
-			return nil, err
-		}
+	for _, obj := range objects {
 		// Use a sieve pattern, only adding the object to our results if it
 		// passes all match expressions
 		if filter.Partition != nil {
@@ -286,8 +282,8 @@ func (s *Store) objectsGetByFilter(
 				continue
 			}
 		}
-		if filter.ObjectType != nil {
-			if obj.ObjectType != filter.ObjectType.Code {
+		if filter.Type != nil {
+			if obj.Type != filter.Type.Code {
 				continue
 			}
 		}
@@ -436,7 +432,7 @@ func (s *Store) objectsGetByNameIndex(
 	return res, nil
 }
 
-func (s *Store) objectsGetAll() (abstract.Cursor, error) {
+func (s *Store) objectsGetAll() ([]*pb.Object, error) {
 	ctx, cancel := s.requestCtx()
 	defer cancel()
 
@@ -454,31 +450,45 @@ func (s *Store) objectsGetAll() (abstract.Cursor, error) {
 		return nil, err
 	}
 
-	return cursor.NewFromEtcdGetResponse(resp), nil
+	if resp.Count == 0 {
+		return nil, nil
+	}
+
+	res := make([]*pb.Object, resp.Count)
+	for x, kv := range resp.Kvs {
+		msg := &pb.Object{}
+		if err := proto.Unmarshal(kv.Value, msg); err != nil {
+			return nil, err
+		}
+		res[x] = msg
+	}
+
+	return res, nil
 }
 
 // ObjectCreate puts the supplied object into backend storage, adding all the
 // appropriate indexes. It returns the newly-created object.
 func (s *Store) ObjectCreate(
-	obj *pb.Object,
-) (*pb.Object, error) {
-	if obj.Uuid == "" {
-		obj.Uuid = util.NewNormalizedUuid()
+	owr *types.ObjectWithReferences,
+) (*types.ObjectWithReferences, error) {
+	if owr.Object.Uuid == "" {
+		owr.Object.Uuid = util.NewNormalizedUuid()
 	} else {
-		obj.Uuid = util.NormalizeUuid(obj.Uuid)
+		owr.Object.Uuid = util.NormalizeUuid(owr.Object.Uuid)
 	}
+	objUuid := owr.Object.Uuid
 
-	objValue, err := proto.Marshal(obj)
+	objValue, err := proto.Marshal(owr.Object)
 	if err != nil {
 		s.log.ERR("failed to serialize object: %v", err)
 		return nil, errors.ErrUnknown
 	}
 
-	objByNameKey, err := s.objectByNameIndexKey(obj)
+	objByNameKey, err := s.objectByNameIndexKey(owr)
 	if err != nil {
 		return nil, errors.ErrUnknown
 	}
-	objByUuidKey := _OBJECTS_BY_UUID_KEY + obj.Uuid
+	objByUuidKey := _OBJECTS_BY_UUID_KEY + objUuid
 
 	ctx, cancel := s.requestCtx()
 	defer cancel()
@@ -488,7 +498,7 @@ func (s *Store) ObjectCreate(
 	// us, we return an error
 	then := []etcd.Op{
 		// Add the entry for the index by object name
-		etcd.OpPut(objByNameKey, obj.Uuid),
+		etcd.OpPut(objByNameKey, objUuid),
 		// Add the entry for the primary index by object UUID
 		etcd.OpPut(objByUuidKey, string(objValue)),
 	}
@@ -505,5 +515,5 @@ func (s *Store) ObjectCreate(
 	} else if resp.Succeeded == false {
 		return nil, errors.ErrDuplicate
 	}
-	return obj, nil
+	return owr, nil
 }

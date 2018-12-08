@@ -110,7 +110,7 @@ func buildObjectFilters() []*pb.ObjectFilter {
 					UsePrefix: usePrefix,
 				}
 			case "type":
-				filter.ObjectType = &pb.ObjectTypeFilter{
+				filter.Type = &pb.ObjectTypeFilter{
 					Search:    value,
 					UsePrefix: usePrefix,
 				}
@@ -169,7 +169,7 @@ func objectList(cmd *cobra.Command, args []string) {
 	for x, obj := range msgs {
 		rows[x] = []string{
 			obj.Partition,
-			obj.ObjectType,
+			obj.Type,
 			obj.Uuid,
 			obj.Name,
 			obj.Project,

@@ -60,7 +60,7 @@ func objectGet(cmd *cobra.Command, args []string) {
 			fmt.Fprintf(os.Stderr, "Error: --type required when <search> is not a UUID\n")
 			os.Exit(1)
 		}
-		search.ObjectType = &pb.ObjectTypeFilter{
+		search.Type = &pb.ObjectTypeFilter{
 			Search:    cliObjectGetType,
 			UsePrefix: false,
 		}
@@ -74,7 +74,7 @@ func objectGet(cmd *cobra.Command, args []string) {
 	)
 	exitIfError(err)
 	fmt.Printf("Partition: %s\n", obj.Partition)
-	fmt.Printf("Type:      %s\n", obj.ObjectType)
+	fmt.Printf("Type:      %s\n", obj.Type)
 	fmt.Printf("UUID:      %s\n", obj.Uuid)
 	fmt.Printf("Name:      %s\n", obj.Name)
 	if obj.Project != "" {

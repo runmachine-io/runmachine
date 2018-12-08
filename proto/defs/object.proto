@@ -27,7 +27,7 @@ message Object {
     // The UUID of the partition this object is in
     string partition = 1;
     // The object type code this object is
-    string object_type = 2;
+    string type = 2;
     // The external identifier of the project this object is owned by. Can be
     // empty if the type of object isn't ownable by a project (for instance, a
     // `runm.provider` isn't ownable by a project, but a `runm.machine` is)
@@ -46,7 +46,7 @@ message Object {
 // Used in matching object records
 message ObjectFilter {
     PartitionFilter partition = 1;
-    ObjectTypeFilter object_type = 2;
+    ObjectTypeFilter type = 2;
     // The project the object must belong to, if the object type scope of this
     // object is PROJECT
     string project = 3;

@@ -63,3 +63,15 @@ func ErrPartitionNotFound(partition string) *Error {
 		),
 	}
 }
+
+func ErrFailedPropertySchemaValidation(key string, err error) *Error {
+	return &Error{
+		HTTPCode: 400,
+		Code:     400001,
+		Message: fmt.Sprintf(
+			"property with key %s failed schema validation: %s.",
+			key,
+			err,
+		),
+	}
+}

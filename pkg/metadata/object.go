@@ -210,11 +210,30 @@ func (s *Server) validateObjectProperty(
 	key string,
 	value string,
 ) (*pb.Property, error) {
-	// TODO(jaypipes): Do the actual schema validation...
+	propSchema, err := s.store.PropertySchemaGet(
+		partition.Uuid,
+		objType.Code,
+		key,
+	)
+	if err != nil && err != errors.ErrNotFound {
+		return nil, err
+	}
+	if propSchema != nil {
+		err := s.validateValueWithSchema(value, propSchema.Schema)
+		if err != nil {
+			return nil, errors.ErrFailedPropertySchemaValidation(key, err)
+		}
+	}
 	return &pb.Property{
 		Key:   key,
 		Value: value,
 	}, nil
+}
+
+// validateValueWithSchema returns an error if the supplied value passes the
+// supplied property schema document, nil otherwise.
+func (s *Server) validateValueWithSchema(value string, schema string) error {
+	return nil
 }
 
 func (s *Server) ObjectSet(

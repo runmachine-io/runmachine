@@ -146,7 +146,7 @@ func (s *Server) validateObjectSetRequest(
 	after := req.After
 
 	// Simple input data validations
-	if after.ObjectType == "" {
+	if after.Type == "" {
 		return ErrObjectTypeRequired
 	}
 	if after.Partition == "" {
@@ -165,16 +165,16 @@ func (s *Server) validateObjectSetRequest(
 	}
 	after.Partition = p.Uuid
 
-	ot, err := s.store.ObjectTypeGet(after.ObjectType)
+	ot, err := s.store.ObjectTypeGet(after.Type)
 	if err != nil {
 		if err == errors.ErrNotFound {
-			return errObjectTypeNotFound(after.ObjectType)
+			return errObjectTypeNotFound(after.Type)
 		}
 		// We don't want to leak internal implementation errors...
 		s.log.ERR("failed when validating object type in object set: %s", err)
 		return errors.ErrUnknown
 	}
-	after.ObjectType = ot.Code
+	after.Type = ot.Code
 
 	if req.Before == nil {
 		// TODO(jaypipes): User expects to create a new object with the after
@@ -207,7 +207,7 @@ func (s *Server) ObjectSet(
 	if req.Before == nil {
 		s.log.L3(
 			"creating new object of type %s in partition %s with name %s...",
-			req.After.ObjectType,
+			req.After.Type,
 			req.After.Partition,
 			req.After.Name,
 		)
@@ -218,7 +218,7 @@ func (s *Server) ObjectSet(
 		s.log.L1(
 			"created new object with UUID %s of type %s in partition %s with name %s",
 			changed.Uuid,
-			req.After.ObjectType,
+			req.After.Type,
 			req.After.Partition,
 			req.After.Name,
 		)

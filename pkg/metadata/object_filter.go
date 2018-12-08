@@ -90,9 +90,9 @@ func (s *Server) expandObjectFilter(
 		partitions = append(partitions, part)
 	}
 
-	if filter.ObjectType != nil {
+	if filter.Type != nil {
 		// Verify that the object type even exists
-		cur, err := s.store.ObjectTypeList([]*pb.ObjectTypeFilter{filter.ObjectType})
+		cur, err := s.store.ObjectTypeList([]*pb.ObjectTypeFilter{filter.Type})
 		if err != nil {
 			return nil, err
 		}
@@ -132,8 +132,8 @@ func (s *Server) expandObjectFilter(
 			} else {
 				for _, ot := range objTypes {
 					f := &storage.ObjectListFilter{
-						Partition:  p,
-						ObjectType: ot,
+						Partition: p,
+						Type:      ot,
 					}
 					res = append(res, f)
 				}
@@ -142,7 +142,7 @@ func (s *Server) expandObjectFilter(
 	} else if len(objTypes) > 0 {
 		for _, ot := range objTypes {
 			f := &storage.ObjectListFilter{
-				ObjectType: ot,
+				Type: ot,
 			}
 			res = append(res, f)
 		}

@@ -36,16 +36,16 @@ const (
 // that represent a specific filter on partition UUID and object type, along
 // with the the object's name/UUID and UsePrefix flag.
 type ObjectListFilter struct {
-	Partition  *pb.Partition
-	ObjectType *pb.ObjectType
-	Project    string
-	Search     string
-	UsePrefix  bool
+	Partition *pb.Partition
+	Type      *pb.ObjectType
+	Project   string
+	Search    string
+	UsePrefix bool
 	// TODO(jaypipes): Add support for property and tag filters
 }
 
 func (f *ObjectListFilter) IsEmpty() bool {
-	return f.Partition == nil && f.ObjectType == nil && f.Project == "" && f.Search == ""
+	return f.Partition == nil && f.Type == nil && f.Project == "" && f.Search == ""
 }
 
 func (f *ObjectListFilter) String() string {
@@ -53,8 +53,8 @@ func (f *ObjectListFilter) String() string {
 	if f.Partition != nil {
 		attrMap["partition"] = f.Partition.Uuid
 	}
-	if f.ObjectType != nil {
-		attrMap["object_type"] = f.ObjectType.Code
+	if f.Type != nil {
+		attrMap["object_type"] = f.Type.Code
 	}
 	if f.Project != "" {
 		attrMap["project"] = f.Project
@@ -79,12 +79,12 @@ func (f *ObjectListFilter) String() string {
 // project-scoped or not, the object's name index will contain the object's
 // project along with the object type and name.
 func (s *Store) objectByNameIndexKey(obj *pb.Object) (string, error) {
-	objType, err := s.ObjectTypeGet(obj.ObjectType)
+	objType, err := s.ObjectTypeGet(obj.Type)
 	if err != nil {
 		s.log.ERR(
 			"storage.ObjectDelete: object type '%s' for object with "+
 				"UUID '%s' was not valid: %s",
-			obj.ObjectType, obj.Uuid, err,
+			obj.Type, obj.Uuid, err,
 		)
 		return "", errors.ErrUnknown
 	}
@@ -212,8 +212,8 @@ func (s *Store) objectsGetByFilter(
 					return nil, errors.ErrNotFound
 				}
 			}
-			if filter.ObjectType != nil {
-				if obj.ObjectType != filter.ObjectType.Code {
+			if filter.Type != nil {
+				if obj.Type != filter.Type.Code {
 					return nil, errors.ErrNotFound
 				}
 			}
@@ -236,8 +236,8 @@ func (s *Store) objectsGetByFilter(
 			// scan on all objects by the primary objects/by-uuid/ index and
 			// manually check to see if the deserialized Object's name has the
 			// requested name...
-			if filter.ObjectType != nil && filter.Partition != nil {
-				if filter.ObjectType.Scope == pb.ObjectTypeScope_PROJECT {
+			if filter.Type != nil && filter.Partition != nil {
+				if filter.Type.Scope == pb.ObjectTypeScope_PROJECT {
 					if filter.Project != "" {
 						// Just drop through if we don't have a project because
 						// we won't be able to look up a project-scoped object
@@ -246,7 +246,7 @@ func (s *Store) objectsGetByFilter(
 						// this filter
 						return s.objectsGetByProjectNameIndex(
 							filter.Partition.Uuid,
-							filter.ObjectType.Code,
+							filter.Type.Code,
 							filter.Project,
 							filter.Search,
 							filter.UsePrefix,
@@ -255,7 +255,7 @@ func (s *Store) objectsGetByFilter(
 				} else {
 					return s.objectsGetByNameIndex(
 						filter.Partition.Uuid,
-						filter.ObjectType.Code,
+						filter.Type.Code,
 						filter.Search,
 						filter.UsePrefix,
 					)
@@ -286,8 +286,8 @@ func (s *Store) objectsGetByFilter(
 				continue
 			}
 		}
-		if filter.ObjectType != nil {
-			if obj.ObjectType != filter.ObjectType.Code {
+		if filter.Type != nil {
+			if obj.Type != filter.Type.Code {
 				continue
 			}
 		}

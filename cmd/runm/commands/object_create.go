@@ -58,10 +58,10 @@ func getObjectFromBytes(b []byte) (*pb.Object, error) {
 	}
 	return &pb.Object{
 		// The server actually will translate partition names to UUIDs...
-		Partition:  od.Partition,
-		ObjectType: od.Type,
-		Project:    od.Project,
-		Name:       od.Name,
+		Partition: od.Partition,
+		Type:      od.Type,
+		Project:   od.Project,
+		Name:      od.Name,
 	}, nil
 }
 
@@ -110,7 +110,7 @@ func objectCreate(cmd *cobra.Command, args []string) {
 	obj = resp.Object
 	if !quiet {
 		fmt.Printf("UUID:        %s\n", obj.Uuid)
-		fmt.Printf("Type:        %s\n", obj.ObjectType)
+		fmt.Printf("Type:        %s\n", obj.Type)
 		fmt.Printf("Partition:   %s\n", obj.Partition)
 		fmt.Printf("Name:        %s\n", obj.Name)
 		fmt.Printf("Project:     %s\n", obj.Project)

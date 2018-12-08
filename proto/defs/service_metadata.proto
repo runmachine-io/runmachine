@@ -170,23 +170,20 @@ message ObjectDeleteResponse {
 message PropertySchemaGetRequest {
     Session session = 1;
     string partition = 2;
-    string object_type = 3;
+    string type = 3;
     string key = 4;
 }
 
 message PropertySchemaSetRequest {
     Session session = 1;
-    PropertySchema property_schema = 2;
+    PayloadFormat format = 2;
+    // Raw bytes representing the new representation of the property schema.
+    // The server is responsible for unmarshaling this raw payload.
+    bytes payload = 3;
 }
 
 message PropertySchemaSetResponse {
     PropertySchema property_schema = 2;
-}
-
-message PropertySchemaListFilter {
-    string partition = 1;
-    string object_type = 2;
-    string key = 3;
 }
 
 message PropertySchemaListRequest {
@@ -194,7 +191,7 @@ message PropertySchemaListRequest {
     SearchOptions options = 2;
     // A set of filter expressions that are OR'd together when determining
     // matches
-    repeated PropertySchemaListFilter any = 3;
+    repeated PropertySchemaFilter any = 3;
 }
 
 message PropertySchemaDeleteRequest {

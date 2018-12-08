@@ -54,7 +54,7 @@ message PropertySchema {
     string partition = 1;
     // String code of the object type the property schema applies to. e.g.
     // "runm.machine"
-    string object_type = 2;
+    string type = 2;
     // The property key to apply the property schema to. e.g. "architecture"
     string key = 3;
     // a YAML document describing the format and type constraints of the value
@@ -62,4 +62,14 @@ message PropertySchema {
     string schema = 4;
     // Collection of access permissions applied to this property schema
     repeated PropertyAccessPermission access_permissions = 50;
+}
+
+// Used in matching property schema records
+message PropertySchemaFilter {
+    PartitionFilter partition = 1;
+    ObjectTypeFilter type = 2;
+    // A search term on the property schema's property key
+    string search = 4;
+    // Indicates the search should be a prefix expression
+    bool use_prefix = 5;
 }

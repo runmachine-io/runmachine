@@ -44,7 +44,7 @@ Find all runm.image objects starting with "db" in the "admin" project:
 Find all runm.machine objects OR runm.image objects that are a partition called
 part0:
 
---filter "type=runm.machine --partition=part0" \
+--filter "type=runm.machine partition=part0" \
 --filter "type=runm.image partition=part0"
 
 Find any object in the "admin" project that has a name starting with "db":

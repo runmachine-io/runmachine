@@ -1,7 +1,9 @@
 package commands
 
 import (
+	"bufio"
 	"fmt"
+	"io/ioutil"
 	"os"
 
 	"google.golang.org/grpc"
@@ -55,6 +57,8 @@ var (
 	listLimit  int
 	listMarker string
 	listSort   string
+	// filepath to read a document to send to the server for create/update operations
+	objectDocPath string
 )
 
 func exitIfConnectErr(err error) {
@@ -79,6 +83,33 @@ func exitNoRecords() {
 		fmt.Println(msgNoRecords)
 	}
 	os.Exit(0)
+}
+
+func readInputDocumentOrExit() []byte {
+	var b []byte
+	if objectDocPath == "" {
+		// User did not specify -f therefore we expect to read the YAML
+		// document from stdin
+		scanner := bufio.NewScanner(os.Stdin)
+		buf := make([]byte, 0)
+		for scanner.Scan() {
+			buf = append(buf, scanner.Bytes()...)
+		}
+		b = buf
+	} else {
+		if buf, err := ioutil.ReadFile(objectDocPath); err != nil {
+			fmt.Printf("Error: %s\n", err)
+			os.Exit(1)
+		} else {
+			b = buf
+		}
+	}
+
+	if len(b) == 0 {
+		fmt.Println("Error: expected to receive YAML document in STDIN")
+		os.Exit(1)
+	}
+	return b
 }
 
 // getSession constructs a Session protobuffer message by looking for

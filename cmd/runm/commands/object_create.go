@@ -17,7 +17,7 @@ var objectCreateCommand = &cobra.Command{
 
 func setupObjectCreateFlags() {
 	objectCreateCommand.Flags().StringVarP(
-		&objectDocPath,
+		&cliObjectDocPath,
 		"file", "f",
 		"",
 		"optional filepath to YAML document to send.",

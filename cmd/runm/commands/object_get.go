@@ -73,11 +73,5 @@ func objectGet(cmd *cobra.Command, args []string) {
 		},
 	)
 	exitIfError(err)
-	fmt.Printf("Partition: %s\n", obj.Partition)
-	fmt.Printf("Type:      %s\n", obj.Type)
-	fmt.Printf("UUID:      %s\n", obj.Uuid)
-	fmt.Printf("Name:      %s\n", obj.Name)
-	if obj.Project != "" {
-		fmt.Printf("Project:   %s\n", obj.Project)
-	}
+	printObject(obj)
 }

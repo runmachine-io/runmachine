@@ -17,7 +17,7 @@ var objectCreateCommand = &cobra.Command{
 
 func setupObjectCreateFlags() {
 	objectCreateCommand.Flags().StringVarP(
-		&objectDocPath,
+		&cliObjectDocPath,
 		"file", "f",
 		"",
 		"optional filepath to YAML document to send.",
@@ -43,11 +43,7 @@ func objectCreate(cmd *cobra.Command, args []string) {
 	exitIfError(err)
 	obj := resp.Object
 	if !quiet {
-		fmt.Printf("UUID:        %s\n", obj.Uuid)
-		fmt.Printf("Type:        %s\n", obj.Type)
-		fmt.Printf("Partition:   %s\n", obj.Partition)
-		fmt.Printf("Name:        %s\n", obj.Name)
-		fmt.Printf("Project:     %s\n", obj.Project)
+		printObject(obj)
 	} else {
 		fmt.Println(obj.Uuid)
 	}

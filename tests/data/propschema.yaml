@@ -1,5 +1,5 @@
-partition: p0
-object_type: runm.machine
+partition: part0
+type: runm.machine
 key: architecture
 schema:
   blah

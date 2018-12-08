@@ -43,15 +43,15 @@ func propertySchemaGet(cmd *cobra.Command, args []string) {
 	session := getSession()
 
 	req := &pb.PropertySchemaGetRequest{
-		Session:    session,
-		Partition:  propSchemaGetPartition,
-		ObjectType: args[0],
-		Key:        args[1],
+		Session:   session,
+		Partition: propSchemaGetPartition,
+		Type:      args[0],
+		Key:       args[1],
 	}
 	obj, err := client.PropertySchemaGet(context.Background(), req)
 	exitIfError(err)
 	fmt.Printf("Partition:    %s\n", obj.Partition)
-	fmt.Printf("Object type:  %s\n", obj.ObjectType)
+	fmt.Printf("Type:         %s\n", obj.Type)
 	fmt.Printf("Key:          %s\n", obj.Key)
 	fmt.Printf("Schema:\n%s\n", obj.Schema)
 }

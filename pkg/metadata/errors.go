@@ -34,6 +34,10 @@ var (
 		codes.FailedPrecondition,
 		"object filter is required when fetching object.",
 	)
+	ErrFailedExpandPropertySchemaFilters = status.Errorf(
+		codes.FailedPrecondition,
+		"failed to expand property schema filters.",
+	)
 	ErrMultipleRecordsFound = status.Errorf(
 		codes.FailedPrecondition,
 		"multiple records found (expected single record match).",

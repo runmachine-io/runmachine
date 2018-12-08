@@ -10,6 +10,7 @@ import (
 	"github.com/runmachine-io/runmachine/pkg/abstract"
 	"github.com/runmachine-io/runmachine/pkg/cursor"
 	"github.com/runmachine-io/runmachine/pkg/errors"
+	"github.com/runmachine-io/runmachine/pkg/metadata/types"
 	pb "github.com/runmachine-io/runmachine/proto"
 )
 
@@ -57,22 +58,16 @@ func (s *Store) PropertySchemaGet(
 	return obj, nil
 }
 
-type PropertySchemaFilter struct {
-	PartitionUuid  string
-	ObjectTypeCode string
-	PropertyKey    string
-}
-
 // PropertySchemaList returns a cursor over zero or more PropertySchema
 // protobuffer objects matching a set of supplied filters.
 func (s *Store) PropertySchemaList(
-	any []*PropertySchemaFilter,
+	any []*types.PropertySchemaFilter,
 ) (abstract.Cursor, error) {
 	// Iterate over the partitions in our filter list
 	partUuids := make([]string, 0)
 	for _, filter := range any {
-		if filter.PartitionUuid != "" {
-			partUuids = append(partUuids, filter.PartitionUuid)
+		if filter.Partition != nil {
+			partUuids = append(partUuids, filter.Partition.Uuid)
 		}
 	}
 	if len(partUuids) == 0 {
@@ -84,7 +79,7 @@ func (s *Store) PropertySchemaList(
 		// TODO(jaypipes): Merge all returned getters into a single cursor
 		return s.propertySchemaGetFilteredByPartition(partUuid)
 	}
-	return nil, nil
+	return cursor.Empty(), nil
 }
 
 func (s *Store) propertySchemaGetFilteredByPartition(
@@ -119,7 +114,7 @@ func (s *Store) PropertySchemaCreate(
 	ctx, cancel := s.requestCtx()
 	defer cancel()
 
-	objType := obj.ObjectType
+	objType := obj.Type
 	propSchemaKey := obj.Key
 
 	key := fmt.Sprintf("by-type/%s/%s", objType, propSchemaKey)

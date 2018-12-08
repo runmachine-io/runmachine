@@ -58,7 +58,7 @@ var (
 	listMarker string
 	listSort   string
 	// filepath to read a document to send to the server for create/update operations
-	objectDocPath string
+	cliObjectDocPath string
 )
 
 func exitIfConnectErr(err error) {
@@ -87,7 +87,7 @@ func exitNoRecords() {
 
 func readInputDocumentOrExit() []byte {
 	var b []byte
-	if objectDocPath == "" {
+	if cliObjectDocPath == "" {
 		// User did not specify -f therefore we expect to read the YAML
 		// document from stdin
 		scanner := bufio.NewScanner(os.Stdin)
@@ -97,7 +97,7 @@ func readInputDocumentOrExit() []byte {
 		}
 		b = buf
 	} else {
-		if buf, err := ioutil.ReadFile(objectDocPath); err != nil {
+		if buf, err := ioutil.ReadFile(cliObjectDocPath); err != nil {
 			fmt.Printf("Error: %s\n", err)
 			os.Exit(1)
 		} else {

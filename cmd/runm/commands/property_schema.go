@@ -10,7 +10,7 @@ var propertySchemaCommand = &cobra.Command{
 }
 
 func init() {
-	propertySchemaCommand.AddCommand(propertySchemaSetCommand)
 	propertySchemaCommand.AddCommand(propertySchemaListCommand)
 	propertySchemaCommand.AddCommand(propertySchemaGetCommand)
+	propertySchemaCommand.AddCommand(propertySchemaCreateCommand)
 }

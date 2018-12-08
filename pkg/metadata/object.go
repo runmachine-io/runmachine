@@ -173,31 +173,67 @@ func (s *Server) validateObjectSetRequest(
 		return nil, errors.ErrUnknown
 	}
 
-	if obj.Uuid == "" {
-		// TODO(jaypipes): User expects to create a new object with the after
-		// image. Ensure we don't have an existing object with the supplied
-		// UUID, or if UUID is empty (indicating the user wants the UUID to be
-		// auto-created), no existing object with the supplied name exists in
-		// the partition or project scope.
-		switch objType.Scope {
-		case pb.ObjectTypeScope_PROJECT:
-		case pb.ObjectTypeScope_PARTITION:
+	objProperties := make([]*pb.Property, 0)
+	if obj.Properties != nil {
+		// Validate that the properties set against this object meet any schema
+		// associated with that property key and object type
+		for key, value := range obj.Properties {
+			prop, err := s.validateObjectProperty(part, objType, key, value)
+			if err != nil {
+				return nil, err
+			}
+			objProperties = append(objProperties, prop)
 		}
 	}
-
-	// TODO(jaypipes): property schema validation checks
 
 	return &types.ObjectWithReferences{
 		Partition: part,
 		Type:      objType,
 		Object: &pb.Object{
-			Partition: part.Uuid,
-			Type:      objType.Code,
-			Project:   obj.Project,
-			Name:      obj.Name,
-			Uuid:      obj.Uuid,
+			Partition:  part.Uuid,
+			Type:       objType.Code,
+			Project:    obj.Project,
+			Name:       obj.Name,
+			Uuid:       obj.Uuid,
+			Tags:       obj.Tags,
+			Properties: objProperties,
 		},
 	}, nil
+}
+
+// validateObjectProperty ensures that the supplied key and value meet any
+// defined property schema constraints that may have been defined for that
+// object type and key. Returns a pointer to a Property protobuffer message.
+func (s *Server) validateObjectProperty(
+	partition *pb.Partition,
+	objType *pb.ObjectType,
+	key string,
+	value string,
+) (*pb.Property, error) {
+	propSchema, err := s.store.PropertySchemaGet(
+		partition.Uuid,
+		objType.Code,
+		key,
+	)
+	if err != nil && err != errors.ErrNotFound {
+		return nil, err
+	}
+	if propSchema != nil {
+		err := s.validateValueWithSchema(value, propSchema.Schema)
+		if err != nil {
+			return nil, errors.ErrFailedPropertySchemaValidation(key, err)
+		}
+	}
+	return &pb.Property{
+		Key:   key,
+		Value: value,
+	}, nil
+}
+
+// validateValueWithSchema returns an error if the supplied value passes the
+// supplied property schema document, nil otherwise.
+func (s *Server) validateValueWithSchema(value string, schema string) error {
+	return nil
 }
 
 func (s *Server) ObjectSet(

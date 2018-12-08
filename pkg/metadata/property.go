@@ -4,9 +4,11 @@ import (
 	"context"
 
 	pb "github.com/runmachine-io/runmachine/proto"
+	yaml "gopkg.in/yaml.v2"
 
+	apitypes "github.com/runmachine-io/runmachine/pkg/api/types"
 	"github.com/runmachine-io/runmachine/pkg/errors"
-	"github.com/runmachine-io/runmachine/pkg/metadata/storage"
+	"github.com/runmachine-io/runmachine/pkg/metadata/types"
 )
 
 func (s *Server) PropertySchemaDelete(
@@ -23,7 +25,7 @@ func (s *Server) PropertySchemaGet(
 	req *pb.PropertySchemaGetRequest,
 ) (*pb.PropertySchema, error) {
 	// TODO(jaypipes): AUTHZ check user can read property schemas
-	if req.ObjectType == "" {
+	if req.Type == "" {
 		return nil, ErrObjectTypeRequired
 	}
 	// TODO(jaypipes): Look up whether object type exists
@@ -50,7 +52,7 @@ func (s *Server) PropertySchemaGet(
 	}
 	obj, err := s.store.PropertySchemaGet(
 		part.Uuid,
-		req.ObjectType,
+		req.Type,
 		req.Key,
 	)
 	if err != nil {
@@ -62,60 +64,22 @@ func (s *Server) PropertySchemaGet(
 	return obj, nil
 }
 
-func (s *Server) buildPropertySchemaFilter(
-	filter *pb.PropertySchemaListFilter,
-) (*storage.PropertySchemaFilter, error) {
-	f := &storage.PropertySchemaFilter{}
-	if filter.Partition != "" {
-		// Verify that the partition exists and translate names to UUIDs
-		part, err := s.store.PartitionGet(filter.Partition)
-		if err != nil {
-			return nil, err
-		} else {
-			f.PartitionUuid = part.Uuid
-		}
-	}
-	return f, nil
-}
-
 // PropertySchemaList streams PropertySchema protobuffer messages representing
 // property schemas that matched the requested filters
 func (s *Server) PropertySchemaList(
 	req *pb.PropertySchemaListRequest,
 	stream pb.RunmMetadata_PropertySchemaListServer,
 ) error {
-	any := make([]*storage.PropertySchemaFilter, 0)
-	for _, filter := range req.Any {
-		if f, err := s.buildPropertySchemaFilter(filter); err != nil {
-			if err == errors.ErrNotFound {
-				// Just return nil since clearly we can have no
-				// property schemas matching an unknown partition
-				return nil
-			}
-			return ErrUnknown
-		} else if f != nil {
-			any = append(any, f)
-		}
+	if err := checkSession(req.Session); err != nil {
+		return err
 	}
-	if len(any) == 0 {
-		// By default, filter by the session's partition
-		part, err := s.store.PartitionGet(req.Session.Partition)
-		if err != nil {
-			if err == errors.ErrNotFound {
-				// Just return nil since clearly we can have no
-				// property schemas matching an unknown partition
-				return nil
-			}
-			return ErrUnknown
-		}
-		any = append(
-			any,
-			&storage.PropertySchemaFilter{
-				PartitionUuid: part.Uuid,
-			},
-		)
+
+	filters, err := s.normalizePropertySchemaFilters(req.Session, req.Any)
+	if err != nil {
+		return err
 	}
-	cur, err := s.store.PropertySchemaList(any)
+
+	cur, err := s.store.PropertySchemaList(filters)
 	if err != nil {
 		return err
 	}
@@ -132,30 +96,32 @@ func (s *Server) PropertySchemaList(
 	return nil
 }
 
-func (s *Server) PropertySchemaSet(
-	ctx context.Context,
+// validateObjectSetRequest ensures that the data the user sent in the
+// request's payload can be unmarshal'd properly into YAML, contains all
+// relevant fields.  and meets things like property schema validation checks.
+//
+// Returns a fully validated Object protobuffer message that is ready to send
+// to backend storage.
+func (s *Server) validatePropertySchemaSetRequest(
 	req *pb.PropertySchemaSetRequest,
-) (*pb.PropertySchemaSetResponse, error) {
-	// TODO(jaypipes): AUTHZ check for writing property schemas
-	if req.PropertySchema == nil {
-		return nil, ErrPropertySchemaObjectRequired
+) (*types.PropertySchemaWithReferences, error) {
+
+	// reads the supplied buffer which contains a YAML document describing the
+	// property schema to create or update.
+	obj := &apitypes.PropertySchema{}
+	if err := yaml.Unmarshal(req.Payload, obj); err != nil {
+		return nil, err
 	}
 
-	// First, validate the supplied property schema has the required fields.
-	obj := req.PropertySchema
-
+	if obj.Type == "" {
+		return nil, ErrObjectTypeRequired
+	}
 	if obj.Partition == "" {
 		return nil, ErrPartitionRequired
 	}
-
-	if obj.ObjectType == "" {
-		return nil, ErrObjectTypeRequired
-	}
-
 	if obj.Key == "" {
 		return nil, ErrPropertyKeyRequired
 	}
-
 	if obj.Schema == "" {
 		return nil, ErrSchemaRequired
 	} else {
@@ -163,20 +129,66 @@ func (s *Server) PropertySchemaSet(
 		s.log.L3("Validating property schema")
 	}
 
+	// Validate the referred to type, partition and project actually exist
+	part, err := s.store.PartitionGet(obj.Partition)
+	if err != nil {
+		if err == errors.ErrNotFound {
+			return nil, errPartitionNotFound(obj.Partition)
+		}
+		// We don't want to leak internal implementation errors...
+		s.log.ERR("failed when validating partition in object set: %s", err)
+		return nil, errors.ErrUnknown
+	}
+
+	objType, err := s.store.ObjectTypeGet(obj.Type)
+	if err != nil {
+		if err == errors.ErrNotFound {
+			return nil, errObjectTypeNotFound(obj.Type)
+		}
+		// We don't want to leak internal implementation errors...
+		s.log.ERR("failed when validating object type in object set: %s", err)
+		return nil, errors.ErrUnknown
+	}
+
 	// TODO(jaypipes): AUTHZ check user can specify partition
 
-	partition := obj.Partition
-	objType := obj.ObjectType
+	return &types.PropertySchemaWithReferences{
+		Partition: part,
+		Type:      objType,
+		PropertySchema: &pb.PropertySchema{
+			Partition: part.Uuid,
+			Type:      objType.Code,
+			Key:       obj.Key,
+			Schema:    obj.Schema,
+		},
+	}, nil
+}
+
+func (s *Server) PropertySchemaSet(
+	ctx context.Context,
+	req *pb.PropertySchemaSetRequest,
+) (*pb.PropertySchemaSetResponse, error) {
+	// TODO(jaypipes): AUTHZ check for writing property schemas
+
+	pswr, err := s.validatePropertySchemaSetRequest(req)
+	if err != nil {
+		return nil, err
+	}
+
+	partition := pswr.Partition.Uuid
+	objType := pswr.Type.Code
+	obj := pswr.PropertySchema
 	propKey := obj.Key
 
 	existing, err := s.store.PropertySchemaGet(partition, objType, propKey)
 	if err != nil {
-		if err != ErrNotFound {
+		if err != errors.ErrNotFound {
 			s.log.ERR(
 				"Failed trying to find existing property schema for %s:%s:%s: %s",
 				partition,
 				objType,
 				propKey,
+				err,
 			)
 			// NOTE(jaypipes): we don't return internal errors
 			return nil, ErrUnknown

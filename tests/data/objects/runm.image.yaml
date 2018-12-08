@@ -2,3 +2,9 @@ partition: part0
 type: runm.image
 project: proj0
 name: db-server
+properties:
+  architecture: x86_64
+  os: linux
+tags:
+  - latest
+  - active

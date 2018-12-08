@@ -31,31 +31,21 @@ const (
 // index. Depending on whether the supplied object's object type is
 // project-scoped or not, the object's name index will contain the object's
 // project along with the object type and name.
-func (s *Store) objectByNameIndexKey(obj *pb.Object) (string, error) {
-	objType, err := s.ObjectTypeGet(obj.Type)
-	if err != nil {
-		s.log.ERR(
-			"storage.ObjectDelete: object type '%s' for object with "+
-				"UUID '%s' was not valid: %s",
-			obj.Type, obj.Uuid, err,
-		)
-		return "", errors.ErrUnknown
-	}
-
-	switch objType.Scope {
+func (s *Store) objectByNameIndexKey(owr *types.ObjectWithReferences) (string, error) {
+	switch owr.Type.Scope {
 	case pb.ObjectTypeScope_PARTITION:
 		// $PARTITION/objects/by-type/{type}/by-name/{name}
-		return _PARTITIONS_KEY + obj.Partition + "/" +
-			_OBJECTS_BY_TYPE_KEY + objType.Code + "/" +
-			_BY_NAME_KEY + obj.Name, nil
+		return _PARTITIONS_KEY + owr.Partition.Uuid + "/" +
+			_OBJECTS_BY_TYPE_KEY + owr.Type.Code + "/" +
+			_BY_NAME_KEY + owr.Object.Name, nil
 	case pb.ObjectTypeScope_PROJECT:
 		// $PARTITION/objects/by-type/{type}/by-project/{project}/by-name/{name}
-		return _PARTITIONS_KEY + obj.Partition + "/" +
-			_OBJECTS_BY_TYPE_KEY + objType.Code + "/" +
-			_BY_PROJECT_KEY + obj.Project + "/" +
-			_BY_NAME_KEY + obj.Name, nil
+		return _PARTITIONS_KEY + owr.Partition.Uuid + "/" +
+			_OBJECTS_BY_TYPE_KEY + owr.Type.Code + "/" +
+			_BY_PROJECT_KEY + owr.Object.Project + "/" +
+			_BY_NAME_KEY + owr.Object.Name, nil
 	}
-	return "", fmt.Errorf("Unknown object type scope: %s", objType.Scope)
+	return "", fmt.Errorf("Unknown object type scope: %s", owr.Type.Scope)
 }
 
 // ObjectDelete removes an object from storage along with any index records the
@@ -63,13 +53,14 @@ func (s *Store) objectByNameIndexKey(obj *pb.Object) (string, error) {
 // been pulled from etcd storage and therefore contain an already-normalized
 // UUID, a valid object type and partition, etc.
 func (s *Store) ObjectDelete(
-	obj *pb.Object,
+	owr *types.ObjectWithReferences,
 ) error {
-	objByNameKey, err := s.objectByNameIndexKey(obj)
+	objByNameKey, err := s.objectByNameIndexKey(owr)
 	if err != nil {
 		return errors.ErrUnknown
 	}
-	objByUuidKey := _OBJECTS_BY_UUID_KEY + obj.Uuid
+	objUuid := owr.Object.Uuid
+	objByUuidKey := _OBJECTS_BY_UUID_KEY + objUuid
 
 	ctx, cancel := s.requestCtx()
 	defer cancel()
@@ -413,25 +404,26 @@ func (s *Store) objectsGetAll() (abstract.Cursor, error) {
 // ObjectCreate puts the supplied object into backend storage, adding all the
 // appropriate indexes. It returns the newly-created object.
 func (s *Store) ObjectCreate(
-	obj *pb.Object,
-) (*pb.Object, error) {
-	if obj.Uuid == "" {
-		obj.Uuid = util.NewNormalizedUuid()
+	owr *types.ObjectWithReferences,
+) (*types.ObjectWithReferences, error) {
+	if owr.Object.Uuid == "" {
+		owr.Object.Uuid = util.NewNormalizedUuid()
 	} else {
-		obj.Uuid = util.NormalizeUuid(obj.Uuid)
+		owr.Object.Uuid = util.NormalizeUuid(owr.Object.Uuid)
 	}
+	objUuid := owr.Object.Uuid
 
-	objValue, err := proto.Marshal(obj)
+	objValue, err := proto.Marshal(owr.Object)
 	if err != nil {
 		s.log.ERR("failed to serialize object: %v", err)
 		return nil, errors.ErrUnknown
 	}
 
-	objByNameKey, err := s.objectByNameIndexKey(obj)
+	objByNameKey, err := s.objectByNameIndexKey(owr)
 	if err != nil {
 		return nil, errors.ErrUnknown
 	}
-	objByUuidKey := _OBJECTS_BY_UUID_KEY + obj.Uuid
+	objByUuidKey := _OBJECTS_BY_UUID_KEY + objUuid
 
 	ctx, cancel := s.requestCtx()
 	defer cancel()
@@ -441,7 +433,7 @@ func (s *Store) ObjectCreate(
 	// us, we return an error
 	then := []etcd.Op{
 		// Add the entry for the index by object name
-		etcd.OpPut(objByNameKey, obj.Uuid),
+		etcd.OpPut(objByNameKey, objUuid),
 		// Add the entry for the primary index by object UUID
 		etcd.OpPut(objByUuidKey, string(objValue)),
 	}
@@ -458,5 +450,5 @@ func (s *Store) ObjectCreate(
 	} else if resp.Succeeded == false {
 		return nil, errors.ErrDuplicate
 	}
-	return obj, nil
+	return owr, nil
 }

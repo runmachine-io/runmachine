@@ -2,11 +2,13 @@ package metadata
 
 import (
 	"context"
+	"fmt"
 
 	yaml "gopkg.in/yaml.v2"
 
-	"github.com/runmachine-io/runmachine/pkg/api/types"
+	apitypes "github.com/runmachine-io/runmachine/pkg/api/types"
 	"github.com/runmachine-io/runmachine/pkg/errors"
+	"github.com/runmachine-io/runmachine/pkg/metadata/types"
 	pb "github.com/runmachine-io/runmachine/proto"
 )
 
@@ -37,6 +39,16 @@ func (s *Server) ObjectDelete(
 	}
 	defer cur.Close()
 
+	// NOTE(jaypipes): store.ObjectDelete() accepts a single argument of type
+	// ObjectWithReferences. Here, we have two maps for Partition and
+	// ObjectType messages that we fetch by partition UUID or object type code
+	// while iterating over the objects to delete. These Partition and
+	// ObjectType messages are included in the ObjectWithReferences structs
+	// that are passed to ObjectDelete. Gotta love implementing joins in
+	// Golang/memory... :(
+	partitions := make(map[string]*pb.Partition, 0)
+	objTypes := make(map[string]*pb.ObjectType, 0)
+
 	resErrors := make([]string, 0)
 	numDeleted := uint64(0)
 	for cur.Next() {
@@ -44,7 +56,42 @@ func (s *Server) ObjectDelete(
 		if err = cur.Scan(obj); err != nil {
 			return nil, err
 		}
-		if err = s.store.ObjectDelete(obj); err != nil {
+		part, ok := partitions[obj.Partition]
+		if !ok {
+			part, err = s.store.PartitionGet(obj.Partition)
+			if err != nil {
+				msg := fmt.Sprintf(
+					"failed to find partition %s while attempting to delete "+
+						"object with UUID %s",
+					obj.Partition,
+					obj.Uuid,
+				)
+				s.log.ERR(msg)
+				resErrors = append(resErrors, msg)
+				continue
+			}
+		}
+		ot, ok := objTypes[obj.Type]
+		if !ok {
+			ot, err = s.store.ObjectTypeGet(obj.Type)
+			if err != nil {
+				msg := fmt.Sprintf(
+					"failed to find object type %s while attempting to delete "+
+						"object with UUID %s",
+					obj.Type,
+					obj.Uuid,
+				)
+				s.log.ERR(msg)
+				resErrors = append(resErrors, msg)
+				continue
+			}
+		}
+		owr := &types.ObjectWithReferences{
+			Partition: part,
+			Type:      ot,
+			Object:    obj,
+		}
+		if err = s.store.ObjectDelete(owr); err != nil {
 			resErrors = append(resErrors, err.Error())
 		}
 		// TODO(jaypipes): Send an event notification
@@ -148,13 +195,12 @@ func (s *Server) ObjectList(
 // to backend storage.
 func (s *Server) validateObjectSetRequest(
 	req *pb.ObjectSetRequest,
-) (*pb.Object, error) {
-
+) (*types.ObjectWithReferences, error) {
 	// reads the supplied buffer which contains a YAML document describing the
 	// object to create or update, and returns a pointer to an Object
 	// protobuffer message containing the fields to set on the new (or changed)
 	// object.
-	obj := &types.Object{}
+	obj := &apitypes.Object{}
 	if err := yaml.Unmarshal(req.Payload, obj); err != nil {
 		return nil, err
 	}
@@ -168,7 +214,7 @@ func (s *Server) validateObjectSetRequest(
 	}
 
 	// Validate the referred to type, partition and project actually exist
-	p, err := s.store.PartitionGet(obj.Partition)
+	part, err := s.store.PartitionGet(obj.Partition)
 	if err != nil {
 		if err == errors.ErrNotFound {
 			return nil, errPartitionNotFound(obj.Partition)
@@ -177,9 +223,8 @@ func (s *Server) validateObjectSetRequest(
 		s.log.ERR("failed when validating partition in object set: %s", err)
 		return nil, errors.ErrUnknown
 	}
-	partUuid := p.Uuid
 
-	ot, err := s.store.ObjectTypeGet(obj.Type)
+	objType, err := s.store.ObjectTypeGet(obj.Type)
 	if err != nil {
 		if err == errors.ErrNotFound {
 			return nil, errObjectTypeNotFound(obj.Type)
@@ -188,7 +233,6 @@ func (s *Server) validateObjectSetRequest(
 		s.log.ERR("failed when validating object type in object set: %s", err)
 		return nil, errors.ErrUnknown
 	}
-	objTypeCode := ot.Code
 
 	if obj.Uuid == "" {
 		// TODO(jaypipes): User expects to create a new object with the after
@@ -196,7 +240,7 @@ func (s *Server) validateObjectSetRequest(
 		// UUID, or if UUID is empty (indicating the user wants the UUID to be
 		// auto-created), no existing object with the supplied name exists in
 		// the partition or project scope.
-		switch ot.Scope {
+		switch objType.Scope {
 		case pb.ObjectTypeScope_PROJECT:
 		case pb.ObjectTypeScope_PARTITION:
 		}
@@ -204,12 +248,16 @@ func (s *Server) validateObjectSetRequest(
 
 	// TODO(jaypipes): property schema validation checks
 
-	return &pb.Object{
-		// The server actually will translate partition names to UUIDs...
-		Partition: partUuid,
-		Type:      objTypeCode,
-		Project:   obj.Project,
-		Name:      obj.Name,
+	return &types.ObjectWithReferences{
+		Partition: part,
+		Type:      objType,
+		Object: &pb.Object{
+			Partition: part.Uuid,
+			Type:      objType.Code,
+			Project:   obj.Project,
+			Name:      obj.Name,
+			Uuid:      obj.Uuid,
+		},
 	}, nil
 }
 
@@ -219,34 +267,34 @@ func (s *Server) ObjectSet(
 ) (*pb.ObjectSetResponse, error) {
 	// TODO(jaypipes): AUTHZ check if user can write objects
 
-	obj, err := s.validateObjectSetRequest(req)
+	owr, err := s.validateObjectSetRequest(req)
 	if err != nil {
 		return nil, err
 	}
 
-	var changed *pb.Object
-	if obj.Uuid == "" {
+	var changed *types.ObjectWithReferences
+	if owr.Object.Uuid == "" {
 		s.log.L3(
 			"creating new object of type %s in partition %s with name %s...",
-			obj.Type,
-			obj.Partition,
-			obj.Name,
+			owr.Type.Code,
+			owr.Partition.Uuid,
+			owr.Object.Name,
 		)
-		changed, err = s.store.ObjectCreate(obj)
+		changed, err = s.store.ObjectCreate(owr)
 		if err != nil {
 			return nil, err
 		}
 		s.log.L1(
 			"created new object with UUID %s of type %s in partition %s with name %s",
-			changed.Uuid,
-			obj.Type,
-			obj.Partition,
-			obj.Name,
+			changed.Object.Uuid,
+			owr.Type.Code,
+			owr.Partition.Uuid,
+			owr.Object.Name,
 		)
 	}
 
 	return &pb.ObjectSetResponse{
-		Object: changed,
+		Object: changed.Object,
 	}, nil
 }
 

@@ -2,7 +2,6 @@ package metadata
 
 import (
 	"context"
-	"fmt"
 
 	yaml "gopkg.in/yaml.v2"
 
@@ -33,64 +32,23 @@ func (s *Server) ObjectDelete(
 		return nil, ErrAtLeastOneObjectFilterRequired
 	}
 
-	objects, err := s.store.ObjectList(filters)
+	owrs, err := s.store.ObjectListWithReferences(filters)
 	if err != nil {
 		return nil, err
 	}
 
-	// NOTE(jaypipes): store.ObjectDelete() accepts a single argument of type
-	// ObjectWithReferences. Here, we have two maps for Partition and
-	// ObjectType messages that we fetch by partition UUID or object type code
-	// while iterating over the objects to delete. These Partition and
-	// ObjectType messages are included in the ObjectWithReferences structs
-	// that are passed to ObjectDelete. Gotta love implementing joins in
-	// Golang/memory... :(
-	partitions := make(map[string]*pb.Partition, 0)
-	objTypes := make(map[string]*pb.ObjectType, 0)
-
 	resErrors := make([]string, 0)
 	numDeleted := uint64(0)
-	for _, obj := range objects {
-		part, ok := partitions[obj.Partition]
-		if !ok {
-			part, err = s.store.PartitionGet(obj.Partition)
-			if err != nil {
-				msg := fmt.Sprintf(
-					"failed to find partition %s while attempting to delete "+
-						"object with UUID %s",
-					obj.Partition,
-					obj.Uuid,
-				)
-				s.log.ERR(msg)
-				resErrors = append(resErrors, msg)
-				continue
-			}
-		}
-		ot, ok := objTypes[obj.Type]
-		if !ok {
-			ot, err = s.store.ObjectTypeGet(obj.Type)
-			if err != nil {
-				msg := fmt.Sprintf(
-					"failed to find object type %s while attempting to delete "+
-						"object with UUID %s",
-					obj.Type,
-					obj.Uuid,
-				)
-				s.log.ERR(msg)
-				resErrors = append(resErrors, msg)
-				continue
-			}
-		}
-		owr := &types.ObjectWithReferences{
-			Partition: part,
-			Type:      ot,
-			Object:    obj,
-		}
+	for _, owr := range owrs {
 		if err = s.store.ObjectDelete(owr); err != nil {
 			resErrors = append(resErrors, err.Error())
 		}
 		// TODO(jaypipes): Send an event notification
-		s.log.L1("user %s deleted object with UUID %s", req.Session.User, obj.Uuid)
+		s.log.L1(
+			"user %s deleted object with UUID %s",
+			req.Session.User,
+			owr.Object.Uuid,
+		)
 		numDeleted += 1
 	}
 	resp := &pb.ObjectDeleteResponse{

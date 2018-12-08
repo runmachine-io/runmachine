@@ -41,3 +41,25 @@ var (
 		Message:  "unknown error.",
 	}
 )
+
+func ErrObjectTypeNotFound(objType string) *Error {
+	return &Error{
+		HTTPCode: 404,
+		Code:     404001,
+		Message: fmt.Sprintf(
+			"object type %s could not be found.",
+			objType,
+		),
+	}
+}
+
+func ErrPartitionNotFound(partition string) *Error {
+	return &Error{
+		HTTPCode: 404,
+		Code:     404002,
+		Message: fmt.Sprintf(
+			"partition %s could not be found.",
+			partition,
+		),
+	}
+}

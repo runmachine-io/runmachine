@@ -134,6 +134,65 @@ func (s *Store) ObjectList(
 	return res, nil
 }
 
+// ObjectListWithReferences returns a slice of pointers to ObjectWithReference
+// structs that have had Partition and ObjectType relations expanded inline.
+func (s *Store) ObjectListWithReferences(
+	any []*types.ObjectListFilter,
+) ([]*types.ObjectWithReferences, error) {
+	objects, err := s.ObjectList(any)
+	if err != nil {
+		return nil, err
+	}
+
+	// NOTE(jaypipes): store.ObjectDelete() accepts a single argument of type
+	// ObjectWithReferences. Here, we have two maps for Partition and
+	// ObjectType messages that we fetch by partition UUID or object type code
+	// while iterating over the objects to delete. These Partition and
+	// ObjectType messages are included in the ObjectWithReferences structs
+	// that are passed to ObjectDelete. Gotta love implementing joins in
+	// Golang/memory... :(
+	partitions := make(map[string]*pb.Partition, 0)
+	objTypes := make(map[string]*pb.ObjectType, 0)
+	res := make([]*types.ObjectWithReferences, len(objects))
+	for x, obj := range objects {
+		part, ok := partitions[obj.Partition]
+		if !ok {
+			part, err = s.PartitionGet(obj.Partition)
+			if err != nil {
+				msg := fmt.Sprintf(
+					"failed to find partition %s while attempting to delete "+
+						"object with UUID %s",
+					obj.Partition,
+					obj.Uuid,
+				)
+				s.log.ERR(msg)
+				return nil, errors.ErrPartitionNotFound(obj.Partition)
+			}
+		}
+		ot, ok := objTypes[obj.Type]
+		if !ok {
+			ot, err = s.ObjectTypeGet(obj.Type)
+			if err != nil {
+				msg := fmt.Sprintf(
+					"failed to find object type %s while attempting to delete "+
+						"object with UUID %s",
+					obj.Type,
+					obj.Uuid,
+				)
+				s.log.ERR(msg)
+				return nil, errors.ErrObjectTypeNotFound(obj.Type)
+			}
+		}
+		owr := &types.ObjectWithReferences{
+			Partition: part,
+			Type:      ot,
+			Object:    obj,
+		}
+		res[x] = owr
+	}
+	return res, nil
+}
+
 func (s *Store) objectsGetByFilter(
 	filter *types.ObjectListFilter,
 ) ([]*pb.Object, error) {

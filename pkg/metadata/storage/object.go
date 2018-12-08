@@ -2,7 +2,6 @@ package storage
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
 	etcd "github.com/coreos/etcd/clientv3"
@@ -11,6 +10,7 @@ import (
 	"github.com/runmachine-io/runmachine/pkg/abstract"
 	"github.com/runmachine-io/runmachine/pkg/cursor"
 	"github.com/runmachine-io/runmachine/pkg/errors"
+	"github.com/runmachine-io/runmachine/pkg/metadata/types"
 	"github.com/runmachine-io/runmachine/pkg/util"
 	pb "github.com/runmachine-io/runmachine/proto"
 )
@@ -26,53 +26,6 @@ const (
 	// protobuffer message
 	_OBJECTS_BY_UUID_KEY = "objects/by-uuid/"
 )
-
-// A specialized filter class that has already looked up specific partition and
-// object types (expanded from user-supplied partition and type filter
-// strings). Users pass pb.ObjectFilter messages which contain optional
-// pb.PartitionFilter and pb.ObjectTypeFilter messages. Those may be expanded
-// (due to UsePrefix = true) to a set of partition UUIDs and/or object type
-// codes. We then create zero or more of these ObjectListFilter structs
-// that represent a specific filter on partition UUID and object type, along
-// with the the object's name/UUID and UsePrefix flag.
-type ObjectListFilter struct {
-	Partition *pb.Partition
-	Type      *pb.ObjectType
-	Project   string
-	Search    string
-	UsePrefix bool
-	// TODO(jaypipes): Add support for property and tag filters
-}
-
-func (f *ObjectListFilter) IsEmpty() bool {
-	return f.Partition == nil && f.Type == nil && f.Project == "" && f.Search == ""
-}
-
-func (f *ObjectListFilter) String() string {
-	attrMap := make(map[string]string, 0)
-	if f.Partition != nil {
-		attrMap["partition"] = f.Partition.Uuid
-	}
-	if f.Type != nil {
-		attrMap["object_type"] = f.Type.Code
-	}
-	if f.Project != "" {
-		attrMap["project"] = f.Project
-	}
-	if f.Search != "" {
-		attrMap["search"] = f.Search
-		attrMap["use_prefix"] = strconv.FormatBool(f.UsePrefix)
-	}
-	attrs := ""
-	x := 0
-	for k, v := range attrMap {
-		if x > 0 {
-			attrs += ","
-		}
-		attrs += k + "=" + v
-	}
-	return fmt.Sprintf("ObjectListFilter(%s)", attrs)
-}
 
 // objectByNameKey returns a string for the key to use for the object's name
 // index. Depending on whether the supplied object's object type is
@@ -148,7 +101,7 @@ func (s *Store) ObjectDelete(
 // ObjectTypeList returns a cursor over zero or more ObjectType
 // protobuffer objects matching a set of supplied filters.
 func (s *Store) ObjectList(
-	any []*ObjectListFilter,
+	any []*types.ObjectListFilter,
 ) (abstract.Cursor, error) {
 	if len(any) == 0 {
 		return s.objectsGetAll()
@@ -160,13 +113,13 @@ func (s *Store) ObjectList(
 
 	for _, filter := range any {
 		if filter.IsEmpty() {
-			s.log.ERR("received empty ObjectListFilter in ObjectList()")
+			s.log.ERR("received empty types.ObjectListFilter in ObjectList()")
 			continue
 		}
-		// If the ObjectListFilter contains a value for the Search field,
+		// If the types.ObjectListFilter contains a value for the Search field,
 		// that means we need to look up objects by UUID or name (with an
 		// optional prefix for the name). If no Search field is present, that
-		// means that in order to evaluate this ObjectListFilter we'll be
+		// means that in order to evaluate this types.ObjectListFilter we'll be
 		// searching on ranges of objects by type, partition or project.
 		filterObjs, err := s.objectsGetByFilter(filter)
 		if err != nil {
@@ -194,7 +147,7 @@ func (s *Store) ObjectList(
 }
 
 func (s *Store) objectsGetByFilter(
-	filter *ObjectListFilter,
+	filter *types.ObjectListFilter,
 ) ([]*pb.Object, error) {
 	if filter.Search != "" {
 		if util.IsUuidLike(filter.Search) {

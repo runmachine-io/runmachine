@@ -2,7 +2,7 @@ package metadata
 
 import (
 	"github.com/runmachine-io/runmachine/pkg/errors"
-	"github.com/runmachine-io/runmachine/pkg/metadata/storage"
+	"github.com/runmachine-io/runmachine/pkg/metadata/types"
 	pb "github.com/runmachine-io/runmachine/proto"
 )
 
@@ -11,7 +11,7 @@ import (
 // partition that the user's session is on.
 func (s *Server) defaultObjectFilter(
 	session *pb.Session,
-) (*storage.ObjectListFilter, error) {
+) (*types.ObjectListFilter, error) {
 	part, err := s.store.PartitionGet(session.Partition)
 	if err != nil {
 		if err == errors.ErrNotFound {
@@ -26,7 +26,7 @@ func (s *Server) defaultObjectFilter(
 		}
 		return nil, err
 	}
-	return &storage.ObjectListFilter{
+	return &types.ObjectListFilter{
 		Partition: part,
 		Project:   session.Project,
 	}, nil
@@ -34,26 +34,26 @@ func (s *Server) defaultObjectFilter(
 
 // expandObjectFilter is used to expand an ObjectFilter, which may contain
 // PartitionFilter and ObjectTypeFilter objects that themselves may resolve to
-// multiple partitions or object types, to a set of ObjectListFilter
-// objects. A ObjectListFilter is used to describe a filter on objects in
+// multiple partitions or object types, to a set of types.ObjectListFilter
+// objects. A types.ObjectListFilter is used to describe a filter on objects in
 // a *specific* partition and having a *specific* object type.
 func (s *Server) expandObjectFilter(
 	session *pb.Session,
 	filter *pb.ObjectFilter,
-) ([]*storage.ObjectListFilter, error) {
-	res := make([]*storage.ObjectListFilter, 0)
-	// A set of partition UUIDs that we'll create ObjectListFilters with.
+) ([]*types.ObjectListFilter, error) {
+	res := make([]*types.ObjectListFilter, 0)
+	// A set of partition UUIDs that we'll create types.ObjectListFilters with.
 	// These are the UUIDs of any partitions that match the PartitionFilter in
 	// the supplied pb.ObjectFilter
 	partitions := make([]*pb.Partition, 0)
-	// A set of object type codes that we'll create ObjectListFilters
+	// A set of object type codes that we'll create types.ObjectListFilters
 	// with. These are the codes of object types that match the
 	// ObjectTypeFilter in the supplied ObjectFilter
 	objTypes := make([]*pb.ObjectType, 0)
 
 	if filter.Partition != nil {
 		// Verify that the requested partition(s) exist(s) and for each
-		// requested partition match, construct a new ObjectListFilter
+		// requested partition match, construct a new types.ObjectListFilter
 		cur, err := s.store.PartitionList([]*pb.PartitionFilter{filter.Partition})
 		if err != nil {
 			return nil, err
@@ -120,18 +120,18 @@ func (s *Server) expandObjectFilter(
 	}
 
 	// OK, if we've expanded partition or object type, we need to construct
-	// ObjectListFilter objects containing the combination of all the
+	// types.ObjectListFilter objects containing the combination of all the
 	// expanded partitions and object types.
 	if len(partitions) > 0 {
 		for _, p := range partitions {
 			if len(objTypes) == 0 {
-				f := &storage.ObjectListFilter{
+				f := &types.ObjectListFilter{
 					Partition: p,
 				}
 				res = append(res, f)
 			} else {
 				for _, ot := range objTypes {
-					f := &storage.ObjectListFilter{
+					f := &types.ObjectListFilter{
 						Partition: p,
 						Type:      ot,
 					}
@@ -141,7 +141,7 @@ func (s *Server) expandObjectFilter(
 		}
 	} else if len(objTypes) > 0 {
 		for _, ot := range objTypes {
-			f := &storage.ObjectListFilter{
+			f := &types.ObjectListFilter{
 				Type: ot,
 			}
 			res = append(res, f)
@@ -149,16 +149,16 @@ func (s *Server) expandObjectFilter(
 	}
 
 	// If we've expanded the supplied partition filters into multiple
-	// ObjectListFilters, then we need to add our supplied ObjectFilter's
+	// types.ObjectListFilters, then we need to add our supplied ObjectFilter's
 	// search and use prefix for the object's UUID/name. If we supplied no
 	// partition filters, then go ahead and just return a single
-	// ObjectListFilter with the search term and prefix indicator for the
+	// types.ObjectListFilter with the search term and prefix indicator for the
 	// object.
 	if filter.Search != "" || filter.Project != "" {
 		if len(res) > 0 {
 			// Now that we've expanded our partitions and object types, add in the
 			// original ObjectFilter's Search and UsePrefix for each
-			// ObjectListFilter we've created
+			// types.ObjectListFilter we've created
 			for _, pf := range res {
 				pf.Project = filter.Project
 				pf.Search = filter.Search
@@ -167,7 +167,7 @@ func (s *Server) expandObjectFilter(
 		} else {
 			res = append(
 				res,
-				&storage.ObjectListFilter{
+				&types.ObjectListFilter{
 					Project:   filter.Project,
 					Search:    filter.Search,
 					UsePrefix: filter.UsePrefix,
@@ -182,13 +182,13 @@ func (s *Server) expandObjectFilter(
 // ObjectFilter messages. It then expands those supplied ObjectFilter messages
 // if they contain partition or object type filters that have a prefix. If no
 // ObjectFilter messages are passed to this method, it returns the default
-// ObjectListFilter which will return all objects for the Session's partition
+// types.ObjectListFilter which will return all objects for the Session's partition
 // and project.
 func (s *Server) normalizeObjectFilters(
 	session *pb.Session,
 	any []*pb.ObjectFilter,
-) ([]*storage.ObjectListFilter, error) {
-	res := make([]*storage.ObjectListFilter, 0)
+) ([]*types.ObjectListFilter, error) {
+	res := make([]*types.ObjectListFilter, 0)
 	for _, filter := range any {
 		if pfs, err := s.expandObjectFilter(session, filter); err != nil {
 			if err == errors.ErrNotFound {

@@ -7,8 +7,6 @@ import (
 	etcd "github.com/coreos/etcd/clientv3"
 	"github.com/golang/protobuf/proto"
 
-	"github.com/runmachine-io/runmachine/pkg/abstract"
-	"github.com/runmachine-io/runmachine/pkg/cursor"
 	"github.com/runmachine-io/runmachine/pkg/errors"
 	"github.com/runmachine-io/runmachine/pkg/metadata/types"
 	"github.com/runmachine-io/runmachine/pkg/util"
@@ -89,11 +87,11 @@ func (s *Store) ObjectDelete(
 	return nil
 }
 
-// ObjectTypeList returns a cursor over zero or more ObjectType
-// protobuffer objects matching a set of supplied filters.
+// ObjectList returns a slice of pointers to Object protobuffer messages
+// matching a set of supplied filters.
 func (s *Store) ObjectList(
 	any []*types.ObjectListFilter,
-) (abstract.Cursor, error) {
+) ([]*pb.Object, error) {
 	if len(any) == 0 {
 		return s.objectsGetAll()
 	}
@@ -124,17 +122,16 @@ func (s *Store) ObjectList(
 		}
 	}
 	if len(objs) == 0 {
-		return cursor.Empty(), nil
+		return nil, nil
 	}
 
-	// Convert the map values into an array of proto.Message interfaces
-	msgs := make([]proto.Message, len(objs))
+	res := make([]*pb.Object, len(objs))
 	x := 0
 	for _, obj := range objs {
-		msgs[x] = obj
+		res[x] = obj
 		x += 1
 	}
-	return cursor.NewFromSlicePBMessages(msgs[:x]), nil
+	return res, nil
 }
 
 func (s *Store) objectsGetByFilter(
@@ -212,17 +209,13 @@ func (s *Store) objectsGetByFilter(
 	// filter on name but not object type. We will get all objects and filter
 	// out any objects that don't meet the supplied partition UUID, project and
 	// object type code filters.
-	cur, err := s.objectsGetAll()
+	objects, err := s.objectsGetAll()
 	if err != nil {
 		return nil, err
 	}
 
 	res := make([]*pb.Object, 0)
-	for cur.Next() {
-		obj := &pb.Object{}
-		if err = cur.Scan(obj); err != nil {
-			return nil, err
-		}
+	for _, obj := range objects {
 		// Use a sieve pattern, only adding the object to our results if it
 		// passes all match expressions
 		if filter.Partition != nil {
@@ -380,7 +373,7 @@ func (s *Store) objectsGetByNameIndex(
 	return res, nil
 }
 
-func (s *Store) objectsGetAll() (abstract.Cursor, error) {
+func (s *Store) objectsGetAll() ([]*pb.Object, error) {
 	ctx, cancel := s.requestCtx()
 	defer cancel()
 
@@ -398,7 +391,20 @@ func (s *Store) objectsGetAll() (abstract.Cursor, error) {
 		return nil, err
 	}
 
-	return cursor.NewFromEtcdGetResponse(resp), nil
+	if resp.Count == 0 {
+		return nil, nil
+	}
+
+	res := make([]*pb.Object, resp.Count)
+	for x, kv := range resp.Kvs {
+		msg := &pb.Object{}
+		if err := proto.Unmarshal(kv.Value, msg); err != nil {
+			return nil, err
+		}
+		res[x] = msg
+	}
+
+	return res, nil
 }
 
 // ObjectCreate puts the supplied object into backend storage, adding all the

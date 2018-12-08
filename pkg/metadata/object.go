@@ -33,11 +33,10 @@ func (s *Server) ObjectDelete(
 		return nil, ErrAtLeastOneObjectFilterRequired
 	}
 
-	cur, err := s.store.ObjectList(filters)
+	objects, err := s.store.ObjectList(filters)
 	if err != nil {
 		return nil, err
 	}
-	defer cur.Close()
 
 	// NOTE(jaypipes): store.ObjectDelete() accepts a single argument of type
 	// ObjectWithReferences. Here, we have two maps for Partition and
@@ -51,11 +50,7 @@ func (s *Server) ObjectDelete(
 
 	resErrors := make([]string, 0)
 	numDeleted := uint64(0)
-	for cur.Next() {
-		obj := &pb.Object{}
-		if err = cur.Scan(obj); err != nil {
-			return nil, err
-		}
+	for _, obj := range objects {
 		part, ok := partitions[obj.Partition]
 		if !ok {
 			part, err = s.store.PartitionGet(obj.Partition)
@@ -137,24 +132,15 @@ func (s *Server) ObjectGet(
 		return nil, ErrFailedExpandObjectFilters
 	}
 
-	cur, err := s.store.ObjectList(pfs)
+	objects, err := s.store.ObjectList(pfs)
 	if err != nil {
 		return nil, err
 	}
-	defer cur.Close()
-
-	found := false
-	obj := &pb.Object{}
-	for cur.Next() {
-		if found {
-			return nil, ErrMultipleRecordsFound
-		}
-		if err = cur.Scan(obj); err != nil {
-			return nil, err
-		}
-		found = true
+	if len(objects) != 1 {
+		return nil, ErrMultipleRecordsFound
 	}
-	return obj, nil
+
+	return objects[0], nil
 }
 
 func (s *Server) ObjectList(
@@ -170,16 +156,11 @@ func (s *Server) ObjectList(
 		return err
 	}
 
-	cur, err := s.store.ObjectList(filters)
+	objects, err := s.store.ObjectList(filters)
 	if err != nil {
 		return err
 	}
-	defer cur.Close()
-	for cur.Next() {
-		obj := &pb.Object{}
-		if err = cur.Scan(obj); err != nil {
-			return err
-		}
+	for _, obj := range objects {
 		if err = stream.Send(obj); err != nil {
 			return err
 		}

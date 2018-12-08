@@ -11,6 +11,11 @@ import "search.proto";
 import "session.proto";
 import "wrappers.proto";
 
+enum PayloadFormat {
+    YAML = 0;
+    PROTOBUFFER = 1;
+}
+
 // The runm-metadata gRPC service is a lookup service for UUID to external
 // unique names.
 //
@@ -131,11 +136,10 @@ message ObjectSetFields {
 
 message ObjectSetRequest {
     Session session = 1;
-    // The before image of the object to change. Empty if the caller expects
-    // they are creating a new object
-    Object before = 2;
-    // The new image of the object being changed or created.
-    Object after = 3;
+    PayloadFormat format = 2;
+    // Raw bytes representing the new representation of the object. The server
+    // is responsible for unmarshaling this raw payload.
+    bytes payload = 3;
 }
 
 message ObjectSetResponse {

@@ -3,6 +3,9 @@ package metadata
 import (
 	"context"
 
+	yaml "gopkg.in/yaml.v2"
+
+	"github.com/runmachine-io/runmachine/pkg/api/types"
 	"github.com/runmachine-io/runmachine/pkg/errors"
 	pb "github.com/runmachine-io/runmachine/proto"
 )
@@ -138,45 +141,56 @@ func (s *Server) ObjectList(
 }
 
 // validateObjectSetRequest ensures that the data the user sent in the
-// request's Before and After elements makes sense and meets things like
-// property schema validation checks.
+// request's payload can be unmarshal'd properly into YAML, contains all
+// relevant fields.  and meets things like property schema validation checks.
+//
+// Returns a fully validated Object protobuffer message that is ready to send
+// to backend storage.
 func (s *Server) validateObjectSetRequest(
 	req *pb.ObjectSetRequest,
-) error {
-	after := req.After
+) (*pb.Object, error) {
+
+	// reads the supplied buffer which contains a YAML document describing the
+	// object to create or update, and returns a pointer to an Object
+	// protobuffer message containing the fields to set on the new (or changed)
+	// object.
+	obj := &types.Object{}
+	if err := yaml.Unmarshal(req.Payload, obj); err != nil {
+		return nil, err
+	}
 
 	// Simple input data validations
-	if after.Type == "" {
-		return ErrObjectTypeRequired
+	if obj.Type == "" {
+		return nil, ErrObjectTypeRequired
 	}
-	if after.Partition == "" {
-		return ErrPartitionRequired
+	if obj.Partition == "" {
+		return nil, ErrPartitionRequired
 	}
 
 	// Validate the referred to type, partition and project actually exist
-	p, err := s.store.PartitionGet(after.Partition)
+	p, err := s.store.PartitionGet(obj.Partition)
 	if err != nil {
 		if err == errors.ErrNotFound {
-			return errPartitionNotFound(after.Partition)
+			return nil, errPartitionNotFound(obj.Partition)
 		}
 		// We don't want to leak internal implementation errors...
 		s.log.ERR("failed when validating partition in object set: %s", err)
-		return errors.ErrUnknown
+		return nil, errors.ErrUnknown
 	}
-	after.Partition = p.Uuid
+	partUuid := p.Uuid
 
-	ot, err := s.store.ObjectTypeGet(after.Type)
+	ot, err := s.store.ObjectTypeGet(obj.Type)
 	if err != nil {
 		if err == errors.ErrNotFound {
-			return errObjectTypeNotFound(after.Type)
+			return nil, errObjectTypeNotFound(obj.Type)
 		}
 		// We don't want to leak internal implementation errors...
 		s.log.ERR("failed when validating object type in object set: %s", err)
-		return errors.ErrUnknown
+		return nil, errors.ErrUnknown
 	}
-	after.Type = ot.Code
+	objTypeCode := ot.Code
 
-	if req.Before == nil {
+	if obj.Uuid == "" {
 		// TODO(jaypipes): User expects to create a new object with the after
 		// image. Ensure we don't have an existing object with the supplied
 		// UUID, or if UUID is empty (indicating the user wants the UUID to be
@@ -189,7 +203,14 @@ func (s *Server) validateObjectSetRequest(
 	}
 
 	// TODO(jaypipes): property schema validation checks
-	return nil
+
+	return &pb.Object{
+		// The server actually will translate partition names to UUIDs...
+		Partition: partUuid,
+		Type:      objTypeCode,
+		Project:   obj.Project,
+		Name:      obj.Name,
+	}, nil
 }
 
 func (s *Server) ObjectSet(
@@ -198,29 +219,29 @@ func (s *Server) ObjectSet(
 ) (*pb.ObjectSetResponse, error) {
 	// TODO(jaypipes): AUTHZ check if user can write objects
 
-	err := s.validateObjectSetRequest(req)
+	obj, err := s.validateObjectSetRequest(req)
 	if err != nil {
 		return nil, err
 	}
 
 	var changed *pb.Object
-	if req.Before == nil {
+	if obj.Uuid == "" {
 		s.log.L3(
 			"creating new object of type %s in partition %s with name %s...",
-			req.After.Type,
-			req.After.Partition,
-			req.After.Name,
+			obj.Type,
+			obj.Partition,
+			obj.Name,
 		)
-		changed, err = s.store.ObjectCreate(req.After)
+		changed, err = s.store.ObjectCreate(obj)
 		if err != nil {
 			return nil, err
 		}
 		s.log.L1(
 			"created new object with UUID %s of type %s in partition %s with name %s",
 			changed.Uuid,
-			req.After.Type,
-			req.After.Partition,
-			req.After.Name,
+			obj.Type,
+			obj.Partition,
+			obj.Name,
 		)
 	}
 

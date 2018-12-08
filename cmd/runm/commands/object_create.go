@@ -7,7 +7,6 @@ import (
 	"os"
 
 	"golang.org/x/net/context"
-	yaml "gopkg.in/yaml.v2"
 
 	pb "github.com/runmachine-io/runmachine/proto"
 	"github.com/spf13/cobra"
@@ -29,7 +28,7 @@ func setupObjectCreateFlags() {
 		&objectDocPath,
 		"file", "f",
 		"",
-		"optional filepath to object document to read.",
+		"optional filepath to YAML document to send.",
 	)
 }
 
@@ -37,38 +36,13 @@ func init() {
 	setupObjectCreateFlags()
 }
 
-// The YAML document will be parsed into this struct, which is similar to an
-// Object protobuffer message
-type objDoc struct {
-	Partition string `yaml:"partition"`
-	Type      string `yaml:"type"`
-	Project   string `yaml:"project"`
-	Name      string `yaml:"name"`
-	// TODO(jaypipes): Handle properties and tags...
-}
-
-// getObjectFromBytes reads the supplied buffer which contains a YAML document
-// describing the object to create or update, and returns a pointer to an
-// Object protobuffer message containing the fields to set on the new (or
-// changed) object.
-func getObjectFromBytes(b []byte) (*pb.Object, error) {
-	od := &objDoc{}
-	if err := yaml.Unmarshal(b, od); err != nil {
-		return nil, err
-	}
-	return &pb.Object{
-		// The server actually will translate partition names to UUIDs...
-		Partition: od.Partition,
-		Type:      od.Type,
-		Project:   od.Project,
-		Name:      od.Name,
-	}, nil
-}
-
 func objectCreate(cmd *cobra.Command, args []string) {
 	conn := connect()
 	defer conn.Close()
 
+	// TODO(jaypipes): Move the below generic file-reading into a common helper
+	// function since this is going to be a common pattern for
+	// creating/updating objects.
 	var b []byte
 	if objectDocPath == "" {
 		// User did not specify -f therefore we expect to read the YAML
@@ -93,21 +67,16 @@ func objectCreate(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	obj, err := getObjectFromBytes(b)
-	if err != nil {
-		fmt.Printf("Error: failed to parse object YAML document: %s\n", err)
-		os.Exit(1)
-	}
-
 	client := pb.NewRunmMetadataClient(conn)
 	req := &pb.ObjectSetRequest{
 		Session: getSession(),
-		After:   obj,
+		Format:  pb.PayloadFormat_YAML,
+		Payload: b,
 	}
 
 	resp, err := client.ObjectSet(context.Background(), req)
 	exitIfError(err)
-	obj = resp.Object
+	obj := resp.Object
 	if !quiet {
 		fmt.Printf("UUID:        %s\n", obj.Uuid)
 		fmt.Printf("Type:        %s\n", obj.Type)

@@ -51,20 +51,10 @@ func (s *Server) expandPropertySchemaFilter(
 	objTypes := make([]*pb.ObjectType, 0)
 
 	if filter.Partition != nil {
-		// Verify that the requested partition(s) exist(s) and for each
-		// requested partition match, construct a new types.PropertySchemaFilter
-		cur, err := s.store.PartitionList([]*pb.PartitionFilter{filter.Partition})
+		// Verify that the requested partition(s) exist(s)
+		partitions, err := s.store.PartitionList([]*pb.PartitionFilter{filter.Partition})
 		if err != nil {
 			return nil, err
-		}
-		defer cur.Close()
-
-		for cur.Next() {
-			part := &pb.Partition{}
-			if err = cur.Scan(part); err != nil {
-				return nil, err
-			}
-			partitions = append(partitions, part)
 		}
 		if len(partitions) == 0 {
 			return nil, errors.ErrNotFound
@@ -91,18 +81,9 @@ func (s *Server) expandPropertySchemaFilter(
 
 	if filter.Type != nil {
 		// Verify that the object type even exists
-		cur, err := s.store.ObjectTypeList([]*pb.ObjectTypeFilter{filter.Type})
+		objTypes, err := s.store.ObjectTypeList([]*pb.ObjectTypeFilter{filter.Type})
 		if err != nil {
 			return nil, err
-		}
-		defer cur.Close()
-
-		for cur.Next() {
-			ot := &pb.ObjectType{}
-			if err = cur.Scan(ot); err != nil {
-				return nil, err
-			}
-			objTypes = append(objTypes, ot)
 		}
 		if len(objTypes) == 0 {
 			return nil, errors.ErrNotFound

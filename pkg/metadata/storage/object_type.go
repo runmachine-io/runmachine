@@ -6,8 +6,6 @@ import (
 	etcd "github.com/coreos/etcd/clientv3"
 	"github.com/golang/protobuf/proto"
 
-	"github.com/runmachine-io/runmachine/pkg/abstract"
-	"github.com/runmachine-io/runmachine/pkg/cursor"
 	"github.com/runmachine-io/runmachine/pkg/errors"
 	pb "github.com/runmachine-io/runmachine/proto"
 )
@@ -112,26 +110,44 @@ func (s *Store) ObjectTypeGet(
 	return obj, nil
 }
 
-// ObjectTypeList returns a cursor over zero or more ObjectType
-// protobuffer objects matching a set of supplied filters.
+// ObjectTypeList returns a slice of pointers to ObjectType protobuffer
+// messages matching a set of supplied filters.
 func (s *Store) ObjectTypeList(
 	any []*pb.ObjectTypeFilter,
-) (abstract.Cursor, error) {
+) ([]*pb.ObjectType, error) {
 	if len(any) == 0 {
 		// Just return all object types
 		return s.objectTypesGetByCode("", true)
 	}
+
+	// Each filter is evaluated in an OR fashion, so we keep a hashmap of
+	// object type codes in order to return unique results
+	objs := make(map[string]*pb.ObjectType, 0)
 	for _, filter := range any {
-		// TODO(jaypipes): Merge all returned getters into a single cursor
-		return s.objectTypesGetByCode(filter.Search, filter.UsePrefix)
+		filterObjs, err := s.objectTypesGetByCode(
+			filter.Search,
+			filter.UsePrefix,
+		)
+		if err != nil {
+			return nil, err
+		}
+		for _, obj := range filterObjs {
+			objs[obj.Code] = obj
+		}
 	}
-	return nil, nil
+	res := make([]*pb.ObjectType, len(objs))
+	x := 0
+	for _, obj := range objs {
+		res[x] = obj
+		x += 1
+	}
+	return res, nil
 }
 
 func (s *Store) objectTypesGetByCode(
 	code string,
 	usePrefix bool,
-) (abstract.Cursor, error) {
+) ([]*pb.ObjectType, error) {
 	ctx, cancel := s.requestCtx()
 	defer cancel()
 
@@ -153,7 +169,20 @@ func (s *Store) objectTypesGetByCode(
 		return nil, err
 	}
 
-	return cursor.NewFromEtcdGetResponse(resp), nil
+	if resp.Count == 0 {
+		return []*pb.ObjectType{}, nil
+	}
+
+	res := make([]*pb.ObjectType, resp.Count)
+	for x, kv := range resp.Kvs {
+		msg := &pb.ObjectType{}
+		if err := proto.Unmarshal(kv.Value, msg); err != nil {
+			return nil, err
+		}
+		res[x] = msg
+	}
+
+	return res, nil
 }
 
 // objectTypeCreate writes the supplied ObjectType object to the key at

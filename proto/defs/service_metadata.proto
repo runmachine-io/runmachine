@@ -125,7 +125,7 @@ message ObjectTypeListRequest {
 
 message ObjectGetRequest {
     Session session = 1;
-    ObjectFilter search = 2;
+    ObjectFilter filter = 2;
 }
 
 message ObjectSetFields {
@@ -169,9 +169,7 @@ message ObjectDeleteResponse {
 
 message PropertySchemaGetRequest {
     Session session = 1;
-    string partition = 2;
-    string type = 3;
-    string key = 4;
+    PropertySchemaFilter filter = 2;
 }
 
 message PropertySchemaSetRequest {

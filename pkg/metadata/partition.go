@@ -39,17 +39,12 @@ func (s *Server) PartitionList(
 	req *pb.PartitionListRequest,
 	stream pb.RunmMetadata_PartitionListServer,
 ) error {
-	cur, err := s.store.PartitionList(req.Any)
+	objs, err := s.store.PartitionList(req.Any)
 	if err != nil {
 		return err
 	}
-	defer cur.Close()
-	for cur.Next() {
-		msg := &pb.Partition{}
-		if err = cur.Scan(msg); err != nil {
-			return err
-		}
-		if err = stream.Send(msg); err != nil {
+	for _, obj := range objs {
+		if err = stream.Send(obj); err != nil {
 			return err
 		}
 	}

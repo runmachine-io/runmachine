@@ -15,6 +15,9 @@ func (s *Server) PropertySchemaDelete(
 	ctx context.Context,
 	req *pb.PropertySchemaDeleteRequest,
 ) (*pb.PropertySchemaDeleteResponse, error) {
+	if err := checkSession(req.Session); err != nil {
+		return nil, err
+	}
 	return nil, nil
 }
 
@@ -24,14 +27,25 @@ func (s *Server) PropertySchemaGet(
 	ctx context.Context,
 	req *pb.PropertySchemaGetRequest,
 ) (*pb.PropertySchema, error) {
+	if err := checkSession(req.Session); err != nil {
+		return nil, err
+	}
+
 	// TODO(jaypipes): AUTHZ check user can read property schemas
-	if req.Type == "" {
+
+	if req.Filter == nil || req.Filter.Search == "" {
+		return nil, ErrPropertySchemaFilterRequired
+	}
+
+	if req.Filter.Type == nil {
 		return nil, ErrObjectTypeRequired
 	}
 	// TODO(jaypipes): Look up whether object type exists
 
 	var partSearch string
-	if req.Partition == "" {
+	if req.Filter.Partition != nil {
+		partSearch = req.Filter.Partition.Search
+	} else {
 		// Use the session's partition if not specified
 		partSearch = req.Session.Partition
 	}
@@ -47,18 +61,16 @@ func (s *Server) PropertySchemaGet(
 	}
 	// TODO(jaypipes): AUTHZ check user can use partition
 
-	if req.Key == "" {
-		return nil, ErrPropertyKeyRequired
-	}
 	obj, err := s.store.PropertySchemaGet(
 		part.Uuid,
-		req.Type,
-		req.Key,
+		req.Filter.Type.Search,
+		req.Filter.Search,
 	)
 	if err != nil {
 		if err == errors.ErrNotFound {
 			return nil, ErrNotFound
 		}
+		// Don't leak internal errors out
 		return nil, ErrUnknown
 	}
 	return obj, nil
@@ -79,24 +91,19 @@ func (s *Server) PropertySchemaList(
 		return err
 	}
 
-	cur, err := s.store.PropertySchemaList(filters)
+	objs, err := s.store.PropertySchemaList(filters)
 	if err != nil {
 		return err
 	}
-	defer cur.Close()
-	for cur.Next() {
-		msg := &pb.PropertySchema{}
-		if err = cur.Scan(msg); err != nil {
-			return err
-		}
-		if err = stream.Send(msg); err != nil {
+	for _, obj := range objs {
+		if err = stream.Send(obj); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-// validateObjectSetRequest ensures that the data the user sent in the
+// validatePropertySchemaSetRequest ensures that the data the user sent in the
 // request's payload can be unmarshal'd properly into YAML, contains all
 // relevant fields.  and meets things like property schema validation checks.
 //
@@ -105,7 +112,6 @@ func (s *Server) PropertySchemaList(
 func (s *Server) validatePropertySchemaSetRequest(
 	req *pb.PropertySchemaSetRequest,
 ) (*types.PropertySchemaWithReferences, error) {
-
 	// reads the supplied buffer which contains a YAML document describing the
 	// property schema to create or update.
 	obj := &apitypes.PropertySchema{}
@@ -168,6 +174,10 @@ func (s *Server) PropertySchemaSet(
 	ctx context.Context,
 	req *pb.PropertySchemaSetRequest,
 ) (*pb.PropertySchemaSetResponse, error) {
+	if err := checkSession(req.Session); err != nil {
+		return nil, err
+	}
+
 	// TODO(jaypipes): AUTHZ check for writing property schemas
 
 	pswr, err := s.validatePropertySchemaSetRequest(req)

@@ -5,8 +5,6 @@ import (
 	etcd_namespace "github.com/coreos/etcd/clientv3/namespace"
 	"github.com/golang/protobuf/proto"
 
-	"github.com/runmachine-io/runmachine/pkg/abstract"
-	"github.com/runmachine-io/runmachine/pkg/cursor"
 	"github.com/runmachine-io/runmachine/pkg/errors"
 	"github.com/runmachine-io/runmachine/pkg/util"
 	pb "github.com/runmachine-io/runmachine/proto"
@@ -99,7 +97,12 @@ func (s *Store) PartitionGet(
 			// NOTE(jaypipes): This is a major data corruption, since we have
 			// an index record by the partition name pointing to this UUID but
 			// no data record for the UUID...
-			s.log.ERR("DATA CORRUPTION! %s exists but no data record at partitions/by-uuid/%s", byNameKey, partUuid)
+			s.log.ERR(
+				"DATA CORRUPTION! %s exists but no data record at "+
+					"partitions/by-uuid/%s",
+				byNameKey,
+				partUuid,
+			)
 		}
 		return nil, err
 	}
@@ -110,7 +113,7 @@ func (s *Store) PartitionGet(
 // protobuffer objects stored in etcd
 func (s *Store) PartitionList(
 	any []*pb.PartitionFilter,
-) (abstract.Cursor, error) {
+) ([]*pb.Partition, error) {
 	if len(any) == 0 {
 		return s.partitionsGetAll()
 	}
@@ -148,7 +151,7 @@ func (s *Store) PartitionList(
 
 	}
 	if len(uuids) == 0 {
-		return cursor.Empty(), nil
+		return []*pb.Partition{}, nil
 	}
 
 	// Now we have our set of object UUIDs that we will fetch objects from the
@@ -156,7 +159,7 @@ func (s *Store) PartitionList(
 	// keys and then ignore keys that aren't in our set of object UUIDs. Not
 	// sure what would be faster... probably depend on the length of the key
 	// range resulting from doing a min/max on the object UUID set.
-	objs := make([]proto.Message, len(uuids))
+	res := make([]*pb.Partition, len(uuids))
 	x := 0
 	for uuid := range uuids {
 		obj, err := s.partitionGetByUuid(uuid)
@@ -166,10 +169,10 @@ func (s *Store) PartitionList(
 			}
 			return nil, err
 		}
-		objs[x] = obj
+		res[x] = obj
 		x += 1
 	}
-	return cursor.NewFromSlicePBMessages(objs[:x]), nil
+	return res[:x], nil
 }
 
 // partitionUuidsGetByName returns a slice of strings with all partition UUIDs
@@ -198,19 +201,18 @@ func (s *Store) partitionUuidsGetByName(
 		s.log.ERR("error listing partitions by name: %v", err)
 		return nil, err
 	}
-
 	if resp.Count == 0 {
 		return nil, errors.ErrNotFound
 	}
 
 	res := make([]string, resp.Count)
-	for x := int64(0); x < resp.Count; x++ {
-		res[x] = string(resp.Kvs[x].Value)
+	for x, kv := range resp.Kvs {
+		res[x] = string(kv.Value)
 	}
 	return res, nil
 }
 
-func (s *Store) partitionsGetAll() (abstract.Cursor, error) {
+func (s *Store) partitionsGetAll() ([]*pb.Partition, error) {
 	ctx, cancel := s.requestCtx()
 	defer cancel()
 
@@ -227,6 +229,17 @@ func (s *Store) partitionsGetAll() (abstract.Cursor, error) {
 		s.log.ERR("error listing partitions: %v", err)
 		return nil, err
 	}
+	if resp.Count == 0 {
+		return []*pb.Partition{}, nil
+	}
 
-	return cursor.NewFromEtcdGetResponse(resp), nil
+	res := make([]*pb.Partition, resp.Count)
+	for x, kv := range resp.Kvs {
+		msg := &pb.Partition{}
+		if err := proto.Unmarshal(kv.Value, msg); err != nil {
+			return nil, err
+		}
+		res[x] = msg
+	}
+	return res, nil
 }

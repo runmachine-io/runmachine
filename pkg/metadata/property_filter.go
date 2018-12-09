@@ -51,20 +51,10 @@ func (s *Server) expandPropertySchemaFilter(
 	objTypes := make([]*pb.ObjectType, 0)
 
 	if filter.Partition != nil {
-		// Verify that the requested partition(s) exist(s) and for each
-		// requested partition match, construct a new types.PropertySchemaFilter
-		cur, err := s.store.PartitionList([]*pb.PartitionFilter{filter.Partition})
+		// Verify that the requested partition(s) exist(s)
+		partitions, err := s.store.PartitionList([]*pb.PartitionFilter{filter.Partition})
 		if err != nil {
 			return nil, err
-		}
-		defer cur.Close()
-
-		for cur.Next() {
-			part := &pb.Partition{}
-			if err = cur.Scan(part); err != nil {
-				return nil, err
-			}
-			partitions = append(partitions, part)
 		}
 		if len(partitions) == 0 {
 			return nil, errors.ErrNotFound

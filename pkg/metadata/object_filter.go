@@ -92,18 +92,9 @@ func (s *Server) expandObjectFilter(
 
 	if filter.Type != nil {
 		// Verify that the object type even exists
-		cur, err := s.store.ObjectTypeList([]*pb.ObjectTypeFilter{filter.Type})
+		objTypes, err := s.store.ObjectTypeList([]*pb.ObjectTypeFilter{filter.Type})
 		if err != nil {
 			return nil, err
-		}
-		defer cur.Close()
-
-		for cur.Next() {
-			ot := &pb.ObjectType{}
-			if err = cur.Scan(ot); err != nil {
-				return nil, err
-			}
-			objTypes = append(objTypes, ot)
 		}
 		if len(objTypes) == 0 {
 			return nil, errors.ErrNotFound

@@ -11,6 +11,10 @@ func (s *Server) ObjectTypeGet(
 	ctx context.Context,
 	req *pb.ObjectTypeGetRequest,
 ) (*pb.ObjectType, error) {
+	if err := checkSession(req.Session); err != nil {
+		return nil, err
+	}
+
 	if req.Filter == nil || req.Filter.Search == "" {
 		return nil, ErrCodeRequired
 	}
@@ -35,17 +39,16 @@ func (s *Server) ObjectTypeList(
 	req *pb.ObjectTypeListRequest,
 	stream pb.RunmMetadata_ObjectTypeListServer,
 ) error {
-	cur, err := s.store.ObjectTypeList(req.Any)
+	if err := checkSession(req.Session); err != nil {
+		return err
+	}
+
+	objs, err := s.store.ObjectTypeList(req.Any)
 	if err != nil {
 		return err
 	}
-	defer cur.Close()
-	for cur.Next() {
-		msg := &pb.ObjectType{}
-		if err = cur.Scan(msg); err != nil {
-			return err
-		}
-		if err = stream.Send(msg); err != nil {
+	for _, obj := range objs {
+		if err = stream.Send(obj); err != nil {
 			return err
 		}
 	}

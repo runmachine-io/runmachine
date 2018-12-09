@@ -451,7 +451,7 @@ func (s *Store) objectsGetAll() ([]*pb.Object, error) {
 	}
 
 	if resp.Count == 0 {
-		return nil, nil
+		return []*pb.Object{}, nil
 	}
 
 	res := make([]*pb.Object, resp.Count)

@@ -91,17 +91,12 @@ func (s *Server) PropertySchemaList(
 		return err
 	}
 
-	cur, err := s.store.PropertySchemaList(filters)
+	objs, err := s.store.PropertySchemaList(filters)
 	if err != nil {
 		return err
 	}
-	defer cur.Close()
-	for cur.Next() {
-		msg := &pb.PropertySchema{}
-		if err = cur.Scan(msg); err != nil {
-			return err
-		}
-		if err = stream.Send(msg); err != nil {
+	for _, obj := range objs {
+		if err = stream.Send(obj); err != nil {
 			return err
 		}
 	}

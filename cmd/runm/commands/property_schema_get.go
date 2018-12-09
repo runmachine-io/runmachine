@@ -1,12 +1,17 @@
 package commands
 
 import (
-	"fmt"
-
 	"golang.org/x/net/context"
 
 	pb "github.com/runmachine-io/runmachine/proto"
 	"github.com/spf13/cobra"
+)
+
+const (
+	usagePropSchemaGetPartitionOpt = `optional partition filter.
+
+If not set, defaults to the partition used in the user's session.
+`
 )
 
 var (
@@ -24,9 +29,8 @@ var propertySchemaGetCommand = &cobra.Command{
 func setupPropertySchemaGetFlags() {
 	propertySchemaGetCommand.Flags().StringVarP(
 		&propSchemaGetPartition,
-		"partition", "p",
-		"",
-		"optional partition in which to look for the property schema.",
+		"partition", "", "",
+		usagePropSchemaGetPartitionOpt,
 	)
 }
 
@@ -42,16 +46,26 @@ func propertySchemaGet(cmd *cobra.Command, args []string) {
 
 	session := getSession()
 
+	filter := &pb.PropertySchemaFilter{
+		Type: &pb.ObjectTypeFilter{
+			Search:    args[0],
+			UsePrefix: false,
+		},
+		Search:    args[1],
+		UsePrefix: false,
+	}
+	if propSchemaGetPartition != "" {
+		filter.Partition = &pb.PartitionFilter{
+			Search:    propSchemaGetPartition,
+			UsePrefix: false,
+		}
+	}
+
 	req := &pb.PropertySchemaGetRequest{
-		Session:   session,
-		Partition: propSchemaGetPartition,
-		Type:      args[0],
-		Key:       args[1],
+		Session: session,
+		Filter:  filter,
 	}
 	obj, err := client.PropertySchemaGet(context.Background(), req)
 	exitIfError(err)
-	fmt.Printf("Partition:    %s\n", obj.Partition)
-	fmt.Printf("Type:         %s\n", obj.Type)
-	fmt.Printf("Key:          %s\n", obj.Key)
-	fmt.Printf("Schema:\n%s\n", obj.Schema)
+	printPropertySchema(obj)
 }

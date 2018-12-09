@@ -50,7 +50,7 @@ func (s *Store) PropertySchemaGet(
 	} else if gr.Count > 1 {
 		return nil, errors.ErrMultipleRecords
 	}
-	var obj *pb.PropertySchema
+	obj := &pb.PropertySchema{}
 	if err = proto.Unmarshal(gr.Kvs[0].Value, obj); err != nil {
 		return nil, err
 	}

@@ -32,13 +32,20 @@ func (s *Server) PropertySchemaGet(
 	}
 
 	// TODO(jaypipes): AUTHZ check user can read property schemas
-	if req.Type == "" {
+
+	if req.Filter == nil || req.Filter.Search == "" {
+		return nil, ErrPropertySchemaFilterRequired
+	}
+
+	if req.Filter.Type == nil {
 		return nil, ErrObjectTypeRequired
 	}
 	// TODO(jaypipes): Look up whether object type exists
 
 	var partSearch string
-	if req.Partition == "" {
+	if req.Filter.Partition != nil {
+		partSearch = req.Filter.Partition.Search
+	} else {
 		// Use the session's partition if not specified
 		partSearch = req.Session.Partition
 	}
@@ -54,17 +61,14 @@ func (s *Server) PropertySchemaGet(
 	}
 	// TODO(jaypipes): AUTHZ check user can use partition
 
-	if req.Key == "" {
-		return nil, ErrPropertyKeyRequired
-	}
 	obj, err := s.store.PropertySchemaGet(
 		part.Uuid,
-		req.Type,
-		req.Key,
+		req.Filter.Type.Search,
+		req.Filter.Search,
 	)
 	if err != nil {
 		if err == errors.ErrNotFound {
-			return nil, err
+			return nil, ErrNotFound
 		}
 		// Don't leak internal errors out
 		return nil, ErrUnknown

@@ -68,11 +68,11 @@ func (s *Server) ObjectGet(
 	if err := checkSession(req.Session); err != nil {
 		return nil, err
 	}
-	if req.Search == nil {
+	if req.Filter == nil {
 		return nil, ErrObjectFilterRequired
 	}
 
-	pfs, err := s.expandObjectFilter(req.Session, req.Search)
+	pfs, err := s.expandObjectFilter(req.Session, req.Filter)
 	if err != nil {
 		if err == errors.ErrNotFound {
 			return nil, ErrNotFound
@@ -81,7 +81,7 @@ func (s *Server) ObjectGet(
 		// an unknown error after logging it.
 		s.log.ERR(
 			"failed to retrieve object with search filter %s: %s",
-			req.Search,
+			req.Filter.Search,
 			err,
 		)
 		return nil, ErrUnknown

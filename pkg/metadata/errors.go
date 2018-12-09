@@ -62,6 +62,10 @@ var (
 		codes.FailedPrecondition,
 		"schema is required.",
 	)
+	ErrPropertySchemaFilterRequired = status.Errorf(
+		codes.FailedPrecondition,
+		"property schema filter is required.",
+	)
 	ErrPropertySchemaObjectRequired = status.Errorf(
 		codes.FailedPrecondition,
 		"property schema object is required.",

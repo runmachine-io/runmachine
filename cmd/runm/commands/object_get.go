@@ -50,7 +50,7 @@ func objectGet(cmd *cobra.Command, args []string) {
 
 	session := getSession()
 	uuidOrName := args[0]
-	search := &pb.ObjectFilter{
+	filter := &pb.ObjectFilter{
 		Search:    uuidOrName,
 		UsePrefix: false,
 	}
@@ -60,7 +60,7 @@ func objectGet(cmd *cobra.Command, args []string) {
 			fmt.Fprintf(os.Stderr, "Error: --type required when <search> is not a UUID\n")
 			os.Exit(1)
 		}
-		search.Type = &pb.ObjectTypeFilter{
+		filter.Type = &pb.ObjectTypeFilter{
 			Search:    cliObjectGetType,
 			UsePrefix: false,
 		}
@@ -69,7 +69,7 @@ func objectGet(cmd *cobra.Command, args []string) {
 		context.Background(),
 		&pb.ObjectGetRequest{
 			Session: session,
-			Search:  search,
+			Filter:  filter,
 		},
 	)
 	exitIfError(err)

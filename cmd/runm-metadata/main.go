@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -51,6 +53,19 @@ func main() {
 		opts = []grpc.ServerOption{grpc.Creds(creds)}
 		log.L2("using credentials file %v", cfg.KeyPath)
 	}
+
+	// Handle SIGTERM signals and close our Service instance, which should take
+	// care of notifying the service registry about our endpoint going away
+	sigs := make(chan os.Signal, 1)
+	done := make(chan bool, 1)
+	signal.Notify(sigs, syscall.SIGTERM)
+	go func() {
+		sig := <-sigs
+		log.L1("received %s.", sig)
+		md.Close()
+		done <- true
+	}()
+
 	s := grpc.NewServer(opts...)
 	pb.RegisterRunmMetadataServer(s, md)
 	s.Serve(lis)

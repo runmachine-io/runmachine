@@ -22,6 +22,20 @@ type Server struct {
 }
 
 func (s *Server) Close() {
+	addr := fmt.Sprintf("%s:%d", s.cfg.BindHost, s.cfg.BindPort)
+	s.log.L1(
+		"unregistering %s:%s endpoint in gsr",
+		s.cfg.ServiceName,
+		addr,
+	)
+	ep := &gsr.Endpoint{
+		Service: &gsr.Service{Name: s.cfg.ServiceName},
+		Address: addr,
+	}
+	err := s.registry.Unregister(ep)
+	if err != nil {
+		s.log.ERR("failed to unregister: %s\n", err)
+	}
 }
 
 func New(

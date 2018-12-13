@@ -177,4 +177,16 @@ functionality provided by OpenStack Nova's vCenter virtualization driver.
 
 ## Architecture
 
-TODO
+`runmachine`'s architecture is detailed in a separate
+[document](docs/architecture.md), however, the basic architecture of
+`runmachine` is a small set of services that handle a distinct piece of
+functionality. These services work together to provide a `runmachine` user the
+ability to manage compute resources.
+
+* `runm-metadata` is a service providing functionality for associating both
+  structured and unstructured data with one or more objects.
+* `runm-resource` is a service providing inventory management,
+  placement/scheduling and usage information.
+* `runm-control` is a service that validates a request to take some action and
+  then forwards that action along to one or more `runm-exec` workers that
+  complete the work

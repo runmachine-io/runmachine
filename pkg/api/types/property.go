@@ -42,10 +42,10 @@ type PropertySchemaDocument struct {
 	Enum []string `yaml:"enum"`
 	// Indicates the property is required for all objects of this property
 	// schema's object type
-	Required bool `yaml:"required"`
+	Required *bool `yaml:"required"`
 	// Indicates the property's value must be a multiple of this number. The
 	// property's type must be either "number" or "integer"
-	MultipleOf uint `yaml:"multiple_of"`
+	MultipleOf *uint `yaml:"multiple_of"`
 	// Indicates the property's numeric value must be greater than or equal to
 	// this number The property's type must be either "number" or "integer"
 	Minimum *int `yaml:"minimum"`
@@ -54,10 +54,10 @@ type PropertySchemaDocument struct {
 	Maximum *int `yaml:"maximum"`
 	// Indicates the property's value must be a string and that string must
 	// have a length greater than or equal to this number
-	MinLength uint `yaml:"min_length"`
+	MinLength *uint `yaml:"min_length"`
 	// Indicates the property's value must be a string and that string must
 	// have a length less than or equal to this number
-	MaxLength uint `yaml:"max_length"`
+	MaxLength *uint `yaml:"max_length"`
 	// Indicates the property's value must be a string and must match this
 	// regex pattern
 	Pattern string `yaml:"pattern"`

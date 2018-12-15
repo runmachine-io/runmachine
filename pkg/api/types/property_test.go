@@ -10,7 +10,13 @@ import (
 )
 
 var (
-	_one = 1
+	_true    = true
+	_zero    = 0
+	_one     = 1
+	_two     = 2
+	_zero_us = uint(0)
+	_one_us  = uint(1)
+	_two_us  = uint(2)
 )
 
 func TestPropertySchemaDocumentYAML(t *testing.T) {
@@ -44,13 +50,49 @@ type:
 				},
 			},
 		},
-		// Simple single string type
+		// Check maximum (number-based)
 		{
 			doc: `
 maximum: 1
 `,
 			expect: types.PropertySchemaDocument{
 				Maximum: &_one,
+			},
+		},
+		// Check minimum (number-based)
+		{
+			doc: `
+minimum: 0
+`,
+			expect: types.PropertySchemaDocument{
+				Minimum: &_zero,
+			},
+		},
+		// Check nax length (string)
+		{
+			doc: `
+max_length: 2
+`,
+			expect: types.PropertySchemaDocument{
+				MaxLength: &_two_us,
+			},
+		},
+		// Check min length (string)
+		{
+			doc: `
+min_length: 0
+`,
+			expect: types.PropertySchemaDocument{
+				MinLength: &_zero_us,
+			},
+		},
+		// Check required
+		{
+			doc: `
+required: true
+`,
+			expect: types.PropertySchemaDocument{
+				Required: &_true,
 			},
 		},
 	}

@@ -10,7 +10,6 @@ import (
 )
 
 var (
-	_true    = true
 	_zero    = 0
 	_one     = 1
 	_two     = 2
@@ -92,7 +91,7 @@ min_length: 0
 required: true
 `,
 			expect: types.PropertySchemaDocument{
-				Required: &_true,
+				Required: true,
 			},
 		},
 	}

@@ -42,7 +42,7 @@ type PropertySchemaDocument struct {
 	Enum []string `yaml:"enum"`
 	// Indicates the property is required for all objects of this property
 	// schema's object type
-	Required *bool `yaml:"required"`
+	Required bool `yaml:"required"`
 	// Indicates the property's value must be a multiple of this number. The
 	// property's type must be either "number" or "integer"
 	MultipleOf *uint `yaml:"multiple_of"`

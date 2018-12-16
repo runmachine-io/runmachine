@@ -104,3 +104,51 @@ required: true
 		assert.Equal(test.expect, got)
 	}
 }
+
+func TestPropertySchemaDocumentValidate(t *testing.T) {
+	tests := []struct {
+		doc       *types.PropertySchemaDocument
+		expectErr bool
+	}{
+		// Good type
+		{
+			doc: &types.PropertySchemaDocument{
+				Types: []string{"string"},
+			},
+			expectErr: false,
+		},
+		// Bad type
+		{
+			doc: &types.PropertySchemaDocument{
+				Types: []string{"array", "string"},
+			},
+			expectErr: true,
+		},
+		// Good format
+		{
+			doc: &types.PropertySchemaDocument{
+				Format: "date-time",
+			},
+			expectErr: false,
+		},
+		// Bad format
+		{
+			doc: &types.PropertySchemaDocument{
+				Format: "datetime",
+			},
+			expectErr: true,
+		},
+	}
+
+	for x, test := range tests {
+		if err := test.doc.Validate(); err != nil {
+			if !test.expectErr {
+				t.Fatalf("in test %d expected no error but got: %v", x, err)
+			}
+		} else {
+			if test.expectErr {
+				t.Fatalf("in test %d expected error but got none", x)
+			}
+		}
+	}
+}

@@ -1,5 +1,36 @@
 package types
 
+import "fmt"
+
+var (
+	// the set of valid type strings that may appear in the property schema
+	// document "type" field
+	validTypes = []string{
+		"string",
+		"integer",
+		"number",
+		"boolean",
+	}
+	// the set of valid format strings that may be specified in property schema
+	// document's "format" field
+	validFormats = []string{
+		"date-time",
+		"date",
+		"time",
+		"email",
+		"idn-email",
+		"hostname",
+		"idn-hostname",
+		"ipv4",
+		"ipv6",
+		"uri",
+		"uri-reference",
+		"iri",
+		"iri-reference",
+		"uri-template",
+	}
+)
+
 type PropertySchema struct {
 	// Identifier of the partition the object belongs to
 	Partition string `yaml:"partition"`
@@ -79,4 +110,46 @@ type PropertySchemaDocument struct {
 	// * "iri-reference"
 	// * "uri-template"
 	Format string `yaml:"format"`
+}
+
+// Validate returns an error if the schema document isn't valid, or nil
+// otherwise
+func (doc *PropertySchemaDocument) Validate() error {
+	if len(doc.Types) > 0 {
+		typeFound := make(map[string]bool, len(doc.Types))
+		for _, docType := range doc.Types {
+			typeFound[docType] = false
+			for _, t := range validTypes {
+				if t == docType {
+					typeFound[docType] = true
+				}
+			}
+		}
+		for docType, found := range typeFound {
+			if !found {
+				return fmt.Errorf(
+					"invalid type %s. valid types are %v",
+					docType,
+					validTypes,
+				)
+			}
+		}
+	}
+	if doc.Format != "" {
+		found := false
+		for _, f := range validFormats {
+			if f == doc.Format {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return fmt.Errorf(
+				"invalid format %s. valid formats are %v",
+				doc.Format,
+				validFormats,
+			)
+		}
+	}
+	return nil
 }

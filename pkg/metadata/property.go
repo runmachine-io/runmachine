@@ -11,30 +11,30 @@ import (
 	"github.com/runmachine-io/runmachine/pkg/metadata/types"
 )
 
-func (s *Server) PropertySchemaDelete(
+func (s *Server) PropertyDefinitionDelete(
 	ctx context.Context,
-	req *pb.PropertySchemaDeleteRequest,
-) (*pb.PropertySchemaDeleteResponse, error) {
+	req *pb.PropertyDefinitionDeleteRequest,
+) (*pb.PropertyDefinitionDeleteResponse, error) {
 	if err := checkSession(req.Session); err != nil {
 		return nil, err
 	}
 	return nil, nil
 }
 
-// PropertySchemaGet looks up a property schema by partition, object type and
-// property key and returns a PropertySchema protobuf message.
-func (s *Server) PropertySchemaGet(
+// PropertyDefinitionGet looks up a property definition by partition, object type and
+// property key and returns a PropertyDefinition protobuf message.
+func (s *Server) PropertyDefinitionGet(
 	ctx context.Context,
-	req *pb.PropertySchemaGetRequest,
-) (*pb.PropertySchema, error) {
+	req *pb.PropertyDefinitionGetRequest,
+) (*pb.PropertyDefinition, error) {
 	if err := checkSession(req.Session); err != nil {
 		return nil, err
 	}
 
-	// TODO(jaypipes): AUTHZ check user can read property schemas
+	// TODO(jaypipes): AUTHZ check user can read property definitions
 
 	if req.Filter == nil || req.Filter.Search == "" {
-		return nil, ErrPropertySchemaFilterRequired
+		return nil, ErrPropertyDefinitionFilterRequired
 	}
 
 	if req.Filter.Type == nil {
@@ -61,7 +61,7 @@ func (s *Server) PropertySchemaGet(
 	}
 	// TODO(jaypipes): AUTHZ check user can use partition
 
-	obj, err := s.store.PropertySchemaGet(
+	obj, err := s.store.PropertyDefinitionGet(
 		part.Uuid,
 		req.Filter.Type.Search,
 		req.Filter.Search,
@@ -76,22 +76,22 @@ func (s *Server) PropertySchemaGet(
 	return obj, nil
 }
 
-// PropertySchemaList streams PropertySchema protobuffer messages representing
-// property schemas that matched the requested filters
-func (s *Server) PropertySchemaList(
-	req *pb.PropertySchemaListRequest,
-	stream pb.RunmMetadata_PropertySchemaListServer,
+// PropertyDefinitionList streams PropertyDefinition protobuffer messages representing
+// property definitions that matched the requested filters
+func (s *Server) PropertyDefinitionList(
+	req *pb.PropertyDefinitionListRequest,
+	stream pb.RunmMetadata_PropertyDefinitionListServer,
 ) error {
 	if err := checkSession(req.Session); err != nil {
 		return err
 	}
 
-	filters, err := s.normalizePropertySchemaFilters(req.Session, req.Any)
+	filters, err := s.normalizePropertyDefinitionFilters(req.Session, req.Any)
 	if err != nil {
 		return err
 	}
 
-	objs, err := s.store.PropertySchemaList(filters)
+	objs, err := s.store.PropertyDefinitionList(filters)
 	if err != nil {
 		return err
 	}
@@ -103,18 +103,18 @@ func (s *Server) PropertySchemaList(
 	return nil
 }
 
-// validatePropertySchemaSetRequest ensures that the data the user sent in the
+// validatePropertyDefinitionSetRequest ensures that the data the user sent in the
 // request's payload can be unmarshal'd properly into YAML, contains all
-// relevant fields.  and meets things like property schema validation checks.
+// relevant fields.  and meets things like property definition validation checks.
 //
 // Returns a fully validated Object protobuffer message that is ready to send
 // to backend storage.
-func (s *Server) validatePropertySchemaSetRequest(
-	req *pb.PropertySchemaSetRequest,
-) (*types.PropertySchemaWithReferences, error) {
+func (s *Server) validatePropertyDefinitionSetRequest(
+	req *pb.PropertyDefinitionSetRequest,
+) (*types.PropertyDefinitionWithReferences, error) {
 	// reads the supplied buffer which contains a YAML document describing the
-	// property schema to create or update.
-	obj := &apitypes.PropertySchema{}
+	// property definition to create or update.
+	obj := &apitypes.PropertyDefinition{}
 	if err := yaml.Unmarshal(req.Payload, obj); err != nil {
 		return nil, err
 	}
@@ -128,14 +128,16 @@ func (s *Server) validatePropertySchemaSetRequest(
 	if obj.Key == "" {
 		return nil, ErrPropertyKeyRequired
 	}
-	if obj.Schema == "" {
+	if obj.Schema == nil {
 		return nil, ErrSchemaRequired
 	} else {
-		// TODO(jaypipes): Validate the schema document provided
-		s.log.L3("Validating property schema")
+		if err := obj.Schema.Validate(); err != nil {
+			return nil, errors.ErrInvalidPropertyDefinition(obj.Type, obj.Key, err)
+		}
 	}
 
 	// Validate the referred to type, partition and project actually exist
+	// TODO(jaypipes): AUTHZ check user can specify partition
 	part, err := s.store.PartitionGet(obj.Partition)
 	if err != nil {
 		if err == errors.ErrNotFound {
@@ -156,45 +158,45 @@ func (s *Server) validatePropertySchemaSetRequest(
 		return nil, errors.ErrUnknown
 	}
 
-	// TODO(jaypipes): AUTHZ check user can specify partition
+	// TODO(jaypipes): Validate if the user specific access permissions
 
-	return &types.PropertySchemaWithReferences{
+	return &types.PropertyDefinitionWithReferences{
 		Partition: part,
 		Type:      objType,
-		PropertySchema: &pb.PropertySchema{
+		Definition: &pb.PropertyDefinition{
 			Partition: part.Uuid,
 			Type:      objType.Code,
 			Key:       obj.Key,
-			Schema:    obj.Schema,
+			Schema:    obj.Schema.JSONSchemaString(),
 		},
 	}, nil
 }
 
-func (s *Server) PropertySchemaSet(
+func (s *Server) PropertyDefinitionSet(
 	ctx context.Context,
-	req *pb.PropertySchemaSetRequest,
-) (*pb.PropertySchemaSetResponse, error) {
+	req *pb.PropertyDefinitionSetRequest,
+) (*pb.PropertyDefinitionSetResponse, error) {
 	if err := checkSession(req.Session); err != nil {
 		return nil, err
 	}
 
-	// TODO(jaypipes): AUTHZ check for writing property schemas
+	// TODO(jaypipes): AUTHZ check for writing property definitions
 
-	pswr, err := s.validatePropertySchemaSetRequest(req)
+	pdwr, err := s.validatePropertyDefinitionSetRequest(req)
 	if err != nil {
 		return nil, err
 	}
 
-	partition := pswr.Partition.Uuid
-	objType := pswr.Type.Code
-	obj := pswr.PropertySchema
-	propKey := obj.Key
+	partition := pdwr.Partition.Uuid
+	objType := pdwr.Type.Code
+	def := pdwr.Definition
+	propKey := def.Key
 
-	existing, err := s.store.PropertySchemaGet(partition, objType, propKey)
+	existing, err := s.store.PropertyDefinitionGet(partition, objType, propKey)
 	if err != nil {
 		if err != errors.ErrNotFound {
 			s.log.ERR(
-				"Failed trying to find existing property schema for %s:%s:%s: %s",
+				"Failed trying to find existing property definition for %s:%s:%s: %s",
 				partition,
 				objType,
 				propKey,
@@ -206,12 +208,12 @@ func (s *Server) PropertySchemaSet(
 	}
 
 	if existing == nil {
-		s.log.L3("Creating new property schema %s:%s:%s", partition, objType, propKey)
+		s.log.L3("Creating new property definition %s:%s:%s", partition, objType, propKey)
 
 		// Set default access permissions to read/write by any role in the
 		// creating project
-		if obj.AccessPermissions == nil {
-			obj.AccessPermissions = []*pb.PropertyAccessPermission{
+		if def.AccessPermissions == nil {
+			def.AccessPermissions = []*pb.PropertyAccessPermission{
 				&pb.PropertyAccessPermission{
 					Project: &pb.StringValue{
 						Value: req.Session.Project,
@@ -224,19 +226,19 @@ func (s *Server) PropertySchemaSet(
 		// TODO(jaypipes): Make sure that the project that created the property
 		// schema can read and write it
 
-		if err := s.store.PropertySchemaCreate(obj); err != nil {
+		if err := s.store.PropertyDefinitionCreate(pdwr); err != nil {
 			return nil, err
 		}
-		resp := &pb.PropertySchemaSetResponse{
-			PropertySchema: obj,
+		resp := &pb.PropertyDefinitionSetResponse{
+			PropertyDefinition: def,
 		}
-		s.log.L1("Created new property schema %s:%s:%s", partition, objType, propKey)
+		s.log.L1("Created new property definition %s:%s:%s", partition, objType, propKey)
 		return resp, nil
 	}
 
-	s.log.L3("Updating property schema %s:%s:%s", partition, objType, propKey)
+	s.log.L3("Updating property definition %s:%s:%s", partition, objType, propKey)
 
-	// TODO(jaypipes): Update the property schema...
+	// TODO(jaypipes): Update the property definition...
 
 	return nil, nil
 }

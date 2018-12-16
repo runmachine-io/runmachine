@@ -1,0 +1,10 @@
+partition: part0
+type: runm.machine
+key: architecture
+schema:
+  type: string
+  enum:
+    - x86
+    - x86_64
+    - arm
+    - arm64

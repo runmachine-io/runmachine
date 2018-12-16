@@ -128,7 +128,7 @@ func (s *Server) ObjectList(
 
 // validateObjectSetRequest ensures that the data the user sent in the
 // request's payload can be unmarshal'd properly into YAML, contains all
-// relevant fields.  and meets things like property schema validation checks.
+// relevant fields.  and meets things like property meta validation checks.
 //
 // Returns a fully validated Object protobuffer message that is ready to send
 // to backend storage.
@@ -202,7 +202,7 @@ func (s *Server) validateObjectSetRequest(
 }
 
 // validateObjectProperty ensures that the supplied key and value meet any
-// defined property schema constraints that may have been defined for that
+// defined property meta constraints that may have been defined for that
 // object type and key. Returns a pointer to a Property protobuffer message.
 func (s *Server) validateObjectProperty(
 	partition *pb.Partition,
@@ -210,7 +210,7 @@ func (s *Server) validateObjectProperty(
 	key string,
 	value string,
 ) (*pb.Property, error) {
-	propSchema, err := s.store.PropertySchemaGet(
+	propDef, err := s.store.PropertyDefinitionGet(
 		partition.Uuid,
 		objType.Code,
 		key,
@@ -218,10 +218,10 @@ func (s *Server) validateObjectProperty(
 	if err != nil && err != errors.ErrNotFound {
 		return nil, err
 	}
-	if propSchema != nil {
-		err := s.validateValueWithSchema(value, propSchema.Schema)
+	if propDef != nil {
+		err := s.validateValueWithSchema(value, propDef.Schema)
 		if err != nil {
-			return nil, errors.ErrFailedPropertySchemaValidation(key, err)
+			return nil, errors.ErrFailedPropertyDefinitionValidation(key, err)
 		}
 	}
 	return &pb.Property{
@@ -231,7 +231,7 @@ func (s *Server) validateObjectProperty(
 }
 
 // validateValueWithSchema returns an error if the supplied value passes the
-// supplied property schema document, nil otherwise.
+// supplied property meta document, nil otherwise.
 func (s *Server) validateValueWithSchema(value string, schema string) error {
 	return nil
 }

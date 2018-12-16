@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	usagePropSchemaGetPartitionOpt = `optional partition filter.
+	usagePropDefGetPartitionOpt = `optional partition filter.
 
 If not set, defaults to the partition used in the user's session.
 `
@@ -16,29 +16,29 @@ If not set, defaults to the partition used in the user's session.
 
 var (
 	// partition override. if empty, we use the session's partition
-	propSchemaGetPartition string
+	cliPropDefGetPartition string
 )
 
-var propertySchemaGetCommand = &cobra.Command{
+var propertyDefinitionGetCommand = &cobra.Command{
 	Use:   "get <object_type> <key>",
-	Short: "Show information for a single property schema",
+	Short: "Show information for a single property definition",
 	Args:  cobra.ExactArgs(2),
-	Run:   propertySchemaGet,
+	Run:   propertyDefinitionGet,
 }
 
-func setupPropertySchemaGetFlags() {
-	propertySchemaGetCommand.Flags().StringVarP(
-		&propSchemaGetPartition,
+func setupPropertyDefinitionGetFlags() {
+	propertyDefinitionGetCommand.Flags().StringVarP(
+		&cliPropDefGetPartition,
 		"partition", "", "",
-		usagePropSchemaGetPartitionOpt,
+		usagePropDefGetPartitionOpt,
 	)
 }
 
 func init() {
-	setupPropertySchemaGetFlags()
+	setupPropertyDefinitionGetFlags()
 }
 
-func propertySchemaGet(cmd *cobra.Command, args []string) {
+func propertyDefinitionGet(cmd *cobra.Command, args []string) {
 	conn := connect()
 	defer conn.Close()
 
@@ -46,7 +46,7 @@ func propertySchemaGet(cmd *cobra.Command, args []string) {
 
 	session := getSession()
 
-	filter := &pb.PropertySchemaFilter{
+	filter := &pb.PropertyDefinitionFilter{
 		Type: &pb.ObjectTypeFilter{
 			Search:    args[0],
 			UsePrefix: false,
@@ -54,18 +54,18 @@ func propertySchemaGet(cmd *cobra.Command, args []string) {
 		Search:    args[1],
 		UsePrefix: false,
 	}
-	if propSchemaGetPartition != "" {
+	if cliPropDefGetPartition != "" {
 		filter.Partition = &pb.PartitionFilter{
-			Search:    propSchemaGetPartition,
+			Search:    cliPropDefGetPartition,
 			UsePrefix: false,
 		}
 	}
 
-	req := &pb.PropertySchemaGetRequest{
+	req := &pb.PropertyDefinitionGetRequest{
 		Session: session,
 		Filter:  filter,
 	}
-	obj, err := client.PropertySchemaGet(context.Background(), req)
+	obj, err := client.PropertyDefinitionGet(context.Background(), req)
 	exitIfError(err)
-	printPropertySchema(obj)
+	printPropertyDefinition(obj)
 }

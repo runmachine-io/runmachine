@@ -1,0 +1,7 @@
+# This is an example of an invalid property schema. The listed type "array" is
+# not valid since only scalar types are accepted.
+partition: part0
+type: runm.image
+key: invalid
+schema:
+  type: array

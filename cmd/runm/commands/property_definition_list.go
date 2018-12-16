@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	usagePropertySchemaFilterOption = `optional filter to apply.
+	usagePropertyDefinitionFilterOption = `optional filter to apply.
 
 --filter <filter expression>
 
@@ -25,9 +25,9 @@ filters are evaluated using an "OR" condition.
 The <filter expression> value is a whitespace-separated set of $field=$value
 expressions to filter by. $field may be any of the following:
 
-- partition: UUID or name of the partition the property schema belongs to
+- partition: UUID or name of the partition the property definition belongs to
 - type: code of the object type (:see runm object-type list)
-- key: the property key to list property schemas for
+- key: the property key to list property definitions for
 
 The $value should be an identifier or name for the $field. You can use an
 asterisk (*) to indicate a prefix match. For example, to list all property
@@ -36,12 +36,12 @@ the string "arch", you would use --filter "type=runm.machine key=arch*"
 
 Examples:
 
-Find all property schemas that apply to runm.image objects in a partition
+Find all property definitions that apply to runm.image objects in a partition
 beginning with "east":
 
 --filter "type=runm.image partition=east*"
 
-Find all property schemas that apply to runm.machine objects OR runm.image
+Find all property definitions that apply to runm.machine objects OR runm.image
 objects that are a partition called part0:
 
 --filter "type=runm.machine partition=part0" \
@@ -51,37 +51,37 @@ objects that are a partition called part0:
 
 var (
 	// CLI-provided set of --filter options
-	cliPropertySchemaFilters = []string{}
+	cliPropertyDefinitionFilters = []string{}
 )
 
-var propertySchemaListCommand = &cobra.Command{
+var propertyDefinitionListCommand = &cobra.Command{
 	Use:   "list",
-	Short: "List information about property schemas",
-	Run:   propertySchemaList,
+	Short: "List information about property definitions",
+	Run:   propertyDefinitionList,
 }
 
-func setupPropertySchemaListFlags() {
-	propertySchemaListCommand.Flags().StringArrayVarP(
-		&cliPropertySchemaFilters,
+func setupPropertyDefinitionListFlags() {
+	propertyDefinitionListCommand.Flags().StringArrayVarP(
+		&cliPropertyDefinitionFilters,
 		"filter", "f",
 		nil,
-		usagePropertySchemaFilterOption,
+		usagePropertyDefinitionFilterOption,
 	)
 }
 
 func init() {
-	setupPropertySchemaListFlags()
+	setupPropertyDefinitionListFlags()
 }
 
-func buildPropertySchemaFilters() []*pb.PropertySchemaFilter {
-	filters := make([]*pb.PropertySchemaFilter, 0)
+func buildPropertyDefinitionFilters() []*pb.PropertyDefinitionFilter {
+	filters := make([]*pb.PropertyDefinitionFilter, 0)
 	// Each --filter <field expression> supplied by the user will have one or
 	// more $field=$value segments to it, separated by spaces. Split those
 	// $field=$value pairs up and evaluate each $field and $value string for
 	// fitness
-	for _, f := range cliPropertySchemaFilters {
+	for _, f := range cliPropertyDefinitionFilters {
 		fieldExprs := strings.Fields(f)
-		filter := &pb.PropertySchemaFilter{}
+		filter := &pb.PropertyDefinitionFilter{}
 		for _, fieldExpr := range fieldExprs {
 			kvs := strings.SplitN(fieldExpr, "=", 2)
 			if len(kvs) != 2 {
@@ -124,19 +124,19 @@ func buildPropertySchemaFilters() []*pb.PropertySchemaFilter {
 	return filters
 }
 
-func propertySchemaList(cmd *cobra.Command, args []string) {
+func propertyDefinitionList(cmd *cobra.Command, args []string) {
 	conn := connect()
 	defer conn.Close()
 
 	client := pb.NewRunmMetadataClient(conn)
-	req := &pb.PropertySchemaListRequest{
+	req := &pb.PropertyDefinitionListRequest{
 		Session: getSession(),
-		Any:     buildPropertySchemaFilters(),
+		Any:     buildPropertyDefinitionFilters(),
 	}
-	stream, err := client.PropertySchemaList(context.Background(), req)
+	stream, err := client.PropertyDefinitionList(context.Background(), req)
 	exitIfConnectErr(err)
 
-	msgs := make([]*pb.PropertySchema, 0)
+	msgs := make([]*pb.PropertyDefinition, 0)
 	for {
 		role, err := stream.Recv()
 		if err == io.EOF {

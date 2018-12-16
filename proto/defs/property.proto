@@ -20,11 +20,11 @@ message PropertyAccessPermission {
     AccessPermission permission = 3;
 }
 
-// Administrators are able to create small JSONSchema documents that allow the
-// restriction of data type and format for a particular property key. The only
-// restriction is that a property schema may not allow the value of the
-// property item value to be an object or list. In other words, the value of
-// the property item must be a scalar value.
+// Administrators are able to create schemas that allow the restriction of data
+// type and format for a particular property key. The only restriction is that
+// the schema may not allow the value of the property item value to be
+// an object or array. In other words, the value of the property item must be a
+// scalar value.
 //
 // For example, let's say an administrator wants to allow users to associate an
 // "application type" to images that may be used to launch machines. There are
@@ -35,40 +35,95 @@ message PropertyAccessPermission {
 // * product
 // * vendor
 //
-// The administrator would create a JSONSchema document for describing the
-// above constraints that looked like this:
+// The administrator would create a property definition object with schema that looks
+// like this:
 //
-// {
-//   "type": "string",
-//   "enum": ["tool", "product", "vendor"]
-// }
+// type: string
+// enum:
+//   - tool
+//   - product
+//   - vendor
 //
-// The adminstrator would then save a PropertySchema message with an
-// object_type of "image", a key of "application_code", and a schema of the
-// above serialized JSONSchema document.
+// The adminstrator would then save a PropertyDefinition message with an
+// object_type of "image", a key of "application_code", and the above schema.
 //
 // Once saved to the property service, the "application_type" property item
 // values would be validated against the above schema before being stored.
 message PropertySchema {
-    // UUID of the partition this property schema has been created in
+    // A property's value may be any scalar JSON type
+    enum PropertyValueType {
+        TYPE_STRING = 0;
+        TYPE_INTEGER = 1;
+        TYPE_NUMBER = 2;
+        TYPE_BOOLEAN = 3;
+    }
+
+    // Some pre-defined patterns that match JSONSchema Draft 7 formats that are
+    // supported by runmachine property schemas
+    enum PropertyValueFormat {
+        FORMAT_NONE = 0;
+        FORMAT_DATETIME = 1;
+        FORMAT_DATE = 2;
+        FORMAT_TIME = 3;
+        FORMAT_EMAIL = 4;
+        FORMAT_IDN_EMAIL = 5;
+        FORMAT_HOSTNAME = 6;
+        FORMAT_IDN_HOSTNAME = 7;
+        FORMAT_IPV4 = 8;
+        FORMAT_IPV6 = 9;
+        FORMAT_URI = 10;
+        FORMAT_URI_REFERENCE = 11;
+        FORMAT_IRI = 12;
+        FORMAT_IRI_REFERENCE = 13;
+        FORMAT_URI_TEMPLATE = 14;
+    }
+    // Zero or more valid scalar types for the value. If empty, "string" is
+    // assumed
+    repeated PropertyValueType types = 1;
+    // The valid strings the value may be
+    repeated string enum_values = 2;
+    // true if this property key must be set on objects of this type
+    bool is_required = 3;
+    // If the type is numeric, the value must be a multiple of this number
+    UInt64Value multiple_of = 4;
+    // If the type is numeric, the value must be greater than or equal to this
+    // number
+    Int64Value minimum = 5;
+    // If the type is numeric, the value must be less than or equal to this
+    // number
+    Int64Value maximum = 6;
+    // If the type is string, the value must have a length greater than or
+    // equal to this number
+    UInt64Value minimum_length = 7;
+    // If the type is string, the value must have a length less than or equal
+    // to this number
+    UInt64Value maximum_length = 8;
+    // Regex pattern that value must match
+    string pattern = 9;
+    // Pre-defined regex format the value must match (see JSONSchema Draft 7
+    // formats)
+    PropertyValueFormat format = 10;
+}
+
+message PropertyDefinition {
+    // UUID of the partition this property definition has been created in
     string partition = 1;
-    // String code of the object type the property schema applies to. e.g.
+    // String code of the object type the property definition applies to. e.g.
     // "runm.machine"
     string type = 2;
-    // The property key to apply the property schema to. e.g. "architecture"
+    // The property key to apply the property definition to. e.g. "architecture"
     string key = 3;
-    // a YAML document describing the format and type constraints of the value
-    // of the property
+    // Describes the format and type constraints of the value of the property
     string schema = 4;
-    // Collection of access permissions applied to this property schema
+    // Collection of access permissions applied to this property definition
     repeated PropertyAccessPermission access_permissions = 50;
 }
 
-// Used in matching property schema records
-message PropertySchemaFilter {
+// Used in matching property definition records
+message PropertyDefinitionFilter {
     PartitionFilter partition = 1;
     ObjectTypeFilter type = 2;
-    // A search term on the property schema's property key
+    // A search term on the property definition's property key
     string search = 4;
     // Indicates the search should be a prefix expression
     bool use_prefix = 5;

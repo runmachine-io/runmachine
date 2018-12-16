@@ -18,19 +18,19 @@ var (
 	_two_us  = uint(2)
 )
 
-func TestPropertySchemaDocumentYAML(t *testing.T) {
+func TestPropertySchemaYAML(t *testing.T) {
 	assert := assert.New(t)
 
 	tests := []struct {
 		doc    string
-		expect types.PropertySchemaDocument
+		expect types.PropertySchema
 	}{
 		// Simple single string type
 		{
 			doc: `
 type: string
 `,
-			expect: types.PropertySchemaDocument{
+			expect: types.PropertySchema{
 				Types: []string{
 					"string",
 				},
@@ -43,7 +43,7 @@ type:
   - string
   - integer
 `,
-			expect: types.PropertySchemaDocument{
+			expect: types.PropertySchema{
 				Types: []string{
 					"string", "integer",
 				},
@@ -54,7 +54,7 @@ type:
 			doc: `
 maximum: 1
 `,
-			expect: types.PropertySchemaDocument{
+			expect: types.PropertySchema{
 				Maximum: &_one,
 			},
 		},
@@ -63,7 +63,7 @@ maximum: 1
 			doc: `
 minimum: 0
 `,
-			expect: types.PropertySchemaDocument{
+			expect: types.PropertySchema{
 				Minimum: &_zero,
 			},
 		},
@@ -72,7 +72,7 @@ minimum: 0
 			doc: `
 max_length: 2
 `,
-			expect: types.PropertySchemaDocument{
+			expect: types.PropertySchema{
 				MaxLength: &_two_us,
 			},
 		},
@@ -81,7 +81,7 @@ max_length: 2
 			doc: `
 min_length: 0
 `,
-			expect: types.PropertySchemaDocument{
+			expect: types.PropertySchema{
 				MinLength: &_zero_us,
 			},
 		},
@@ -90,14 +90,14 @@ min_length: 0
 			doc: `
 required: true
 `,
-			expect: types.PropertySchemaDocument{
+			expect: types.PropertySchema{
 				Required: true,
 			},
 		},
 	}
 
 	for _, test := range tests {
-		got := types.PropertySchemaDocument{}
+		got := types.PropertySchema{}
 		if err := yaml.Unmarshal([]byte(test.doc), &got); err != nil {
 			t.Fatalf("failed unmarshalling %s: %v", test.doc, err)
 		}
@@ -105,35 +105,35 @@ required: true
 	}
 }
 
-func TestPropertySchemaDocumentValidate(t *testing.T) {
+func TestPropertySchemaValidate(t *testing.T) {
 	tests := []struct {
-		doc       *types.PropertySchemaDocument
+		doc       *types.PropertySchema
 		expectErr bool
 	}{
 		// Good type
 		{
-			doc: &types.PropertySchemaDocument{
+			doc: &types.PropertySchema{
 				Types: []string{"string"},
 			},
 			expectErr: false,
 		},
 		// Bad type
 		{
-			doc: &types.PropertySchemaDocument{
+			doc: &types.PropertySchema{
 				Types: []string{"array", "string"},
 			},
 			expectErr: true,
 		},
 		// Good format
 		{
-			doc: &types.PropertySchemaDocument{
+			doc: &types.PropertySchema{
 				Format: "date-time",
 			},
 			expectErr: false,
 		},
 		// Bad format
 		{
-			doc: &types.PropertySchemaDocument{
+			doc: &types.PropertySchema{
 				Format: "datetime",
 			},
 			expectErr: true,

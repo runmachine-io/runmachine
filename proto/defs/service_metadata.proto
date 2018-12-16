@@ -21,7 +21,7 @@ enum PayloadFormat {
 //
 // In addition to the name and UUID lookups, runm-metadata serves as a
 // specialized key/value store for various objects in the runm system. An
-// administrator may create property schema items which dictate the required
+// administrator may create property definition items which dictate the required
 // format or type of a property's values.
 service RunmMetadata {
     // Creates minimal information for service to run, including a name for a
@@ -42,21 +42,21 @@ service RunmMetadata {
     rpc object_type_list(ObjectTypeListRequest) returns (
         stream ObjectType) {}
 
-    // Returns information about a specific property schema
-    rpc property_schema_get(PropertySchemaGetRequest) returns (
-        PropertySchema) {}
+    // Returns information about a specific property definition
+    rpc property_definition_get(PropertyDefinitionGetRequest) returns (
+        PropertyDefinition) {}
 
-    // Deletes one or more property schemas
-    rpc property_schema_delete(PropertySchemaDeleteRequest) returns (
-        PropertySchemaDeleteResponse) {}
+    // Deletes one or more property definitions
+    rpc property_definition_delete(PropertyDefinitionDeleteRequest) returns (
+        PropertyDefinitionDeleteResponse) {}
 
-    // Set information about a specific property schema
-    rpc property_schema_set(PropertySchemaSetRequest) returns (
-        PropertySchemaSetResponse) {}
+    // Set information about a specific property definition
+    rpc property_definition_set(PropertyDefinitionSetRequest) returns (
+        PropertyDefinitionSetResponse) {}
 
-    // Returns information about multiple property schemas
-    rpc property_schema_list(PropertySchemaListRequest) returns (
-        stream PropertySchema) {}
+    // Returns information about multiple property definitions
+    rpc property_definition_list(PropertyDefinitionListRequest) returns (
+        stream PropertyDefinition) {}
 
     // Returns information about a specific object
     rpc object_get(ObjectGetRequest) returns (Object) {}
@@ -167,37 +167,37 @@ message ObjectDeleteResponse {
     uint64 num_deleted = 2;
 }
 
-message PropertySchemaGetRequest {
+message PropertyDefinitionGetRequest {
     Session session = 1;
-    PropertySchemaFilter filter = 2;
+    PropertyDefinitionFilter filter = 2;
 }
 
-message PropertySchemaSetRequest {
+message PropertyDefinitionSetRequest {
     Session session = 1;
     PayloadFormat format = 2;
-    // Raw bytes representing the new representation of the property schema.
+    // Raw bytes representing the new representation of the property definition.
     // The server is responsible for unmarshaling this raw payload.
     bytes payload = 3;
 }
 
-message PropertySchemaSetResponse {
-    PropertySchema property_schema = 2;
+message PropertyDefinitionSetResponse {
+    PropertyDefinition property_definition = 2;
 }
 
-message PropertySchemaListRequest {
+message PropertyDefinitionListRequest {
     Session session = 1;
     SearchOptions options = 2;
     // A set of filter expressions that are OR'd together when determining
     // matches
-    repeated PropertySchemaFilter any = 3;
+    repeated PropertyDefinitionFilter any = 3;
 }
 
-message PropertySchemaDeleteRequest {
+message PropertyDefinitionDeleteRequest {
     Session session = 1;
-    repeated PropertySchema property_schema = 2;
+    repeated PropertyDefinition property_definition = 2;
 }
 
-message PropertySchemaDeleteResponse {
+message PropertyDefinitionDeleteResponse {
     repeated Error errors = 1;
     uint64 num_deleted = 2;
 }

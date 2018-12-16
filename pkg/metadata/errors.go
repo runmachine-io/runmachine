@@ -34,9 +34,9 @@ var (
 		codes.FailedPrecondition,
 		"object filter is required when fetching object.",
 	)
-	ErrFailedExpandPropertySchemaFilters = status.Errorf(
+	ErrFailedExpandPropertyDefinitionFilters = status.Errorf(
 		codes.FailedPrecondition,
-		"failed to expand property schema filters.",
+		"failed to expand property meta filters.",
 	)
 	ErrMultipleRecordsFound = status.Errorf(
 		codes.FailedPrecondition,
@@ -62,13 +62,13 @@ var (
 		codes.FailedPrecondition,
 		"schema is required.",
 	)
-	ErrPropertySchemaFilterRequired = status.Errorf(
+	ErrPropertyDefinitionFilterRequired = status.Errorf(
 		codes.FailedPrecondition,
-		"property schema filter is required.",
+		"property meta filter is required.",
 	)
-	ErrPropertySchemaObjectRequired = status.Errorf(
+	ErrPropertyDefinitionObjectRequired = status.Errorf(
 		codes.FailedPrecondition,
-		"property schema object is required.",
+		"property meta object is required.",
 	)
 	ErrSearchRequired = status.Errorf(
 		codes.FailedPrecondition,

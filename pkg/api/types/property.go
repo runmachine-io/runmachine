@@ -31,7 +31,7 @@ var (
 	}
 )
 
-type PropertySchema struct {
+type PropertyDefinition struct {
 	// Identifier of the partition the object belongs to
 	Partition string `yaml:"partition"`
 	// Code for the type of object this is
@@ -40,7 +40,8 @@ type PropertySchema struct {
 	Key string `yaml:"key"`
 	// JSONSchema property type document represented in YAML, dictating the
 	// constraints applied by this schema to the property's value
-	Schema string `yaml:"schema"`
+	Schema *PropertySchema `yaml:"schema"`
+	// TODO(jaypipes): Add access permissions
 }
 
 // NOTE(jaypipes): A type that can be represented in YAML as *either* a string
@@ -64,7 +65,7 @@ func (a *StringArray) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return nil
 }
 
-type PropertySchemaDocument struct {
+type PropertySchema struct {
 	// May only be a JSON scalar type (string, integer, number, etc)
 	Types StringArray `yaml:"type"`
 	// Property value must be one of these enumerated list of values. If this
@@ -114,7 +115,7 @@ type PropertySchemaDocument struct {
 
 // Validate returns an error if the schema document isn't valid, or nil
 // otherwise
-func (doc *PropertySchemaDocument) Validate() error {
+func (doc *PropertySchema) Validate() error {
 	if len(doc.Types) > 0 {
 		typeFound := make(map[string]bool, len(doc.Types))
 		for _, docType := range doc.Types {
@@ -152,4 +153,36 @@ func (doc *PropertySchemaDocument) Validate() error {
 		}
 	}
 	return nil
+}
+
+// Returns a JSONSchema (DRAFT-7) document representing the schema for the
+// object type and key pair.
+func (doc *PropertySchema) JSONSchemaString() string {
+	if doc == nil {
+		return ""
+	}
+	res := "required: "
+	if doc.Required {
+		res += "true\n"
+	} else {
+		res += "false\n"
+	}
+	switch len(doc.Types) {
+	case 0:
+		break
+	case 1:
+		res += "type: " + doc.Types[0]
+	default:
+		res += "types:\n"
+		for _, t := range doc.Types {
+			res += "  - " + t + "\n"
+		}
+	}
+	if len(doc.Enum) > 0 {
+		res += "enum:\n"
+		for _, val := range doc.Enum {
+			res += "  - " + val + "\n"
+		}
+	}
+	return ""
 }

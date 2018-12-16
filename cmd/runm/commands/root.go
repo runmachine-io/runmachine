@@ -113,7 +113,7 @@ func init() {
 	RootCommand.AddCommand(bootstrapCommand)
 	RootCommand.AddCommand(objectTypeCommand)
 	RootCommand.AddCommand(objectCommand)
-	RootCommand.AddCommand(propertySchemaCommand)
+	RootCommand.AddCommand(propertyDefinitionCommand)
 	RootCommand.AddCommand(partitionCommand)
 	RootCommand.SilenceUsage = true
 

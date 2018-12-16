@@ -15,6 +15,11 @@ func (e *Error) Error() string {
 }
 
 var (
+	ErrBadInput = &Error{
+		HTTPCode: 400,
+		Code:     400,
+		Message:  "bad input",
+	}
 	ErrNotFound = &Error{
 		HTTPCode: 404,
 		Code:     404,
@@ -64,12 +69,25 @@ func ErrPartitionNotFound(partition string) *Error {
 	}
 }
 
-func ErrFailedPropertySchemaValidation(key string, err error) *Error {
+func ErrFailedPropertyDefinitionValidation(key string, err error) *Error {
 	return &Error{
 		HTTPCode: 400,
 		Code:     400001,
 		Message: fmt.Sprintf(
 			"property with key %s failed schema validation: %s.",
+			key,
+			err,
+		),
+	}
+}
+
+func ErrInvalidPropertyDefinition(objType string, key string, err error) *Error {
+	return &Error{
+		HTTPCode: 400,
+		Code:     400002,
+		Message: fmt.Sprintf(
+			"invalid property definition for object type %s and key %s: %s.",
+			objType,
 			key,
 			err,
 		),

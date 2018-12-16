@@ -158,14 +158,14 @@ and the object metadata (properties and tags) in the partition:
 ```
 $PARTITION (e.g. $ROOT/partitions/d79706e01fbd4e48aae89209061cdb71/)
   objects/
-  property-schemas/
+  property-definitions/
   properties/
   tags/
 ```
 
 We will refer to the `$PARTITION/objects/` key namespace as `$OBJECT` from here
-on. Similarly, we will refer to `$PARTITION/property-schemas/` as just
-`$PROPERTY_SCHEMAS`, `$PARTITION/properties/` as just `$PROPERTIES` and
+on. Similarly, we will refer to `$PARTITION/property-definitions/` as just
+`$PROPERTY_DEFINITIONS`, `$PARTITION/properties/` as just `$PROPERTIES` and
 `$PARTITION/tags,` as just `$TAGS`. Each of these key namespaces is described
 in detail in the following sections.
 
@@ -204,14 +204,14 @@ means that these objects are not specific to a project, and therefore the
 for these types of objects (there is no `by-project/` sub key namespace under
 the object type).
 
-### The `$PROPERTY_SCHEMAS` key namespace
+### The `$PROPERTY_DEFINITIONS` key namespace
 
-The `$PROPERTY_SCHEMAS` key namespace stores information about the property
+The `$PROPERTY_DEFINITIONS` key namespace stores information about the property
 schemas defined within a partition. The key namespace itself has a very simple
 layout:
 
 ```
-$PROPERTY_SCHEMAS (e.g. $ROOT/partitions/d79706e01fbd4e48aae89209061cdb71/property-schemas/)
+$PROPERTY_DEFINITIONS (e.g. $ROOT/partitions/d79706e01fbd4e48aae89209061cdb71/property-definitions/)
   by-type/
     runm.image/
       architecture -> serialized PropertySchema protobuffer message
@@ -219,15 +219,15 @@ $PROPERTY_SCHEMAS (e.g. $ROOT/partitions/d79706e01fbd4e48aae89209061cdb71/proper
       appgroup -> serialized PropertySchema protobuffer message
 ```
 
-Above shows an example key namespace for `$PROPERTY_SCHEMAS` in a partition
+Above shows an example key namespace for `$PROPERTY_DEFINITIONS` in a partition
 where an administrator has defined two property schemas, one for `runm.image`
 object types with a property key of "architecture" and another for
 `runm.machine` object types with a property key of "appgroup". Under the key
 namespace representing the property schemas for an object type (e.g.
-`$PROPERTY_SCHEMAS/by-type/runm.image`) are additional key namespaces, one for
+`$PROPERTY_DEFINITIONS/by-type/runm.image`) are additional key namespaces, one for
 each property key that has a schema defined for it. The valued keys in those
 key namespaces have values that are the serialized Protobuffer message
-representing the [property schema](../../../proto/defs/property_schema.proto)
+representing the [property definition](../../../proto/defs/property.proto)
 itself.
 
 ### The `$PROPERTIES` key namespace

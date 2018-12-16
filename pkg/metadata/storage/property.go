@@ -12,23 +12,23 @@ import (
 )
 
 const (
-	// The $PROPERTY_SCHEMAS key namespace is a shortcut to:
-	// $ROOT/partitions/by-uuid/{partition_uuid}/property-schemas
-	_PROPERTY_SCHEMAS_BY_TYPE_KEY = "property-schemas/by-type/"
+	// The $PROPERTY_DEFINITIONS key namespace is a shortcut to:
+	// $ROOT/partitions/by-uuid/{partition_uuid}/property-definitions
+	_PROPERTY_DEFINITIONS_BY_TYPE_KEY = "property-definitions/by-type/"
 )
 
-// PropertySchemaGet returns a property schema by partition UUID, object type
+// PropertyDefinitionGet returns a property definition by partition UUID, object type
 // and property key.
-func (s *Store) PropertySchemaGet(
+func (s *Store) PropertyDefinitionGet(
 	partUuid string,
 	objType string,
-	propSchemaKey string,
-) (*pb.PropertySchema, error) {
+	propDefKey string,
+) (*pb.PropertyDefinition, error) {
 	ctx, cancel := s.requestCtx()
 	defer cancel()
 
 	kv := s.kvPartition(partUuid)
-	key := _PROPERTY_SCHEMAS_BY_TYPE_KEY + objType + "/" + propSchemaKey
+	key := _PROPERTY_DEFINITIONS_BY_TYPE_KEY + objType + "/" + propDefKey
 
 	gr, err := kv.Get(ctx, key, etcd.WithPrefix())
 	if err != nil {
@@ -41,7 +41,7 @@ func (s *Store) PropertySchemaGet(
 		return nil, errors.ErrMultipleRecords
 	}
 
-	obj := &pb.PropertySchema{}
+	obj := &pb.PropertyDefinition{}
 	if err = proto.Unmarshal(gr.Kvs[0].Value, obj); err != nil {
 		return nil, err
 	}
@@ -49,16 +49,16 @@ func (s *Store) PropertySchemaGet(
 	return obj, nil
 }
 
-// PropertySchemaList returns a slice of pointers to PropertySchema protobuffer
+// PropertyDefinitionList returns a slice of pointers to PropertyDefinition protobuffer
 // messages matching a set of supplied filters.
-func (s *Store) PropertySchemaList(
-	any []*types.PropertySchemaFilter,
-) ([]*pb.PropertySchema, error) {
+func (s *Store) PropertyDefinitionList(
+	any []*types.PropertyDefinitionFilter,
+) ([]*pb.PropertyDefinition, error) {
 	// Each filter is evaluated in an OR fashion, so we keep a hashmap of
-	// property schema keys in order to return unique results
-	objs := make(map[string]*pb.PropertySchema, 0)
+	// property definition keys in order to return unique results
+	objs := make(map[string]*pb.PropertyDefinition, 0)
 	for _, filter := range any {
-		filterObjs, err := s.propertySchemasGetByFilter(filter)
+		filterObjs, err := s.propertyDefinitionsGetByFilter(filter)
 		if err != nil {
 			return nil, err
 		}
@@ -67,7 +67,7 @@ func (s *Store) PropertySchemaList(
 			objs[key] = obj
 		}
 	}
-	res := make([]*pb.PropertySchema, len(objs))
+	res := make([]*pb.PropertyDefinition, len(objs))
 	x := 0
 	for _, obj := range objs {
 		res[x] = obj
@@ -76,12 +76,12 @@ func (s *Store) PropertySchemaList(
 	return res, nil
 }
 
-// propertySchemasGetByFilter evaluates a single supplied PropertySchemaFilter
+// propertyDefinitionsGetByFilter evaluates a single supplied PropertyDefinitionFilter
 // that has been populated with a valid Partition, ObjectType and property key
 // to filter by
-func (s *Store) propertySchemasGetByFilter(
-	filter *types.PropertySchemaFilter,
-) ([]*pb.PropertySchema, error) {
+func (s *Store) propertyDefinitionsGetByFilter(
+	filter *types.PropertyDefinitionFilter,
+) ([]*pb.PropertyDefinition, error) {
 	ctx, cancel := s.requestCtx()
 	defer cancel()
 
@@ -94,13 +94,13 @@ func (s *Store) propertySchemasGetByFilter(
 	}
 
 	// The filter may have a nil ObjectType. If that's the case, we're listing
-	// property schemas of all object types and the sieve below will do our
+	// property definitions of all object types and the sieve below will do our
 	// filtering on any supplied property key. If we *do* have a non-nil
 	// ObjectType in the filter, then we can ask etcd to do our filtering for
 	// use using a more restrictive etcd.Get key string...
 	var key string
 	if filter.Type != nil {
-		key = _PROPERTY_SCHEMAS_BY_TYPE_KEY + filter.Type.Code + "/"
+		key = _PROPERTY_DEFINITIONS_BY_TYPE_KEY + filter.Type.Code + "/"
 		if filter.Search != "" {
 			key += filter.Search
 			if filter.UsePrefix {
@@ -110,23 +110,23 @@ func (s *Store) propertySchemasGetByFilter(
 			opts = append(opts, etcd.WithPrefix())
 		}
 	} else {
-		key = _PROPERTY_SCHEMAS_BY_TYPE_KEY
+		key = _PROPERTY_DEFINITIONS_BY_TYPE_KEY
 		opts = append(opts, etcd.WithPrefix())
 	}
 
 	resp, err := kv.Get(ctx, key, opts...)
 	if err != nil {
-		s.log.ERR("error listing property schemas: %v", err)
+		s.log.ERR("error listing property definitions: %v", err)
 		return nil, err
 	}
 	if resp.Count == 0 {
-		return []*pb.PropertySchema{}, nil
+		return []*pb.PropertyDefinition{}, nil
 	}
 
-	res := make([]*pb.PropertySchema, resp.Count)
+	res := make([]*pb.PropertyDefinition, resp.Count)
 	x := int64(0)
 	for _, kv := range resp.Kvs {
-		obj := &pb.PropertySchema{}
+		obj := &pb.PropertyDefinition{}
 		if err = proto.Unmarshal(kv.Value, obj); err != nil {
 			return nil, err
 		}
@@ -153,26 +153,27 @@ func (s *Store) propertySchemasGetByFilter(
 	return res[:x], nil
 }
 
-// PropertySchemaCreate writes the supplied PropertySchema object to the key at
-// $PARTITION/property-schemas/by-type/{object_type}/{property_key}/{version}
-func (s *Store) PropertySchemaCreate(
-	obj *pb.PropertySchema,
+// PropertyDefinitionCreate writes the supplied PropertyDefinition object to the key at
+// $PARTITION/property-definitions/by-type/{object_type}/{property_key}/{version}
+func (s *Store) PropertyDefinitionCreate(
+	obj *types.PropertyDefinitionWithReferences,
 ) error {
 	ctx, cancel := s.requestCtx()
 	defer cancel()
 
-	kv := s.kvPartition(obj.Partition)
-	objType := obj.Type
-	propSchemaKey := obj.Key
-	key := _PROPERTY_SCHEMAS_BY_TYPE_KEY + objType + "/" + propSchemaKey
+	partUuid := obj.Partition.Uuid
+	objType := obj.Type.Code
+	propDefKey := obj.Definition.Key
+	kv := s.kvPartition(partUuid)
+	key := _PROPERTY_DEFINITIONS_BY_TYPE_KEY + objType + "/" + propDefKey
 
-	value, err := proto.Marshal(obj)
+	value, err := proto.Marshal(obj.Definition)
 	if err != nil {
 		return err
 	}
 
-	// create the property schema using a transaction that ensures another
-	// thread hasn't created a property schema with the same key underneath us
+	// create the property definition using a transaction that ensures another
+	// thread hasn't created a property definition with the same key underneath us
 	onSuccess := etcd.OpPut(key, string(value))
 	// Ensure the key doesn't yet exist
 	compare := etcd.Compare(etcd.Version(key), "=", 0)

@@ -6,19 +6,19 @@ import (
 	pb "github.com/runmachine-io/runmachine/proto"
 )
 
-// defaultPropertySchemaFilter returns the default property schema filter if
+// defaultPropertyDefinitionFilter returns the default property definition filter if
 // the user didn't specify any filters themselves. This filter will be across
 // the partition that the user's session is on.
-func (s *Server) defaultPropertySchemaFilter(
+func (s *Server) defaultPropertyDefinitionFilter(
 	session *pb.Session,
-) (*types.PropertySchemaFilter, error) {
+) (*types.PropertyDefinitionFilter, error) {
 	part, err := s.store.PartitionGet(session.Partition)
 	if err != nil {
 		if err == errors.ErrNotFound {
 			// Just return nil since clearly we can have no
-			// property schemas matching an unknown partition
+			// property definitions matching an unknown partition
 			s.log.L3(
-				"'%s' listed property schemas with no filters "+
+				"'%s' listed property definitions with no filters "+
 					"and supplied unknown partition '%s' in the session",
 				session.User,
 				session.Partition,
@@ -26,28 +26,28 @@ func (s *Server) defaultPropertySchemaFilter(
 		}
 		return nil, err
 	}
-	return &types.PropertySchemaFilter{
+	return &types.PropertyDefinitionFilter{
 		Partition: part,
 	}, nil
 }
 
-// expandPropertySchemaFilter is used to expand an PropertySchemaFilter, which may contain
+// expandPropertyDefinitionFilter is used to expand an PropertyDefinitionFilter, which may contain
 // PartitionFilter and ObjectTypeFilter objects that themselves may resolve to
-// multiple partitions or object types, to a set of types.PropertySchemaFilter
-// objects. A types.PropertySchemaFilter is used to describe a filter on objects in
+// multiple partitions or object types, to a set of types.PropertyDefinitionFilter
+// objects. A types.PropertyDefinitionFilter is used to describe a filter on objects in
 // a *specific* partition and having a *specific* object type.
-func (s *Server) expandPropertySchemaFilter(
+func (s *Server) expandPropertyDefinitionFilter(
 	session *pb.Session,
-	filter *pb.PropertySchemaFilter,
-) ([]*types.PropertySchemaFilter, error) {
-	res := make([]*types.PropertySchemaFilter, 0)
-	// A set of partition UUIDs that we'll create types.PropertySchemaFilters with.
+	filter *pb.PropertyDefinitionFilter,
+) ([]*types.PropertyDefinitionFilter, error) {
+	res := make([]*types.PropertyDefinitionFilter, 0)
+	// A set of partition UUIDs that we'll create types.PropertyDefinitionFilters with.
 	// These are the UUIDs of any partitions that match the PartitionFilter in
-	// the supplied pb.PropertySchemaFilter
+	// the supplied pb.PropertyDefinitionFilter
 	partitions := make([]*pb.Partition, 0)
-	// A set of object type codes that we'll create types.PropertySchemaFilters
+	// A set of object type codes that we'll create types.PropertyDefinitionFilters
 	// with. These are the codes of object types that match the
-	// ObjectTypeFilter in the supplied PropertySchemaFilter
+	// ObjectTypeFilter in the supplied PropertyDefinitionFilter
 	objTypes := make([]*pb.ObjectType, 0)
 
 	if filter.Partition != nil {
@@ -66,7 +66,7 @@ func (s *Server) expandPropertySchemaFilter(
 		if err != nil {
 			if err == errors.ErrNotFound {
 				// Just return nil since clearly we can have no
-				// property schemas matching an unknown partition
+				// property definitions matching an unknown partition
 				s.log.L3(
 					"'%s' listed objects with no filters "+
 						"and supplied unknown partition '%s' in the session",
@@ -91,18 +91,18 @@ func (s *Server) expandPropertySchemaFilter(
 	}
 
 	// OK, if we've expanded partition or object type, we need to construct
-	// types.PropertySchemaFilter objects containing the combination of all the
+	// types.PropertyDefinitionFilter objects containing the combination of all the
 	// expanded partitions and object types.
 	if len(partitions) > 0 {
 		for _, p := range partitions {
 			if len(objTypes) == 0 {
-				f := &types.PropertySchemaFilter{
+				f := &types.PropertyDefinitionFilter{
 					Partition: p,
 				}
 				res = append(res, f)
 			} else {
 				for _, ot := range objTypes {
-					f := &types.PropertySchemaFilter{
+					f := &types.PropertyDefinitionFilter{
 						Partition: p,
 						Type:      ot,
 					}
@@ -112,7 +112,7 @@ func (s *Server) expandPropertySchemaFilter(
 		}
 	} else if len(objTypes) > 0 {
 		for _, ot := range objTypes {
-			f := &types.PropertySchemaFilter{
+			f := &types.PropertyDefinitionFilter{
 				Type: ot,
 			}
 			res = append(res, f)
@@ -120,16 +120,16 @@ func (s *Server) expandPropertySchemaFilter(
 	}
 
 	// If we've expanded the supplied partition filters into multiple
-	// types.PropertySchemaFilters, then we need to add our supplied
-	// PropertySchemaFilter's search and use prefix for the property key.  If
+	// types.PropertyDefinitionFilters, then we need to add our supplied
+	// PropertyDefinitionFilter's search and use prefix for the property key.  If
 	// we supplied no partition filters, then go ahead and just return a single
-	// types.PropertySchemaFilter with the search term and prefix indicator for
+	// types.PropertyDefinitionFilter with the search term and prefix indicator for
 	// the property key.
 	if filter.Search != "" {
 		if len(res) > 0 {
 			// Now that we've expanded our partitions and object types, add in the
-			// original PropertySchemaFilter's Search and UsePrefix for each
-			// types.PropertySchemaFilter we've created
+			// original PropertyDefinitionFilter's Search and UsePrefix for each
+			// types.PropertyDefinitionFilter we've created
 			for _, pf := range res {
 				pf.Search = filter.Search
 				pf.UsePrefix = filter.UsePrefix
@@ -137,7 +137,7 @@ func (s *Server) expandPropertySchemaFilter(
 		} else {
 			res = append(
 				res,
-				&types.PropertySchemaFilter{
+				&types.PropertyDefinitionFilter{
 					Search:    filter.Search,
 					UsePrefix: filter.UsePrefix,
 				},
@@ -147,27 +147,27 @@ func (s *Server) expandPropertySchemaFilter(
 	return res, nil
 }
 
-// normalizePropertySchemaFilters is passed a Session object and a slice of
-// PropertySchemaFilter protobuffer messages. It then expands those supplied
-// PropertySchemaFilter messages if they contain partition or object type
-// filters that have a prefix. If no PropertySchemaFilter messages are passed
-// to this method, it returns the default types.PropertySchemaFilter which will
-// return all property schemas for the Session's partition
-func (s *Server) normalizePropertySchemaFilters(
+// normalizePropertyDefinitionFilters is passed a Session object and a slice of
+// PropertyDefinitionFilter protobuffer messages. It then expands those supplied
+// PropertyDefinitionFilter messages if they contain partition or object type
+// filters that have a prefix. If no PropertyDefinitionFilter messages are passed
+// to this method, it returns the default types.PropertyDefinitionFilter which will
+// return all property definitions for the Session's partition
+func (s *Server) normalizePropertyDefinitionFilters(
 	session *pb.Session,
-	any []*pb.PropertySchemaFilter,
-) ([]*types.PropertySchemaFilter, error) {
-	res := make([]*types.PropertySchemaFilter, 0)
+	any []*pb.PropertyDefinitionFilter,
+) ([]*types.PropertyDefinitionFilter, error) {
+	res := make([]*types.PropertyDefinitionFilter, 0)
 	for _, filter := range any {
-		if pfs, err := s.expandPropertySchemaFilter(session, filter); err != nil {
+		if pfs, err := s.expandPropertyDefinitionFilter(session, filter); err != nil {
 			if err == errors.ErrNotFound {
-				// Just continue since clearly we can have no property schemas
+				// Just continue since clearly we can have no property definitions
 				// matching an unknown partition but we need to OR together all
 				// filters, which is why we don't just return nil here
 				continue
 			}
 			s.log.ERR(
-				"normalizePropertySchemaFilters: failed to expand property "+
+				"normalizePropertyDefinitionFilters: failed to expand property "+
 					"schema filter %s: %s",
 				filter,
 				err,
@@ -183,9 +183,9 @@ func (s *Server) normalizePropertySchemaFilters(
 	if len(res) == 0 {
 		if len(any) == 0 {
 			// At least one filter should have been expanded
-			defFilter, err := s.defaultPropertySchemaFilter(session)
+			defFilter, err := s.defaultPropertyDefinitionFilter(session)
 			if err != nil {
-				return nil, ErrFailedExpandPropertySchemaFilters
+				return nil, ErrFailedExpandPropertyDefinitionFilters
 			}
 			res = append(res, defFilter)
 		} else {

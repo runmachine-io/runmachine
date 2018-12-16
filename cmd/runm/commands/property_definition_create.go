@@ -9,14 +9,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var propertySchemaCreateCommand = &cobra.Command{
+var propertyDefinitionCreateCommand = &cobra.Command{
 	Use:   "create",
-	Short: "Create a new property schema",
-	Run:   propertySchemaCreate,
+	Short: "Create a new property definition",
+	Run:   propertyDefinitionCreate,
 }
 
-func setupPropertySchemaCreateFlags() {
-	propertySchemaCreateCommand.Flags().StringVarP(
+func setupPropertyDefinitionCreateFlags() {
+	propertyDefinitionCreateCommand.Flags().StringVarP(
 		&cliObjectDocPath,
 		"file", "f",
 		"",
@@ -25,25 +25,25 @@ func setupPropertySchemaCreateFlags() {
 }
 
 func init() {
-	setupPropertySchemaCreateFlags()
+	setupPropertyDefinitionCreateFlags()
 }
 
-func propertySchemaCreate(cmd *cobra.Command, args []string) {
+func propertyDefinitionCreate(cmd *cobra.Command, args []string) {
 	conn := connect()
 	defer conn.Close()
 
 	client := pb.NewRunmMetadataClient(conn)
-	req := &pb.PropertySchemaSetRequest{
+	req := &pb.PropertyDefinitionSetRequest{
 		Session: getSession(),
 		Format:  pb.PayloadFormat_YAML,
 		Payload: readInputDocumentOrExit(),
 	}
 
-	resp, err := client.PropertySchemaSet(context.Background(), req)
+	resp, err := client.PropertyDefinitionSet(context.Background(), req)
 	exitIfError(err)
-	obj := resp.PropertySchema
+	obj := resp.PropertyDefinition
 	if !quiet {
-		fmt.Printf("Successfully created property schema\n")
+		fmt.Printf("Successfully created property definition\n")
 		if verbose {
 			fmt.Printf("Partition:    %s\n", obj.Partition)
 			fmt.Printf("Type:         %s\n", obj.Type)

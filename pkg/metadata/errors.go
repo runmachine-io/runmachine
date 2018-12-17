@@ -36,7 +36,7 @@ var (
 	)
 	ErrFailedExpandPropertyDefinitionFilters = status.Errorf(
 		codes.FailedPrecondition,
-		"failed to expand property meta filters.",
+		"failed to expand property definition filters.",
 	)
 	ErrMultipleRecordsFound = status.Errorf(
 		codes.FailedPrecondition,
@@ -64,11 +64,11 @@ var (
 	)
 	ErrPropertyDefinitionFilterRequired = status.Errorf(
 		codes.FailedPrecondition,
-		"property meta filter is required.",
+		"property definition filter is required.",
 	)
 	ErrPropertyDefinitionObjectRequired = status.Errorf(
 		codes.FailedPrecondition,
-		"property meta object is required.",
+		"property definition object is required.",
 	)
 	ErrSearchRequired = status.Errorf(
 		codes.FailedPrecondition,
@@ -93,6 +93,14 @@ var (
 	ErrObjectDeleteFailed = status.Errorf(
 		codes.FailedPrecondition,
 		"failed to delete object (check response errors collection).",
+	)
+	ErrAtLeastOnePropertyDefinitionFilterRequired = status.Errorf(
+		codes.FailedPrecondition,
+		"at least one property definition filter is required.",
+	)
+	ErrPropertyDefinitionDeleteFailed = status.Errorf(
+		codes.FailedPrecondition,
+		"failed to delete property definition (check response errors collection).",
 	)
 )
 

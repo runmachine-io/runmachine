@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"fmt"
 	"strings"
 
 	etcd "github.com/coreos/etcd/clientv3"
@@ -16,6 +17,43 @@ const (
 	// $ROOT/partitions/by-uuid/{partition_uuid}/property-definitions
 	_PROPERTY_DEFINITIONS_BY_TYPE_KEY = "property-definitions/by-type/"
 )
+
+// PropertyDefinitionDelete removes a property definition from storage and
+// triggers a recalculation of the object type's schema
+func (s *Store) PropertyDefinitionDelete(
+	pdwr *types.PropertyDefinitionWithReferences,
+) error {
+
+	partUuid := pdwr.Partition.Uuid
+	objType := pdwr.Type.Code
+	propDefKey := pdwr.Definition.Key
+
+	kv := s.kvPartition(partUuid)
+	key := _PROPERTY_DEFINITIONS_BY_TYPE_KEY + objType + "/" + propDefKey
+
+	ctx, cancel := s.requestCtx()
+	defer cancel()
+
+	// creates all the indexes and the objects/by-uuid/ entry using a
+	// transaction that ensures if another thread modified anything underneath
+	// us, we return an error
+	then := []etcd.Op{
+		// Delete the entry for the property definition
+		etcd.OpDelete(key),
+	}
+	// TODO(jaypipes): Should we put some If(...) clause in here that verifies
+	// the property definition key existed? Not sure it's worth it, really...
+	resp, err := kv.Txn(ctx).Then(then...).Commit()
+
+	if err != nil {
+		s.log.ERR("storage.PropertyDefinitionDelete: failed to create txn in etcd: %v", err)
+		return errors.ErrUnknown
+	} else if resp.Succeeded == false {
+		s.log.ERR("storage.PropertyDefinitionDelete: txn commit failed in etcd")
+		return errors.ErrUnknown
+	}
+	return nil
+}
 
 // PropertyDefinitionGet returns a property definition by partition UUID, object type
 // and property key.
@@ -72,6 +110,70 @@ func (s *Store) PropertyDefinitionList(
 	for _, obj := range objs {
 		res[x] = obj
 		x += 1
+	}
+	return res, nil
+}
+
+// PropertyDefinitionListWithReferences returns a slice of pointers to
+// PropertyDefinitionWithReference structs that have had Partition and
+// ObjectType relations expanded inline.
+func (s *Store) PropertyDefinitionListWithReferences(
+	any []*types.PropertyDefinitionFilter,
+) ([]*types.PropertyDefinitionWithReferences, error) {
+	objects, err := s.PropertyDefinitionList(any)
+	if err != nil {
+		return nil, err
+	}
+
+	// NOTE(jaypipes): store.PropertyDefinitionDelete() accepts a single
+	// argument of type PropertyDefinitionWithReferences. Here, we have two
+	// maps for Partition and ObjectType messages that we fetch by partition
+	// UUID or object type code while iterating over the objects to delete.
+	// These Partition and ObjectType messages are included in the
+	// PropertyDefinitionWithReferences structs that are passed to
+	// PropertyDefinitionDelete. Gotta love implementing joins in
+	// Golang/memory... :(
+	partitions := make(map[string]*pb.Partition, 0)
+	objTypes := make(map[string]*pb.ObjectType, 0)
+	res := make([]*types.PropertyDefinitionWithReferences, len(objects))
+	for x, obj := range objects {
+		part, ok := partitions[obj.Partition]
+		if !ok {
+			part, err = s.PartitionGet(obj.Partition)
+			if err != nil {
+				msg := fmt.Sprintf(
+					"failed to find partition %s while attempting to delete "+
+						"property definition with property key %s of object "+
+						"type %s",
+					obj.Partition,
+					obj.Key,
+					obj.Type,
+				)
+				s.log.ERR(msg)
+				return nil, errors.ErrPartitionNotFound(obj.Partition)
+			}
+		}
+		ot, ok := objTypes[obj.Type]
+		if !ok {
+			ot, err = s.ObjectTypeGet(obj.Type)
+			if err != nil {
+				msg := fmt.Sprintf(
+					"failed to find object type %s while attempting to delete "+
+						"property definition with property key %s in partition %s",
+					obj.Type,
+					obj.Key,
+					obj.Partition,
+				)
+				s.log.ERR(msg)
+				return nil, errors.ErrObjectTypeNotFound(obj.Type)
+			}
+		}
+		owr := &types.PropertyDefinitionWithReferences{
+			Partition:  part,
+			Type:       ot,
+			Definition: obj,
+		}
+		res[x] = owr
 	}
 	return res, nil
 }

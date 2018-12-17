@@ -36,44 +36,36 @@ func (s *Server) PropertyDefinitionGet(
 	if req.Filter == nil || req.Filter.Search == "" {
 		return nil, ErrPropertyDefinitionFilterRequired
 	}
-
 	if req.Filter.Type == nil {
 		return nil, ErrObjectTypeRequired
 	}
-	// TODO(jaypipes): Look up whether object type exists
-
-	var partSearch string
-	if req.Filter.Partition != nil {
-		partSearch = req.Filter.Partition.Search
-	} else {
-		// Use the session's partition if not specified
-		partSearch = req.Session.Partition
-	}
-	if partSearch == "" {
-		return nil, ErrPartitionRequired
-	}
-	part, err := s.store.PartitionGet(partSearch)
-	if err != nil {
-		if err == errors.ErrNotFound {
-			return nil, ErrPartitionUnknown
-		}
-		return nil, ErrUnknown
-	}
-	// TODO(jaypipes): AUTHZ check user can use partition
-
-	obj, err := s.store.PropertyDefinitionGet(
-		part.Uuid,
-		req.Filter.Type.Search,
-		req.Filter.Search,
-	)
+	filters, err := s.expandPropertyDefinitionFilter(req.Session, req.Filter)
 	if err != nil {
 		if err == errors.ErrNotFound {
 			return nil, ErrNotFound
 		}
-		// Don't leak internal errors out
+		// We don't want to expose internal errors to the user, so just return
+		// an unknown error after logging it.
+		s.log.ERR(
+			"failed to retrieve property definition with search filter %s: %s",
+			req.Filter.Search,
+			err,
+		)
 		return nil, ErrUnknown
 	}
-	return obj, nil
+	if len(filters) == 0 {
+		return nil, ErrFailedExpandPropertyDefinitionFilters
+	}
+
+	objects, err := s.store.PropertyDefinitionList(filters)
+	if err != nil {
+		return nil, err
+	}
+	if len(objects) != 1 {
+		return nil, ErrMultipleRecordsFound
+	}
+
+	return objects[0], nil
 }
 
 // PropertyDefinitionList streams PropertyDefinition protobuffer messages representing

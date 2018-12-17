@@ -55,11 +55,11 @@ role or group that the user is acting as.
 An object is something that has all of the following characteristics:
 
 * It has external human-readable name that is unique within either the
-  [scope](#Object Type Scope) of a partition or the combination of the
+  [scope](#object-type-scope) of a partition or the combination of the
   partition and project
 * It has a globally-unique identifier (UUID)
-* It can have [properties](#Property) associated with it
-* It can have [tags](#Tag) associated with it
+* It can have [properties](#property) associated with it
+* It can have [tags](#tag) associated with it
 
 ## Object Type
 
@@ -70,7 +70,7 @@ what the type of object is used for.
 # Object Type Scope
 
 An object type is either *partition-scoped* or *project-scoped*.
-Partition-scoped object's have human-readable names that are guaranteed to be
+Partition-scoped objects have human-readable names that are guaranteed to be
 unique within a partition. Project-scoped objects have human-readable names
 that are unique within a partition and project combination.
 
@@ -78,23 +78,23 @@ that are unique within a partition and project combination.
 
 A *property* is simply a key/value pair.
 
-An [object](#Object) may have zero or more properties associated with it.
+An [object](#object) may have zero or more properties associated with it.
 
-Properties may have a [property definition](#Property Definition) that
+Properties may have a [property definition](#property-definition) that
 constrains the values for the property.
 
 ## Tag
 
-A *tag* is a simple string. [Objects](#Object) may have zero or more tags
+A *tag* is a simple string. [Objects](#object) may have zero or more tags
 associated with them. There are no constraints placed on a tag's string value.
 Any user with read access to an object's partition (or project if the object is
-[project-scoped](#Object Type Scope)) may view an object's tags. Any user with
+[project-scoped](#object-type-scope)) may view an object's tags. Any user with
 write access to the object may view the object's tags.
 
 ## Property Definition
 
 When creating or updating objects in the system, a user may associate one or
-more [properties](#Properties) with that object. Administrators may set up
+more [properties](#properties) with that object. Administrators may set up
 constraints on the type and format of the values of these properties by setting
 a *property definition* for a specific partition, object type and property key
 combination.

@@ -11,6 +11,8 @@ import (
 	"github.com/runmachine-io/runmachine/pkg/metadata/types"
 )
 
+// PropertyDefinitionDelete looks up one or more property definitions and
+// deletes the definition from backend storage.
 func (s *Server) PropertyDefinitionDelete(
 	ctx context.Context,
 	req *pb.PropertyDefinitionDeleteRequest,
@@ -18,7 +20,50 @@ func (s *Server) PropertyDefinitionDelete(
 	if err := checkSession(req.Session); err != nil {
 		return nil, err
 	}
-	return nil, nil
+	if len(req.Any) == 0 {
+		return nil, ErrAtLeastOnePropertyDefinitionFilterRequired
+	}
+
+	filters, err := s.normalizePropertyDefinitionFilters(req.Session, req.Any)
+	if err != nil {
+		return nil, err
+	}
+	// Be extra-careful not to pass empty filters since that will delete all
+	// objects...
+	if len(filters) == 0 {
+		return nil, ErrAtLeastOnePropertyDefinitionFilterRequired
+	}
+
+	pdwrs, err := s.store.PropertyDefinitionListWithReferences(filters)
+	if err != nil {
+		return nil, err
+	}
+
+	resErrors := make([]string, 0)
+	numDeleted := uint64(0)
+	for _, pdwr := range pdwrs {
+		if err = s.store.PropertyDefinitionDelete(pdwr); err != nil {
+			resErrors = append(resErrors, err.Error())
+		}
+		// TODO(jaypipes): Send an event notification
+		s.log.L1(
+			"user %s deleted property definition for property key %s of "+
+				"object type %s in partition %s",
+			req.Session.User,
+			pdwr.Definition.Key,
+			pdwr.Type.Code,
+			pdwr.Partition.Uuid,
+		)
+		numDeleted += 1
+	}
+	resp := &pb.PropertyDefinitionDeleteResponse{
+		Errors:     resErrors,
+		NumDeleted: numDeleted,
+	}
+	if len(resErrors) > 0 {
+		return resp, ErrPropertyDefinitionDeleteFailed
+	}
+	return resp, nil
 }
 
 // PropertyDefinitionGet looks up a property definition by partition, object type and

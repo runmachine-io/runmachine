@@ -94,6 +94,14 @@ var (
 		codes.FailedPrecondition,
 		"failed to delete object (check response errors collection).",
 	)
+	ErrAtLeastOnePropertyDefinitionFilterRequired = status.Errorf(
+		codes.FailedPrecondition,
+		"at least one property definition filter is required.",
+	)
+	ErrPropertyDefinitionDeleteFailed = status.Errorf(
+		codes.FailedPrecondition,
+		"failed to delete property definition (check response errors collection).",
+	)
 )
 
 func errPartitionNotFound(partition string) error {

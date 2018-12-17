@@ -16,6 +16,7 @@ func init() {
 	propertyDefinitionCommand.AddCommand(propertyDefinitionListCommand)
 	propertyDefinitionCommand.AddCommand(propertyDefinitionGetCommand)
 	propertyDefinitionCommand.AddCommand(propertyDefinitionCreateCommand)
+	propertyDefinitionCommand.AddCommand(propertyDefinitionDeleteCommand)
 }
 
 func printPropertyDefinition(obj *pb.PropertyDefinition) {

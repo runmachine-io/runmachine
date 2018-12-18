@@ -247,8 +247,15 @@ func (s *Server) ObjectSet(
 		return nil, err
 	}
 
+	newObject := owr.Object.Uuid == ""
+	if !newObject {
+		// Check to see if an object with this UUID exists. If it does, we
+		// switch to the update code path
+
+	}
+
 	var changed *types.ObjectWithReferences
-	if owr.Object.Uuid == "" {
+	if newObject {
 		s.log.L3(
 			"creating new object of type %s in partition %s with name %s...",
 			owr.Type.Code,
@@ -266,6 +273,9 @@ func (s *Server) ObjectSet(
 			owr.Partition.Uuid,
 			owr.Object.Name,
 		)
+	} else {
+		s.log.L3("updating object with UUID %s", owr.Object.Uuid)
+		// TODO(jaypipes): Implement update code path
 	}
 
 	return &pb.ObjectSetResponse{

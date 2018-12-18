@@ -1,6 +1,8 @@
 package types
 
-import "fmt"
+import (
+	"fmt"
+)
 
 var (
 	// the set of valid type strings that may appear in the property schema
@@ -41,6 +43,8 @@ type PropertyDefinition struct {
 	// JSONSchema property type document represented in YAML, dictating the
 	// constraints applied by this schema to the property's value
 	Schema *PropertySchema `yaml:"schema"`
+	// Indicates the property is required for all objects of this object type
+	Required bool `yaml:"required"`
 	// TODO(jaypipes): Add access permissions
 }
 
@@ -72,9 +76,6 @@ type PropertySchema struct {
 	// exists in the schema document and no types are specified, type is
 	// assumed to be string
 	Enum []string `yaml:"enum"`
-	// Indicates the property is required for all objects of this property
-	// schema's object type
-	Required bool `yaml:"required"`
 	// Indicates the property's value must be a multiple of this number. The
 	// property's type must be either "number" or "integer"
 	MultipleOf *uint `yaml:"multiple_of"`
@@ -161,19 +162,14 @@ func (doc *PropertySchema) JSONSchemaString() string {
 	if doc == nil {
 		return ""
 	}
-	res := "required: "
-	if doc.Required {
-		res += "true\n"
-	} else {
-		res += "false\n"
-	}
+	res := ""
 	switch len(doc.Types) {
 	case 0:
 		break
 	case 1:
-		res += "type: " + doc.Types[0]
+		res += "type: " + doc.Types[0] + "\n"
 	default:
-		res += "types:\n"
+		res += "type:\n"
 		for _, t := range doc.Types {
 			res += "  - " + t + "\n"
 		}
@@ -184,5 +180,26 @@ func (doc *PropertySchema) JSONSchemaString() string {
 			res += "  - " + val + "\n"
 		}
 	}
-	return ""
+	if doc.MultipleOf != nil {
+		res += fmt.Sprintf("multipleOf: %d\n", *doc.MultipleOf)
+	}
+	if doc.Minimum != nil {
+		res += fmt.Sprintf("minimum: %d\n", *doc.Minimum)
+	}
+	if doc.Maximum != nil {
+		res += fmt.Sprintf("maximum: %d\n", *doc.Maximum)
+	}
+	if doc.MinLength != nil {
+		res += fmt.Sprintf("minLength: %d\n", *doc.MinLength)
+	}
+	if doc.MaxLength != nil {
+		res += fmt.Sprintf("maxLength: %d\n", *doc.MaxLength)
+	}
+	if doc.Format != "" {
+		res += "format: " + doc.Format + "\n"
+	}
+	if doc.Pattern != "" {
+		res += "pattern: " + doc.Pattern + "\n"
+	}
+	return res
 }

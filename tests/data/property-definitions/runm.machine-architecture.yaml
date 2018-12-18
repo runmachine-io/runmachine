@@ -1,6 +1,7 @@
 partition: part0
 type: runm.machine
 key: architecture
+required: true
 schema:
   type: string
   enum:

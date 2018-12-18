@@ -85,15 +85,6 @@ min_length: 0
 				MinLength: &_zero_us,
 			},
 		},
-		// Check required
-		{
-			doc: `
-required: true
-`,
-			expect: types.PropertySchema{
-				Required: true,
-			},
-		},
 	}
 
 	for _, test := range tests {

@@ -257,21 +257,22 @@ func (s *Store) propertyDefinitionsGetByFilter(
 
 // PropertyDefinitionCreate writes the supplied PropertyDefinition object to the key at
 // $PARTITION/property-definitions/by-type/{object_type}/{property_key}/{version}
+// and returns a fully-referenced property definition object that was created.
 func (s *Store) PropertyDefinitionCreate(
-	obj *types.PropertyDefinitionWithReferences,
-) error {
+	pdwr *types.PropertyDefinitionWithReferences,
+) (*types.PropertyDefinitionWithReferences, error) {
 	ctx, cancel := s.requestCtx()
 	defer cancel()
 
-	partUuid := obj.Partition.Uuid
-	objType := obj.Type.Code
-	propDefKey := obj.Definition.Key
+	partUuid := pdwr.Partition.Uuid
+	objType := pdwr.Type.Code
+	propDefKey := pdwr.Definition.Key
 	kv := s.kvPartition(partUuid)
 	key := _PROPERTY_DEFINITIONS_BY_TYPE_KEY + objType + "/" + propDefKey
 
-	value, err := proto.Marshal(obj.Definition)
+	value, err := proto.Marshal(pdwr.Definition)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// create the property definition using a transaction that ensures another
@@ -283,10 +284,10 @@ func (s *Store) PropertyDefinitionCreate(
 
 	if err != nil {
 		s.log.ERR("failed to create txn in etcd: %v", err)
-		return err
+		return nil, err
 	} else if resp.Succeeded == false {
 		s.log.L3("another thread already created key %s.", key)
-		return errors.ErrGenerationConflict
+		return nil, errors.ErrGenerationConflict
 	}
-	return nil
+	return pdwr, nil
 }

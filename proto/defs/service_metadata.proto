@@ -128,12 +128,6 @@ message ObjectGetRequest {
     ObjectFilter filter = 2;
 }
 
-message ObjectSetFields {
-    Partition partition = 1;
-    ObjectType object_type = 2;
-    StringValue name = 3;
-}
-
 message ObjectSetRequest {
     Session session = 1;
     PayloadFormat format = 2;

@@ -1,6 +1,8 @@
 package types
 
-import "fmt"
+import (
+	"fmt"
+)
 
 var (
 	// the set of valid type strings that may appear in the property schema
@@ -171,9 +173,9 @@ func (doc *PropertySchema) JSONSchemaString() string {
 	case 0:
 		break
 	case 1:
-		res += "type: " + doc.Types[0]
+		res += "type: " + doc.Types[0] + "\n"
 	default:
-		res += "types:\n"
+		res += "type:\n"
 		for _, t := range doc.Types {
 			res += "  - " + t + "\n"
 		}
@@ -184,5 +186,26 @@ func (doc *PropertySchema) JSONSchemaString() string {
 			res += "  - " + val + "\n"
 		}
 	}
-	return ""
+	if doc.MultipleOf != nil {
+		res += fmt.Sprintf("multipleOf: %d\n", *doc.MultipleOf)
+	}
+	if doc.Minimum != nil {
+		res += fmt.Sprintf("minimum: %d\n", *doc.Minimum)
+	}
+	if doc.Maximum != nil {
+		res += fmt.Sprintf("maximum: %d\n", *doc.Maximum)
+	}
+	if doc.MinLength != nil {
+		res += fmt.Sprintf("minLength: %d\n", *doc.MinLength)
+	}
+	if doc.MaxLength != nil {
+		res += fmt.Sprintf("maxLength: %d\n", *doc.MaxLength)
+	}
+	if doc.Format != "" {
+		res += "format: " + doc.Format + "\n"
+	}
+	if doc.Pattern != "" {
+		res += "pattern: " + doc.Pattern + "\n"
+	}
+	return res
 }

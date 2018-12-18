@@ -1,0 +1,8 @@
+partition: part0
+type: runm.image
+key: owner_email
+schema:
+  type: string
+  format: idn-email
+  minLength: 5
+  maxLength: 255

@@ -233,7 +233,8 @@ func (s *Server) PropertyDefinitionSet(
 	if err != nil {
 		if err != errors.ErrNotFound {
 			s.log.ERR(
-				"Failed trying to find existing property definition for %s:%s:%s: %s",
+				"Failed trying to find existing property definition "+
+					"for %s:%s:%s: %s",
 				partition,
 				objType,
 				propKey,
@@ -242,10 +243,17 @@ func (s *Server) PropertyDefinitionSet(
 			// NOTE(jaypipes): we don't return internal errors
 			return nil, ErrUnknown
 		}
+	} else {
+		def = existing
 	}
 
 	if existing == nil {
-		s.log.L3("Creating new property definition %s:%s:%s", partition, objType, propKey)
+		s.log.L3(
+			"creating new property definition %s:%s:%s...",
+			partition,
+			objType,
+			propKey,
+		)
 
 		// Set default access permissions to read/write by any role in the
 		// creating project
@@ -263,19 +271,27 @@ func (s *Server) PropertyDefinitionSet(
 		// TODO(jaypipes): Make sure that the project that created the property
 		// schema can read and write it
 
-		if err := s.store.PropertyDefinitionCreate(pdwr); err != nil {
+		if _, err := s.store.PropertyDefinitionCreate(pdwr); err != nil {
 			return nil, err
 		}
-		resp := &pb.PropertyDefinitionSetResponse{
-			PropertyDefinition: def,
-		}
-		s.log.L1("Created new property definition %s:%s:%s", partition, objType, propKey)
-		return resp, nil
+		s.log.L1(
+			"created new property definition %s:%s:%s",
+			partition,
+			objType,
+			propKey,
+		)
+	} else {
+		s.log.L3(
+			"updating property definition %s:%s:%s...",
+			partition,
+			objType,
+			propKey,
+		)
+		// TODO(jaypipes): Update the property definition...
 	}
 
-	s.log.L3("Updating property definition %s:%s:%s", partition, objType, propKey)
-
-	// TODO(jaypipes): Update the property definition...
-
-	return nil, nil
+	resp := &pb.PropertyDefinitionSetResponse{
+		PropertyDefinition: def,
+	}
+	return resp, nil
 }

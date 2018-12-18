@@ -9,14 +9,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var propertyDefinitionCreateCommand = &cobra.Command{
-	Use:   "create",
-	Short: "Create a new property definition",
-	Run:   propertyDefinitionCreate,
+var propertyDefinitionSetCommand = &cobra.Command{
+	Use:   "set",
+	Short: "Create or update a property definition",
+	Run:   propertyDefinitionSet,
 }
 
-func setupPropertyDefinitionCreateFlags() {
-	propertyDefinitionCreateCommand.Flags().StringVarP(
+func setupPropertyDefinitionSetFlags() {
+	propertyDefinitionSetCommand.Flags().StringVarP(
 		&cliObjectDocPath,
 		"file", "f",
 		"",
@@ -25,10 +25,10 @@ func setupPropertyDefinitionCreateFlags() {
 }
 
 func init() {
-	setupPropertyDefinitionCreateFlags()
+	setupPropertyDefinitionSetFlags()
 }
 
-func propertyDefinitionCreate(cmd *cobra.Command, args []string) {
+func propertyDefinitionSet(cmd *cobra.Command, args []string) {
 	conn := connect()
 	defer conn.Close()
 
@@ -43,7 +43,7 @@ func propertyDefinitionCreate(cmd *cobra.Command, args []string) {
 	exitIfError(err)
 	obj := resp.PropertyDefinition
 	if !quiet {
-		fmt.Printf("Successfully created property definition\n")
+		fmt.Printf("ok\n")
 		if verbose {
 			fmt.Printf("Partition:    %s\n", obj.Partition)
 			fmt.Printf("Type:         %s\n", obj.Type)

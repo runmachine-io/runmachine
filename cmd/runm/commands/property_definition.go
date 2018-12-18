@@ -15,7 +15,7 @@ var propertyDefinitionCommand = &cobra.Command{
 func init() {
 	propertyDefinitionCommand.AddCommand(propertyDefinitionListCommand)
 	propertyDefinitionCommand.AddCommand(propertyDefinitionGetCommand)
-	propertyDefinitionCommand.AddCommand(propertyDefinitionCreateCommand)
+	propertyDefinitionCommand.AddCommand(propertyDefinitionSetCommand)
 	propertyDefinitionCommand.AddCommand(propertyDefinitionDeleteCommand)
 }
 

@@ -43,6 +43,8 @@ type PropertyDefinition struct {
 	// JSONSchema property type document represented in YAML, dictating the
 	// constraints applied by this schema to the property's value
 	Schema *PropertySchema `yaml:"schema"`
+	// Indicates the property is required for all objects of this object type
+	Required bool `yaml:"required"`
 	// TODO(jaypipes): Add access permissions
 }
 
@@ -74,9 +76,6 @@ type PropertySchema struct {
 	// exists in the schema document and no types are specified, type is
 	// assumed to be string
 	Enum []string `yaml:"enum"`
-	// Indicates the property is required for all objects of this property
-	// schema's object type
-	Required bool `yaml:"required"`
 	// Indicates the property's value must be a multiple of this number. The
 	// property's type must be either "number" or "integer"
 	MultipleOf *uint `yaml:"multiple_of"`
@@ -163,12 +162,7 @@ func (doc *PropertySchema) JSONSchemaString() string {
 	if doc == nil {
 		return ""
 	}
-	res := "required: "
-	if doc.Required {
-		res += "true\n"
-	} else {
-		res += "false\n"
-	}
+	res := ""
 	switch len(doc.Types) {
 	case 0:
 		break

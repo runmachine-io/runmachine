@@ -201,10 +201,11 @@ func (s *Server) validatePropertyDefinitionSetRequest(
 		Partition: part,
 		Type:      objType,
 		Definition: &pb.PropertyDefinition{
-			Partition: part.Uuid,
-			Type:      objType.Code,
-			Key:       obj.Key,
-			Schema:    obj.Schema.JSONSchemaString(),
+			Partition:  part.Uuid,
+			Type:       objType.Code,
+			Key:        obj.Key,
+			IsRequired: obj.Required,
+			Schema:     obj.Schema.JSONSchemaString(),
 		},
 	}, nil
 }

@@ -45,10 +45,7 @@ func propertyDefinitionSet(cmd *cobra.Command, args []string) {
 	if !quiet {
 		fmt.Printf("ok\n")
 		if verbose {
-			fmt.Printf("Partition:    %s\n", obj.Partition)
-			fmt.Printf("Type:         %s\n", obj.Type)
-			fmt.Printf("Key:          %s\n", obj.Key)
-			fmt.Printf("Schema:\n%s\n", obj.Schema)
+			printPropertyDefinition(obj)
 		}
 	}
 }

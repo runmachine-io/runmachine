@@ -1,6 +1,7 @@
 partition: part0
 type: runm.machine
 key: architecture
+required: true
 schema:
   type: string
   enum:
@@ -8,4 +9,3 @@ schema:
     - x86_64
     - arm
     - arm64
-  required: true

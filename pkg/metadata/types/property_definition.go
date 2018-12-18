@@ -67,9 +67,8 @@ type PropertyDefinitionWithReferences struct {
 // message that will eb stored in backend storage
 func TranslatePropertySchema(as *apitypes.PropertySchema) *pb.PropertySchema {
 	res := &pb.PropertySchema{
-		Types:      []pb.PropertySchema_PropertyValueType{},
-		IsRequired: as.Required,
-		Pattern:    as.Pattern,
+		Types:   []pb.PropertySchema_Type{},
+		Pattern: as.Pattern,
 	}
 	if len(as.Types) > 0 {
 		for _, astype := range as.Types {

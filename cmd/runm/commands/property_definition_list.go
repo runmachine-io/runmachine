@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"strings"
 
 	"golang.org/x/net/context"
@@ -152,7 +153,7 @@ func propertyDefinitionList(cmd *cobra.Command, args []string) {
 		"Partition",
 		"Type",
 		"Key",
-		"Schema",
+		"Required?",
 	}
 	rows := make([][]string, len(msgs))
 	for x, obj := range msgs {
@@ -160,7 +161,7 @@ func propertyDefinitionList(cmd *cobra.Command, args []string) {
 			obj.Partition,
 			obj.Type,
 			obj.Key,
-			obj.Schema,
+			strconv.FormatBool(obj.IsRequired),
 		}
 	}
 	table := tablewriter.NewWriter(os.Stdout)

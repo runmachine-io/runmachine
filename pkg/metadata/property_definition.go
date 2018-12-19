@@ -140,62 +140,49 @@ func (s *Server) PropertyDefinitionList(
 	return nil
 }
 
-// validatePropertyDefinitionSetRequest ensures that the data the user sent in the
-// request's payload can be unmarshal'd properly into YAML, contains all
-// relevant fields.  and meets things like property definition validation checks.
+// validatePropertyDefinitionSetRequest ensures that the data the user sent in
+// the request's payload can be unmarshal'd properly into YAML, contains all
+// relevant fields  and meets things like property definition validation
+// checks.
 //
-// Returns a fully validated Object protobuffer message that is ready to send
-// to backend storage.
+// Returns a fully validated PropertyDefinitionWithReferences struct that
+// describes the property definition and its related objects
 func (s *Server) validatePropertyDefinitionSetRequest(
 	req *pb.PropertyDefinitionSetRequest,
 ) (*types.PropertyDefinitionWithReferences, error) {
 	// reads the supplied buffer which contains a YAML document describing the
 	// property definition to create or update.
-	obj := &apitypes.PropertyDefinition{}
-	if err := yaml.Unmarshal(req.Payload, obj); err != nil {
+	def := &apitypes.PropertyDefinition{}
+	if err := yaml.Unmarshal(req.Payload, def); err != nil {
 		return nil, err
 	}
-
-	if obj.Type == "" {
-		return nil, ErrObjectTypeRequired
-	}
-	if obj.Partition == "" {
-		return nil, ErrPartitionRequired
-	}
-	if obj.Key == "" {
-		return nil, ErrPropertyKeyRequired
-	}
-	if obj.Schema == nil {
-		return nil, ErrSchemaRequired
-	} else {
-		if err := obj.Schema.Validate(); err != nil {
-			return nil, errors.ErrInvalidPropertyDefinition(obj.Type, obj.Key, err)
-		}
+	if err := def.Validate(); err != nil {
+		return nil, errors.ErrInvalidPropertyDefinition(def.Type, def.Key, err)
 	}
 
-	// Validate the referred to type, partition and project actually exist
+	// Validate the referred to type and partition actually exist
 	// TODO(jaypipes): AUTHZ check user can specify partition
-	part, err := s.store.PartitionGet(obj.Partition)
+	part, err := s.store.PartitionGet(def.Partition)
 	if err != nil {
 		if err == errors.ErrNotFound {
-			return nil, errPartitionNotFound(obj.Partition)
+			return nil, errPartitionNotFound(def.Partition)
 		}
 		// We don't want to leak internal implementation errors...
 		s.log.ERR("failed when validating partition in object set: %s", err)
 		return nil, errors.ErrUnknown
 	}
 
-	objType, err := s.store.ObjectTypeGet(obj.Type)
+	objType, err := s.store.ObjectTypeGet(def.Type)
 	if err != nil {
 		if err == errors.ErrNotFound {
-			return nil, errObjectTypeNotFound(obj.Type)
+			return nil, errObjectTypeNotFound(def.Type)
 		}
 		// We don't want to leak internal implementation errors...
 		s.log.ERR("failed when validating object type in object set: %s", err)
 		return nil, errors.ErrUnknown
 	}
 
-	// TODO(jaypipes): Validate if the user specific access permissions
+	// TODO(jaypipes): Validate if the user specified access permissions
 
 	return &types.PropertyDefinitionWithReferences{
 		Partition: part,
@@ -203,10 +190,10 @@ func (s *Server) validatePropertyDefinitionSetRequest(
 		Definition: &pb.PropertyDefinition{
 			Partition:   part.Uuid,
 			Type:        objType.Code,
-			Key:         obj.Key,
-			IsRequired:  obj.Required,
-			Permissions: types.APItoPBPropertyPermissions(obj.Permissions),
-			Schema:      obj.Schema.JSONSchemaString(),
+			Key:         def.Key,
+			IsRequired:  def.Required,
+			Permissions: types.APItoPBPropertyPermissions(def.Permissions),
+			Schema:      def.Schema.JSONSchemaString(),
 		},
 	}, nil
 }

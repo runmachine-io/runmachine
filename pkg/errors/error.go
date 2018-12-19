@@ -52,7 +52,7 @@ func ErrObjectTypeNotFound(objType string) *Error {
 		HTTPCode: 404,
 		Code:     404001,
 		Message: fmt.Sprintf(
-			"object type %s could not be found.",
+			"object type '%s' could not be found.",
 			objType,
 		),
 	}
@@ -63,7 +63,7 @@ func ErrPartitionNotFound(partition string) *Error {
 		HTTPCode: 404,
 		Code:     404002,
 		Message: fmt.Sprintf(
-			"partition %s could not be found.",
+			"partition '%s' could not be found.",
 			partition,
 		),
 	}
@@ -74,19 +74,24 @@ func ErrFailedPropertyDefinitionValidation(key string, err error) *Error {
 		HTTPCode: 400,
 		Code:     400001,
 		Message: fmt.Sprintf(
-			"property with key %s failed schema validation: %s.",
+			"property with key '%s' failed schema validation: %s.",
 			key,
 			err,
 		),
 	}
 }
 
-func ErrInvalidPropertyDefinition(objType string, key string, err error) *Error {
+func ErrInvalidPropertyDefinition(
+	objType string,
+	key string,
+	err error,
+) *Error {
 	return &Error{
 		HTTPCode: 400,
 		Code:     400002,
 		Message: fmt.Sprintf(
-			"invalid property definition for object type %s and key %s: %s.",
+			"invalid property definition for object type '%s' "+
+				"and key '%s': %s.",
 			objType,
 			key,
 			err,

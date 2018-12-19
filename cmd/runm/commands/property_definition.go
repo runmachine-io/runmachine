@@ -45,13 +45,13 @@ func printPropertyDefinition(obj *pb.PropertyDefinition) {
 			permStr += "permission: "
 			readBit := perm.Permission & apitypes.PERMISSION_READ
 			writeBit := perm.Permission & apitypes.PERMISSION_WRITE
-			if readBit == apitypes.PERMISSION_READ {
-				if writeBit == apitypes.PERMISSION_WRITE {
+			if readBit != 0 {
+				if writeBit != 0 {
 					permStr += "READ/WRITE"
 				} else {
 					permStr += "READ"
 				}
-			} else if writeBit == apitypes.PERMISSION_WRITE {
+			} else if writeBit != 0 {
 				permStr += "WRITE"
 			} else {
 				permStr += "NONE (Deny)"

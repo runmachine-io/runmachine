@@ -14,10 +14,20 @@ message Property {
 
 // Indicates whether a particular property item may be changed or read by a
 // class of user
-message PropertyAccessPermission {
+message PropertyPermission {
     StringValue project = 1;
     StringValue role = 2;
-    AccessPermission permission = 3;
+    // The read/write permissions on the property. The default permissions for
+    // any property on an object is that if a user is allowed to read the
+    // object, the user is allowed to read all properties associated with the
+    // object. To deny read permission to a particular role or project, a
+    // PropertyAccessPermission can be created with a zero-valued permission
+    // field, which indicates the role and/or project cannot read the property.
+    //
+    // 0            No permissions  (used to deny rights to specific project)
+    // 1            Read permission
+    // 1 << 1       Write permission
+    uint32 permission = 3;
 }
 
 // Administrators are able to create schemas that allow the restriction of data
@@ -115,8 +125,8 @@ message PropertyDefinition {
     string schema = 4;
     // true if this property key must be set on objects of this type
     bool is_required = 5;
-    // Collection of access permissions applied to this property definition
-    repeated PropertyAccessPermission access_permissions = 50;
+    // Collection of access permissions applied to this property
+    repeated PropertyPermission permissions = 50;
 }
 
 // Used in matching property definition records

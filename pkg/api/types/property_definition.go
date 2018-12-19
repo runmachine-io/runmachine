@@ -4,6 +4,12 @@ import (
 	"fmt"
 )
 
+const (
+	PERMISSION_NONE  = uint32(0)
+	PERMISSION_READ  = uint32(1)
+	PERMISSION_WRITE = uint32(1) << 1
+)
+
 var (
 	// the set of valid type strings that may appear in the property schema
 	// document "type" field
@@ -33,6 +39,23 @@ var (
 	}
 )
 
+// PropertyPermission describes the permission that a project and/or role have
+// to read or write a property on an object
+type PropertyPermission struct {
+	// Optional project identifier to control access for
+	Project string `yaml:"project"`
+	// Optional role identifier to control access for
+	Role string `yaml:"role"`
+	// A string containing the permissions:
+	//
+	// "" indicates the project/role should have no read or write access to the
+	// property
+	// "r" indicates the project/role should have read access
+	// "w" indicates the project/role should have write access
+	// "rw" indicates the project/role should have read and write access
+	Permission string `yaml:"permission"`
+}
+
 type PropertyDefinition struct {
 	// Identifier of the partition the object belongs to
 	Partition string `yaml:"partition"`
@@ -45,7 +68,8 @@ type PropertyDefinition struct {
 	Schema *PropertySchema `yaml:"schema"`
 	// Indicates the property is required for all objects of this object type
 	Required bool `yaml:"required"`
-	// TODO(jaypipes): Add access permissions
+	// Set of project/role specific permissions for the property
+	Permissions []*PropertyPermission `yaml:"permissions"`
 }
 
 // NOTE(jaypipes): A type that can be represented in YAML as *either* a string

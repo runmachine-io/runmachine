@@ -18,6 +18,147 @@ var (
 	_two_us  = uint(2)
 )
 
+func TestPropertyDefinitionYAML(t *testing.T) {
+	assert := assert.New(t)
+
+	tests := []struct {
+		doc    string
+		expect types.PropertyDefinition
+	}{
+		// Required missing
+		{
+			doc: `
+type: runm.image
+key: architecture
+`,
+			expect: types.PropertyDefinition{
+				Type:     "runm.image",
+				Key:      "architecture",
+				Required: false,
+			},
+		},
+		// Required false
+		{
+			doc: `
+type: runm.image
+key: architecture
+required: false
+`,
+			expect: types.PropertyDefinition{
+				Type:     "runm.image",
+				Key:      "architecture",
+				Required: false,
+			},
+		},
+		// Required true
+		{
+			doc: `
+type: runm.image
+key: architecture
+required: true
+`,
+			expect: types.PropertyDefinition{
+				Type:     "runm.image",
+				Key:      "architecture",
+				Required: true,
+			},
+		},
+		// Project access permission specified
+		{
+			doc: `
+type: runm.image
+key: architecture
+permissions:
+  - project: proj1
+    permission: rw
+`,
+			expect: types.PropertyDefinition{
+				Type: "runm.image",
+				Key:  "architecture",
+				Permissions: []*types.PropertyPermission{
+					&types.PropertyPermission{
+						Project:    "proj1",
+						Permission: "rw",
+					},
+				},
+			},
+		},
+		// Role access permission specified
+		{
+			doc: `
+type: runm.image
+key: architecture
+permissions:
+  - role: admin
+    permission: rw
+`,
+			expect: types.PropertyDefinition{
+				Type: "runm.image",
+				Key:  "architecture",
+				Permissions: []*types.PropertyPermission{
+					&types.PropertyPermission{
+						Role:       "admin",
+						Permission: "rw",
+					},
+				},
+			},
+		},
+		// Project and role access permission specified
+		{
+			doc: `
+type: runm.image
+key: architecture
+permissions:
+  - role: member
+    project: proj2
+    permission: r
+`,
+			expect: types.PropertyDefinition{
+				Type: "runm.image",
+				Key:  "architecture",
+				Permissions: []*types.PropertyPermission{
+					&types.PropertyPermission{
+						Role:       "member",
+						Project:    "proj2",
+						Permission: "r",
+					},
+				},
+			},
+		},
+		// Permission with blank permission string (used for revoking all
+		// permissions on a property)
+		{
+			doc: `
+type: runm.image
+key: architecture
+permissions:
+  - role: member
+    project: blacklisted
+    permission:
+`,
+			expect: types.PropertyDefinition{
+				Type: "runm.image",
+				Key:  "architecture",
+				Permissions: []*types.PropertyPermission{
+					&types.PropertyPermission{
+						Role:       "member",
+						Project:    "blacklisted",
+						Permission: "",
+					},
+				},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		got := types.PropertyDefinition{}
+		if err := yaml.Unmarshal([]byte(test.doc), &got); err != nil {
+			t.Fatalf("failed unmarshalling %s: %v", test.doc, err)
+		}
+		assert.Equal(test.expect, got)
+	}
+}
+
 func TestPropertySchemaYAML(t *testing.T) {
 	assert := assert.New(t)
 

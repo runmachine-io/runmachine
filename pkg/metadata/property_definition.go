@@ -201,11 +201,12 @@ func (s *Server) validatePropertyDefinitionSetRequest(
 		Partition: part,
 		Type:      objType,
 		Definition: &pb.PropertyDefinition{
-			Partition:  part.Uuid,
-			Type:       objType.Code,
-			Key:        obj.Key,
-			IsRequired: obj.Required,
-			Schema:     obj.Schema.JSONSchemaString(),
+			Partition:   part.Uuid,
+			Type:        objType.Code,
+			Key:         obj.Key,
+			IsRequired:  obj.Required,
+			Permissions: types.APItoPBPropertyPermissions(obj.Permissions),
+			Schema:      obj.Schema.JSONSchemaString(),
 		},
 	}, nil
 }
@@ -258,13 +259,14 @@ func (s *Server) PropertyDefinitionSet(
 
 		// Set default access permissions to read/write by any role in the
 		// creating project
-		if def.AccessPermissions == nil {
-			def.AccessPermissions = []*pb.PropertyAccessPermission{
-				&pb.PropertyAccessPermission{
+		if def.Permissions == nil {
+			rwPerm := apitypes.PERMISSION_READ | apitypes.PERMISSION_WRITE
+			def.Permissions = []*pb.PropertyPermission{
+				&pb.PropertyPermission{
 					Project: &pb.StringValue{
 						Value: req.Session.Project,
 					},
-					Permission: pb.AccessPermission_READ_WRITE,
+					Permission: rwPerm,
 				},
 			}
 		}

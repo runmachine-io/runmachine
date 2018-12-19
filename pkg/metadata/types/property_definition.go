@@ -155,3 +155,41 @@ func TranslatePropertySchema(as *apitypes.PropertySchema) *pb.PropertySchema {
 	}
 	return res
 }
+
+// APItoPBPropertyPermissions converts the apitypes.PropertyPermissions to
+// protobuffer PropertyPermissions that get stored in backend storage
+func APItoPBPropertyPermissions(
+	apiperms []*apitypes.PropertyPermission,
+) []*pb.PropertyPermission {
+	res := make([]*pb.PropertyPermission, len(apiperms))
+	for x, apiperm := range apiperms {
+		// Convert the string "r", "rw" representation to the integer
+		// permission code used in backend protobuffer storage
+		iperm := apitypes.PERMISSION_NONE
+		switch apiperm.Permission {
+		case "r":
+			iperm = apitypes.PERMISSION_READ
+		case "rw":
+			iperm = apitypes.PERMISSION_READ | apitypes.PERMISSION_WRITE
+		case "w":
+			iperm = apitypes.PERMISSION_WRITE
+		default:
+			iperm = apitypes.PERMISSION_NONE
+		}
+		pbperm := &pb.PropertyPermission{
+			Permission: iperm,
+		}
+		if apiperm.Project != "" {
+			pbperm.Project = &pb.StringValue{
+				Value: apiperm.Project,
+			}
+		}
+		if apiperm.Role != "" {
+			pbperm.Role = &pb.StringValue{
+				Value: apiperm.Role,
+			}
+		}
+		res[x] = pbperm
+	}
+	return res
+}

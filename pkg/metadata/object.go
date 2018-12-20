@@ -94,8 +94,10 @@ func (s *Server) ObjectGet(
 	if err != nil {
 		return nil, err
 	}
-	if len(objects) != 1 {
+	if len(objects) > 1 {
 		return nil, ErrMultipleRecordsFound
+	} else if len(objects) == 0 {
+		return nil, ErrNotFound
 	}
 
 	return objects[0], nil

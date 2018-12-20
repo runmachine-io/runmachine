@@ -42,18 +42,17 @@ func (s *Server) PropertyDefinitionDelete(
 	resErrors := make([]string, 0)
 	numDeleted := uint64(0)
 	for _, pdwr := range pdwrs {
-		if err = s.store.PropertyDefinitionDelete(pdwr); err != nil {
+		pk := &types.PropertyDefinitionPK{
+			Partition:   pdwr.Partition.Uuid,
+			ObjectType:  pdwr.Type.Code,
+			PropertyKey: pdwr.Definition.Key,
+		}
+		s.log.L3("deleting property definition '%s'...", pk)
+		if err = s.store.PropertyDefinitionDeleteByPK(pk); err != nil {
 			resErrors = append(resErrors, err.Error())
 		}
 		// TODO(jaypipes): Send an event notification
-		s.log.L1(
-			"user %s deleted property definition for property key %s of "+
-				"object type %s in partition %s",
-			req.Session.User,
-			pdwr.Definition.Key,
-			pdwr.Type.Code,
-			pdwr.Partition.Uuid,
-		)
+		s.log.L1("deleted property definition '%s'", pk)
 		numDeleted += 1
 	}
 	resp := &pb.PropertyDefinitionDeleteResponse{
@@ -92,7 +91,7 @@ func (s *Server) PropertyDefinitionGet(
 		// We don't want to expose internal errors to the user, so just return
 		// an unknown error after logging it.
 		s.log.ERR(
-			"failed to retrieve property definition with search filter %s: %s",
+			"failed retrieving property definition with search filter %s: %s",
 			req.Filter.Search,
 			err,
 		)
@@ -140,62 +139,49 @@ func (s *Server) PropertyDefinitionList(
 	return nil
 }
 
-// validatePropertyDefinitionSetRequest ensures that the data the user sent in the
-// request's payload can be unmarshal'd properly into YAML, contains all
-// relevant fields.  and meets things like property definition validation checks.
+// validatePropertyDefinitionSetRequest ensures that the data the user sent in
+// the request's payload can be unmarshal'd properly into YAML, contains all
+// relevant fields  and meets things like property definition validation
+// checks.
 //
-// Returns a fully validated Object protobuffer message that is ready to send
-// to backend storage.
+// Returns a fully validated PropertyDefinitionWithReferences struct that
+// describes the property definition and its related objects
 func (s *Server) validatePropertyDefinitionSetRequest(
 	req *pb.PropertyDefinitionSetRequest,
 ) (*types.PropertyDefinitionWithReferences, error) {
 	// reads the supplied buffer which contains a YAML document describing the
 	// property definition to create or update.
-	obj := &apitypes.PropertyDefinition{}
-	if err := yaml.Unmarshal(req.Payload, obj); err != nil {
+	def := &apitypes.PropertyDefinition{}
+	if err := yaml.Unmarshal(req.Payload, def); err != nil {
 		return nil, err
 	}
-
-	if obj.Type == "" {
-		return nil, ErrObjectTypeRequired
-	}
-	if obj.Partition == "" {
-		return nil, ErrPartitionRequired
-	}
-	if obj.Key == "" {
-		return nil, ErrPropertyKeyRequired
-	}
-	if obj.Schema == nil {
-		return nil, ErrSchemaRequired
-	} else {
-		if err := obj.Schema.Validate(); err != nil {
-			return nil, errors.ErrInvalidPropertyDefinition(obj.Type, obj.Key, err)
-		}
+	if err := def.Validate(); err != nil {
+		return nil, errors.ErrInvalidPropertyDefinition(def.Type, def.Key, err)
 	}
 
-	// Validate the referred to type, partition and project actually exist
+	// Validate the referred to type and partition actually exist
 	// TODO(jaypipes): AUTHZ check user can specify partition
-	part, err := s.store.PartitionGet(obj.Partition)
+	part, err := s.store.PartitionGet(def.Partition)
 	if err != nil {
 		if err == errors.ErrNotFound {
-			return nil, errPartitionNotFound(obj.Partition)
+			return nil, errPartitionNotFound(def.Partition)
 		}
 		// We don't want to leak internal implementation errors...
-		s.log.ERR("failed when validating partition in object set: %s", err)
+		s.log.ERR("failed validating partition in object set: %s", err)
 		return nil, errors.ErrUnknown
 	}
 
-	objType, err := s.store.ObjectTypeGet(obj.Type)
+	objType, err := s.store.ObjectTypeGet(def.Type)
 	if err != nil {
 		if err == errors.ErrNotFound {
-			return nil, errObjectTypeNotFound(obj.Type)
+			return nil, errObjectTypeNotFound(def.Type)
 		}
 		// We don't want to leak internal implementation errors...
-		s.log.ERR("failed when validating object type in object set: %s", err)
+		s.log.ERR("failed validating object type in object set: %s", err)
 		return nil, errors.ErrUnknown
 	}
 
-	// TODO(jaypipes): Validate if the user specific access permissions
+	// TODO(jaypipes): Validate if the user specified access permissions
 
 	return &types.PropertyDefinitionWithReferences{
 		Partition: part,
@@ -203,10 +189,10 @@ func (s *Server) validatePropertyDefinitionSetRequest(
 		Definition: &pb.PropertyDefinition{
 			Partition:   part.Uuid,
 			Type:        objType.Code,
-			Key:         obj.Key,
-			IsRequired:  obj.Required,
-			Permissions: types.APItoPBPropertyPermissions(obj.Permissions),
-			Schema:      obj.Schema.JSONSchemaString(),
+			Key:         def.Key,
+			IsRequired:  def.Required,
+			Permissions: types.APItoPBPropertyPermissions(def.Permissions),
+			Schema:      def.Schema.JSONSchemaString(),
 		},
 	}, nil
 }
@@ -226,23 +212,22 @@ func (s *Server) PropertyDefinitionSet(
 		return nil, err
 	}
 
-	partition := pdwr.Partition.Uuid
-	objType := pdwr.Type.Code
 	def := pdwr.Definition
-	propKey := def.Key
+	pk := &types.PropertyDefinitionPK{
+		Partition:   pdwr.Partition.Uuid,
+		ObjectType:  pdwr.Type.Code,
+		PropertyKey: def.Key,
+	}
 
-	existing, err := s.store.PropertyDefinitionGet(partition, objType, propKey)
+	existing, err := s.store.PropertyDefinitionGetByPK(pk)
 	if err != nil {
 		if err != errors.ErrNotFound {
 			s.log.ERR(
-				"Failed trying to find existing property definition "+
-					"for %s:%s:%s: %s",
-				partition,
-				objType,
-				propKey,
+				"Failed trying to find existing property definition '%s': %s",
+				pk,
 				err,
 			)
-			// NOTE(jaypipes): we don't return internal errors
+			// NOTE(jaypipes): don't return internal errors
 			return nil, ErrUnknown
 		}
 	} else {
@@ -250,47 +235,72 @@ func (s *Server) PropertyDefinitionSet(
 	}
 
 	if existing == nil {
-		s.log.L3(
-			"creating new property definition %s:%s:%s...",
-			partition,
-			objType,
-			propKey,
-		)
+		s.log.L3("creating new property definition '%s'...", pk)
 
 		// Set default access permissions to read/write by any role in the
-		// creating project
-		if def.Permissions == nil {
-			rwPerm := apitypes.PERMISSION_READ | apitypes.PERMISSION_WRITE
+		// creating project and read by anyone
+		if len(def.Permissions) == 0 {
+			s.log.L3(
+				"setting default permissions on property definition '%s' "+
+					"to READ/WRITE for project '%s' and READ any",
+				pk, req.Session.Project,
+			)
 			def.Permissions = []*pb.PropertyPermission{
 				&pb.PropertyPermission{
 					Project: &pb.StringValue{
 						Value: req.Session.Project,
 					},
-					Permission: rwPerm,
+					Permission: apitypes.PERMISSION_READ |
+						apitypes.PERMISSION_WRITE,
+				},
+				&pb.PropertyPermission{
+					Permission: apitypes.PERMISSION_READ,
 				},
 			}
+		} else {
+			// Make sure that the project that created the property definition
+			// can read and write it...
+			foundProj := false
+			for _, perm := range def.Permissions {
+				if perm.Project != nil && perm.Project.Value == req.Session.Project {
+					if (perm.Permission & apitypes.PERMISSION_WRITE) == 0 {
+						s.log.L1(
+							"added missing WRITE permission for "+
+								"property definition '%s' in project '%s'",
+							pk, perm.Project.Value,
+						)
+						perm.Permission |= apitypes.PERMISSION_WRITE
+					}
+					foundProj = true
+				}
+			}
+			if !foundProj {
+				s.log.L1(
+					"added missing WRITE permission for property "+
+						"definition '%s' in project '%s'",
+					pk, req.Session.Project,
+				)
+				def.Permissions = append(
+					def.Permissions,
+					&pb.PropertyPermission{
+						Project: &pb.StringValue{
+							Value: req.Session.Project,
+						},
+						Permission: apitypes.PERMISSION_READ |
+							apitypes.PERMISSION_WRITE,
+					},
+				)
+			}
 		}
-
-		// TODO(jaypipes): Make sure that the project that created the property
-		// schema can read and write it
 
 		if _, err := s.store.PropertyDefinitionCreate(pdwr); err != nil {
 			return nil, err
 		}
-		s.log.L1(
-			"created new property definition %s:%s:%s",
-			partition,
-			objType,
-			propKey,
-		)
+		s.log.L1("created new property definition '%s'", pk)
 	} else {
-		s.log.L3(
-			"updating property definition %s:%s:%s...",
-			partition,
-			objType,
-			propKey,
-		)
+		s.log.L3("updating property definition '%s'...", pk)
 		// TODO(jaypipes): Update the property definition...
+		s.log.L1("updated property definition '%s'", pk)
 	}
 
 	resp := &pb.PropertyDefinitionSetResponse{

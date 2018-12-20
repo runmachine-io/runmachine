@@ -5,12 +5,14 @@ import (
 )
 
 const (
+	// TODO(jaypipes): Move these to a generic location?
 	PERMISSION_NONE  = uint32(0)
 	PERMISSION_READ  = uint32(1)
 	PERMISSION_WRITE = uint32(1) << 1
 )
 
 var (
+	validPermissions = []string{"", "r", "rw", "w"}
 	// the set of valid type strings that may appear in the property schema
 	// document "type" field
 	validTypes = []string{
@@ -39,6 +41,41 @@ var (
 	}
 )
 
+type PropertyDefinition struct {
+	// Identifier of the partition the object belongs to
+	Partition string `yaml:"partition"`
+	// Code for the type of object this is
+	Type string `yaml:"type"`
+	// The key of the property this schema will apply to
+	Key string `yaml:"key"`
+	// JSONSchema property type document represented in YAML, dictating the
+	// constraints applied by this schema to the property's value
+	Schema *PropertySchema `yaml:"schema"`
+	// Indicates the property is required for all objects of this object type
+	Required bool `yaml:"required"`
+	// Set of project/role specific permissions for the property
+	Permissions []*PropertyPermission `yaml:"permissions"`
+}
+
+// Validate returns an error if the definition is invalid, nil otherwise
+func (def *PropertyDefinition) Validate() error {
+	if def.Type == "" {
+		return fmt.Errorf("object type required")
+	}
+	if def.Partition == "" {
+		return fmt.Errorf("partition required")
+	}
+	if def.Key == "" {
+		return fmt.Errorf("property key required")
+	}
+	for _, perm := range def.Permissions {
+		if err := perm.Validate(); err != nil {
+			return err
+		}
+	}
+	return def.Schema.Validate()
+}
+
 // PropertyPermission describes the permission that a project and/or role have
 // to read or write a property on an object
 type PropertyPermission struct {
@@ -56,20 +93,21 @@ type PropertyPermission struct {
 	Permission string `yaml:"permission"`
 }
 
-type PropertyDefinition struct {
-	// Identifier of the partition the object belongs to
-	Partition string `yaml:"partition"`
-	// Code for the type of object this is
-	Type string `yaml:"type"`
-	// The key of the property this schema will apply to
-	Key string `yaml:"key"`
-	// JSONSchema property type document represented in YAML, dictating the
-	// constraints applied by this schema to the property's value
-	Schema *PropertySchema `yaml:"schema"`
-	// Indicates the property is required for all objects of this object type
-	Required bool `yaml:"required"`
-	// Set of project/role specific permissions for the property
-	Permissions []*PropertyPermission `yaml:"permissions"`
+// Validate returns an error if the permission is invalid, nil otherwise
+func (perm *PropertyPermission) Validate() error {
+	switch perm.Permission {
+	case "":
+	case "r":
+	case "w":
+	case "rw":
+		return nil
+	default:
+		return fmt.Errorf(
+			"unknown permission string %s. valid choices are %v",
+			perm.Permission, validPermissions,
+		)
+	}
+	return nil
 }
 
 // NOTE(jaypipes): A type that can be represented in YAML as *either* a string
@@ -140,39 +178,42 @@ type PropertySchema struct {
 
 // Validate returns an error if the schema document isn't valid, or nil
 // otherwise
-func (doc *PropertySchema) Validate() error {
-	if len(doc.Types) > 0 {
-		typeFound := make(map[string]bool, len(doc.Types))
-		for _, docType := range doc.Types {
-			typeFound[docType] = false
+func (schema *PropertySchema) Validate() error {
+	if schema == nil {
+		return nil
+	}
+	if len(schema.Types) > 0 {
+		typeFound := make(map[string]bool, len(schema.Types))
+		for _, schemaType := range schema.Types {
+			typeFound[schemaType] = false
 			for _, t := range validTypes {
-				if t == docType {
-					typeFound[docType] = true
+				if t == schemaType {
+					typeFound[schemaType] = true
 				}
 			}
 		}
-		for docType, found := range typeFound {
+		for schemaType, found := range typeFound {
 			if !found {
 				return fmt.Errorf(
-					"invalid type %s. valid types are %v",
-					docType,
+					"invalid type '%s'. valid types are %v",
+					schemaType,
 					validTypes,
 				)
 			}
 		}
 	}
-	if doc.Format != "" {
+	if schema.Format != "" {
 		found := false
 		for _, f := range validFormats {
-			if f == doc.Format {
+			if f == schema.Format {
 				found = true
 				break
 			}
 		}
 		if !found {
 			return fmt.Errorf(
-				"invalid format %s. valid formats are %v",
-				doc.Format,
+				"invalid format '%s'. valid formats are %v",
+				schema.Format,
 				validFormats,
 			)
 		}
@@ -182,48 +223,48 @@ func (doc *PropertySchema) Validate() error {
 
 // Returns a JSONSchema (DRAFT-7) document representing the schema for the
 // object type and key pair.
-func (doc *PropertySchema) JSONSchemaString() string {
-	if doc == nil {
+func (schema *PropertySchema) JSONSchemaString() string {
+	if schema == nil {
 		return ""
 	}
 	res := ""
-	switch len(doc.Types) {
+	switch len(schema.Types) {
 	case 0:
 		break
 	case 1:
-		res += "type: " + doc.Types[0] + "\n"
+		res += "type: " + schema.Types[0] + "\n"
 	default:
 		res += "type:\n"
-		for _, t := range doc.Types {
+		for _, t := range schema.Types {
 			res += "  - " + t + "\n"
 		}
 	}
-	if len(doc.Enum) > 0 {
+	if len(schema.Enum) > 0 {
 		res += "enum:\n"
-		for _, val := range doc.Enum {
+		for _, val := range schema.Enum {
 			res += "  - " + val + "\n"
 		}
 	}
-	if doc.MultipleOf != nil {
-		res += fmt.Sprintf("multipleOf: %d\n", *doc.MultipleOf)
+	if schema.MultipleOf != nil {
+		res += fmt.Sprintf("multipleOf: %d\n", *schema.MultipleOf)
 	}
-	if doc.Minimum != nil {
-		res += fmt.Sprintf("minimum: %d\n", *doc.Minimum)
+	if schema.Minimum != nil {
+		res += fmt.Sprintf("minimum: %d\n", *schema.Minimum)
 	}
-	if doc.Maximum != nil {
-		res += fmt.Sprintf("maximum: %d\n", *doc.Maximum)
+	if schema.Maximum != nil {
+		res += fmt.Sprintf("maximum: %d\n", *schema.Maximum)
 	}
-	if doc.MinLength != nil {
-		res += fmt.Sprintf("minLength: %d\n", *doc.MinLength)
+	if schema.MinLength != nil {
+		res += fmt.Sprintf("minLength: %d\n", *schema.MinLength)
 	}
-	if doc.MaxLength != nil {
-		res += fmt.Sprintf("maxLength: %d\n", *doc.MaxLength)
+	if schema.MaxLength != nil {
+		res += fmt.Sprintf("maxLength: %d\n", *schema.MaxLength)
 	}
-	if doc.Format != "" {
-		res += "format: " + doc.Format + "\n"
+	if schema.Format != "" {
+		res += "format: " + schema.Format + "\n"
 	}
-	if doc.Pattern != "" {
-		res += "pattern: " + doc.Pattern + "\n"
+	if schema.Pattern != "" {
+		res += "pattern: " + schema.Pattern + "\n"
 	}
 	return res
 }

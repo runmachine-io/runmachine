@@ -9,6 +9,18 @@ import (
 	pb "github.com/runmachine-io/runmachine/proto"
 )
 
+// A property definition is always uniquely identified by partition UUID,
+// object type code and property key
+type PropertyDefinitionPK struct {
+	Partition   string
+	ObjectType  string
+	PropertyKey string
+}
+
+func (pk *PropertyDefinitionPK) String() string {
+	return pk.Partition + ":" + pk.ObjectType + ":" + pk.PropertyKey
+}
+
 // A specialized filter class that has already looked up specific partition and
 // object types (expanded from user-supplied partition and type filter
 // strings). Users pass pb.PropertyDefinitionFilter messages which contain optional

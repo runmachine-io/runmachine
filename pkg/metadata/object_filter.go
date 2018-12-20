@@ -42,18 +42,19 @@ func (s *Server) expandObjectFilter(
 	filter *pb.ObjectFilter,
 ) ([]*types.ObjectListFilter, error) {
 	res := make([]*types.ObjectListFilter, 0)
+	var err error
 	// A set of partition UUIDs that we'll create types.ObjectListFilters with.
 	// These are the UUIDs of any partitions that match the PartitionFilter in
 	// the supplied pb.ObjectFilter
-	partitions := make([]*pb.Partition, 0)
+	var partitions []*pb.Partition
 	// A set of object type codes that we'll create types.ObjectListFilters
 	// with. These are the codes of object types that match the
 	// ObjectTypeFilter in the supplied ObjectFilter
-	objTypes := make([]*pb.ObjectType, 0)
+	var objTypes []*pb.ObjectType
 
 	if filter.Partition != nil {
 		// Verify that the requested partition(s) exist(s)
-		partitions, err := s.store.PartitionList([]*pb.PartitionFilter{filter.Partition})
+		partitions, err = s.store.PartitionList([]*pb.PartitionFilter{filter.Partition})
 		if err != nil {
 			return nil, err
 		}
@@ -82,7 +83,7 @@ func (s *Server) expandObjectFilter(
 
 	if filter.Type != nil {
 		// Verify that the object type even exists
-		objTypes, err := s.store.ObjectTypeList([]*pb.ObjectTypeFilter{filter.Type})
+		objTypes, err = s.store.ObjectTypeList([]*pb.ObjectTypeFilter{filter.Type})
 		if err != nil {
 			return nil, err
 		}

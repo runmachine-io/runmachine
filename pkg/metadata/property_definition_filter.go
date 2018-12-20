@@ -31,28 +31,34 @@ func (s *Server) defaultPropertyDefinitionFilter(
 	}, nil
 }
 
-// expandPropertyDefinitionFilter is used to expand an PropertyDefinitionFilter, which may contain
-// PartitionFilter and ObjectTypeFilter objects that themselves may resolve to
-// multiple partitions or object types, to a set of types.PropertyDefinitionFilter
-// objects. A types.PropertyDefinitionFilter is used to describe a filter on objects in
-// a *specific* partition and having a *specific* object type.
+// expandPropertyDefinitionFilter is used to expand an
+// PropertyDefinitionFilter, which may contain PartitionFilter and
+// ObjectTypeFilter objects that themselves may resolve to multiple partitions
+// or object types, to a set of types.PropertyDefinitionFilter objects. A
+// types.PropertyDefinitionFilter is used to describe a filter on objects in a
+// *specific* partition and having a *specific* object type.
 func (s *Server) expandPropertyDefinitionFilter(
 	session *pb.Session,
 	filter *pb.PropertyDefinitionFilter,
 ) ([]*types.PropertyDefinitionFilter, error) {
 	res := make([]*types.PropertyDefinitionFilter, 0)
-	// A set of partition UUIDs that we'll create types.PropertyDefinitionFilters with.
-	// These are the UUIDs of any partitions that match the PartitionFilter in
-	// the supplied pb.PropertyDefinitionFilter
-	partitions := make([]*pb.Partition, 0)
-	// A set of object type codes that we'll create types.PropertyDefinitionFilters
-	// with. These are the codes of object types that match the
-	// ObjectTypeFilter in the supplied PropertyDefinitionFilter
-	objTypes := make([]*pb.ObjectType, 0)
+	var err error
+	// A set of partition UUIDs that we'll create
+	// types.PropertyDefinitionFilters with.  These are the UUIDs of any
+	// partitions that match the PartitionFilter in the supplied
+	// pb.PropertyDefinitionFilter
+	var partitions []*pb.Partition
+	// A set of object type codes that we'll create
+	// types.PropertyDefinitionFilters with. These are the codes of object
+	// types that match the ObjectTypeFilter in the supplied
+	// PropertyDefinitionFilter
+	var objTypes []*pb.ObjectType
 
 	if filter.Partition != nil {
 		// Verify that the requested partition(s) exist(s)
-		partitions, err := s.store.PartitionList([]*pb.PartitionFilter{filter.Partition})
+		partitions, err = s.store.PartitionList(
+			[]*pb.PartitionFilter{filter.Partition},
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -81,7 +87,9 @@ func (s *Server) expandPropertyDefinitionFilter(
 
 	if filter.Type != nil {
 		// Verify that the object type even exists
-		objTypes, err := s.store.ObjectTypeList([]*pb.ObjectTypeFilter{filter.Type})
+		objTypes, err = s.store.ObjectTypeList(
+			[]*pb.ObjectTypeFilter{filter.Type},
+		)
 		if err != nil {
 			return nil, err
 		}

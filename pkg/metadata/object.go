@@ -236,7 +236,10 @@ func (s *Server) validateObjectProperty(
 
 // validateValueWithSchema returns an error if the supplied value passes the
 // supplied property meta document, nil otherwise.
-func (s *Server) validateValueWithSchema(value string, schema string) error {
+func (s *Server) validateValueWithSchema(
+	value string,
+	schema *pb.PropertySchema,
+) error {
 	return nil
 }
 

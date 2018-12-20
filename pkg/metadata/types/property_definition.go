@@ -75,9 +75,9 @@ type PropertyDefinitionWithReferences struct {
 	Definition *pb.PropertyDefinition
 }
 
-// Converts an apitypes PropertySchema to the protobuffer PropertySchema
-// message that will eb stored in backend storage
-func TranslatePropertySchema(as *apitypes.PropertySchema) *pb.PropertySchema {
+// APItoPBPropertySchema onverts an apitypes PropertySchema to the protobuffer
+// PropertySchema message that will eb stored in backend storage
+func APItoPBPropertySchema(as *apitypes.PropertySchema) *pb.PropertySchema {
 	res := &pb.PropertySchema{
 		Types:   []pb.PropertySchema_Type{},
 		Pattern: as.Pattern,

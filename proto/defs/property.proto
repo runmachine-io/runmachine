@@ -121,12 +121,12 @@ message PropertyDefinition {
     string type = 2;
     // The property key to apply the property definition to. e.g. "architecture"
     string key = 3;
-    // Describes the format and type constraints of the value of the property
-    string schema = 4;
     // true if this property key must be set on objects of this type
-    bool is_required = 5;
+    bool is_required = 4;
+    // Describes the format and type constraints of the value of the property
+    PropertySchema schema = 50;
     // Collection of access permissions applied to this property
-    repeated PropertyPermission permissions = 50;
+    repeated PropertyPermission permissions = 51;
 }
 
 // Used in matching property definition records
@@ -134,7 +134,7 @@ message PropertyDefinitionFilter {
     PartitionFilter partition = 1;
     ObjectTypeFilter type = 2;
     // A search term on the property definition's property key
-    string search = 4;
+    string search = 3;
     // Indicates the search should be a prefix expression
-    bool use_prefix = 5;
+    bool use_prefix = 4;
 }

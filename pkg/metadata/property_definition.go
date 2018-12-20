@@ -194,7 +194,7 @@ func (s *Server) validatePropertyDefinitionSetRequest(
 			Key:         def.Key,
 			IsRequired:  def.Required,
 			Permissions: types.APItoPBPropertyPermissions(def.Permissions),
-			Schema:      def.Schema.JSONSchemaString(),
+			Schema:      types.APItoPBPropertySchema(def.Schema),
 		},
 	}, nil
 }

@@ -210,10 +210,12 @@ func (s *Server) validateObjectProperty(
 	key string,
 	value string,
 ) (*pb.Property, error) {
-	propDef, err := s.store.PropertyDefinitionGet(
-		partition.Uuid,
-		objType.Code,
-		key,
+	propDef, err := s.store.PropertyDefinitionGetByPK(
+		&types.PropertyDefinitionPK{
+			Partition:   partition.Uuid,
+			ObjectType:  objType.Code,
+			PropertyKey: key,
+		},
 	)
 	if err != nil && err != errors.ErrNotFound {
 		return nil, err

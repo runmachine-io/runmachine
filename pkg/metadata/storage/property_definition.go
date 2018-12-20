@@ -20,19 +20,16 @@ const (
 
 // PropertyDefinitionDelete removes a property definition from storage and
 // triggers a recalculation of the object type's schema
-func (s *Store) PropertyDefinitionDelete(
-	pdwr *types.PropertyDefinitionWithReferences,
+func (s *Store) PropertyDefinitionDeleteByPK(
+	pk *types.PropertyDefinitionPK,
 ) error {
-
-	partUuid := pdwr.Partition.Uuid
-	objType := pdwr.Type.Code
-	propDefKey := pdwr.Definition.Key
-
-	kv := s.kvPartition(partUuid)
-	key := _PROPERTY_DEFINITIONS_BY_TYPE_KEY + objType + "/" + propDefKey
-
 	ctx, cancel := s.requestCtx()
 	defer cancel()
+
+	kv := s.kvPartition(pk.Partition)
+	key := _PROPERTY_DEFINITIONS_BY_TYPE_KEY +
+		pk.ObjectType + "/" +
+		pk.PropertyKey
 
 	// creates all the indexes and the objects/by-uuid/ entry using a
 	// transaction that ensures if another thread modified anything underneath
@@ -46,27 +43,27 @@ func (s *Store) PropertyDefinitionDelete(
 	resp, err := kv.Txn(ctx).Then(then...).Commit()
 
 	if err != nil {
-		s.log.ERR("storage.PropertyDefinitionDelete: failed to create txn in etcd: %v", err)
+		s.log.ERR("failed to create txn in etcd: %v", err)
 		return errors.ErrUnknown
 	} else if resp.Succeeded == false {
-		s.log.ERR("storage.PropertyDefinitionDelete: txn commit failed in etcd")
+		s.log.ERR("txn commit failed in etcd")
 		return errors.ErrUnknown
 	}
 	return nil
 }
 
-// PropertyDefinitionGet returns a property definition by partition UUID, object type
-// and property key.
-func (s *Store) PropertyDefinitionGet(
-	partUuid string,
-	objType string,
-	propDefKey string,
+// PropertyDefinitionGetByPK returns a property definition by partition UUID,
+// object type and property key.
+func (s *Store) PropertyDefinitionGetByPK(
+	pk *types.PropertyDefinitionPK,
 ) (*pb.PropertyDefinition, error) {
 	ctx, cancel := s.requestCtx()
 	defer cancel()
 
-	kv := s.kvPartition(partUuid)
-	key := _PROPERTY_DEFINITIONS_BY_TYPE_KEY + objType + "/" + propDefKey
+	kv := s.kvPartition(pk.Partition)
+	key := _PROPERTY_DEFINITIONS_BY_TYPE_KEY +
+		pk.ObjectType + "/" +
+		pk.PropertyKey
 
 	gr, err := kv.Get(ctx, key, etcd.WithPrefix())
 	if err != nil {

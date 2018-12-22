@@ -75,6 +75,32 @@ func printPropertySchema(obj *pb.PropertySchema) {
 	}
 }
 
+func printPropertyPermission(obj *pb.PropertyPermission) {
+	if obj.Project == nil && obj.Role == nil {
+		fmt.Printf("GLOBAL ")
+	} else {
+		if obj.Project != nil {
+			fmt.Printf("PROJECT(" + obj.Project.Value + ") ")
+		}
+		if obj.Role != nil {
+			fmt.Printf("ROLE(" + obj.Role.Value + ") ")
+		}
+	}
+	readBit := obj.Permission & apitypes.PERMISSION_READ
+	writeBit := obj.Permission & apitypes.PERMISSION_WRITE
+	if readBit != 0 {
+		if writeBit != 0 {
+			fmt.Printf("READ/WRITE\n")
+		} else {
+			fmt.Printf("READ\n")
+		}
+	} else if writeBit != 0 {
+		fmt.Printf("WRITE\n")
+	} else {
+		fmt.Printf("NONE (Deny)\n")
+	}
+}
+
 func printPropertyDefinition(obj *pb.PropertyDefinition) {
 	fmt.Printf("Partition:    %s\n", obj.Partition)
 	fmt.Printf("Type:         %s\n", obj.Type)
@@ -82,35 +108,9 @@ func printPropertyDefinition(obj *pb.PropertyDefinition) {
 	fmt.Printf("Required:     %s\n", strconv.FormatBool(obj.IsRequired))
 	if len(obj.Permissions) > 0 {
 		fmt.Printf("Permissions:\n")
-		for x, perm := range obj.Permissions {
-			permStr := ""
-			if perm.Project != nil {
-				permStr += "project: " + perm.Project.Value
-			}
-			if perm.Role != nil {
-				if len(permStr) > 0 {
-					permStr += " "
-				}
-				permStr += "role: " + perm.Role.Value
-			}
-			if len(permStr) > 0 {
-				permStr += " "
-			}
-			permStr += "permission: "
-			readBit := perm.Permission & apitypes.PERMISSION_READ
-			writeBit := perm.Permission & apitypes.PERMISSION_WRITE
-			if readBit != 0 {
-				if writeBit != 0 {
-					permStr += "READ/WRITE"
-				} else {
-					permStr += "READ"
-				}
-			} else if writeBit != 0 {
-				permStr += "WRITE"
-			} else {
-				permStr += "NONE (Deny)"
-			}
-			fmt.Printf("  %d: %s\n", x+1, permStr)
+		for _, perm := range obj.Permissions {
+			fmt.Printf("  - ")
+			printPropertyPermission(perm)
 		}
 	}
 	if obj.Schema != nil {

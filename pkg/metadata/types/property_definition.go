@@ -9,18 +9,6 @@ import (
 	pb "github.com/runmachine-io/runmachine/proto"
 )
 
-// A property definition is always uniquely identified by partition UUID,
-// object type code and property key
-type PropertyDefinitionPK struct {
-	Partition   string
-	ObjectType  string
-	PropertyKey string
-}
-
-func (pk *PropertyDefinitionPK) String() string {
-	return pk.Partition + ":" + pk.ObjectType + ":" + pk.PropertyKey
-}
-
 // A specialized filter class that has already looked up specific partition and
 // object types (expanded from user-supplied partition and type filter
 // strings). Users pass pb.PropertyDefinitionFilter messages which contain optional
@@ -32,12 +20,13 @@ func (pk *PropertyDefinitionPK) String() string {
 type PropertyDefinitionFilter struct {
 	Partition *pb.Partition
 	Type      *pb.ObjectType
-	Search    string
+	Uuid      string
+	Key       string
 	UsePrefix bool
 }
 
 func (f *PropertyDefinitionFilter) IsEmpty() bool {
-	return f.Partition == nil && f.Type == nil && f.Search == ""
+	return f.Partition == nil && f.Type == nil && f.Key == "" && f.Uuid == ""
 }
 
 func (f *PropertyDefinitionFilter) String() string {
@@ -48,8 +37,11 @@ func (f *PropertyDefinitionFilter) String() string {
 	if f.Type != nil {
 		attrMap["object_type"] = f.Type.Code
 	}
-	if f.Search != "" {
-		attrMap["search"] = f.Search
+	if f.Uuid != "" {
+		attrMap["uuid"] = f.Uuid
+	}
+	if f.Key != "" {
+		attrMap["key"] = f.Key
 		attrMap["use_prefix"] = strconv.FormatBool(f.UsePrefix)
 	}
 	attrs := ""

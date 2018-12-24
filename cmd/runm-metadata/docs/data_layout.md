@@ -80,24 +80,28 @@ $ROOT
     runm.machine -> serialized ObjectType Protobuffer message
     runm.provider -> serialized ObjectType Protobuffer message
     runm.provider_group -> serialized ObjectType Protobuffer message
-  objects/
-    by-uuid/
-      54b8d8d7e24c43799bbf70c16e921e52 -> serialized Object protobuffer message
-      60b53edd16764f6abc081ddb0a73e69c -> serialized Object protobuffer message
-      3bf3e700f11b4a7cb99244c554b3a856 -> serialized Object protobuffer message
+  objects/by-uuid/
+    54b8d8d7e24c43799bbf70c16e921e52 -> serialized Object message
+    60b53edd16764f6abc081ddb0a73e69c -> serialized Object message
+    3bf3e700f11b4a7cb99244c554b3a856 -> serialized Object message
   partitions/
     by-name/
       us-east.example.com -> d3873f99a21f45f5bce156c1f8b84b03
       us-west.example.com -> d79706e01fbd4e48aae89209061cdb71
     by-uuid/
-      d3873f99a21f45f5bce156c1f8b84b03 -> serialized Partition protobuffer message
-      d79706e01fbd4e48aae89209061cdb71 -> serialized Partition protobuffer message
+      d3873f99a21f45f5bce156c1f8b84b03 -> serialized Partition message
+      d79706e01fbd4e48aae89209061cdb71 -> serialized Partition message
     d3873f99a21f45f5bce156c1f8b84b03/
-    d79706e01fbd4e48aae89209061cdb71/
+    d79706e01fbd4e48aae89209061cdb71/A
+  property-definitions/by-uuid/
+    9ef32862afd54a32b4a6c5f11c590061 -> serialized PropertyDefinition message
+    f287341160ee4feba4012eb7f8125b82 -> serialized PropertyDefinition message
+    f2aaa1bffbba4d5e860404176564347e -> serialized PropertyDefinition message
 ```
 
-Above, you can see that `$ROOT` has three key namespaces, one called
-`object-types/`, one called `objects/by-uuid/` and another called `partitions/`.
+Above, you can see that `$ROOT` has four key namespaces, one called
+`object-types/`, one called `objects/by-uuid/` one called `partitions` and
+another called `property-definitions/by-uuid/`.
 
 The `$ROOT/object-types/` key namespace has a set of [valued keys](#Valued keys)
 describing the object types known to the system.
@@ -109,10 +113,13 @@ The valued keys in the `$ROOT/objects/by-uuid/` key namespace have the UUID of
 the object as the key and a serialized Google Protobuffer message of the
 [Object](../../../proto/defs/object.proto) itself as the value.
 
-**NOTE**: Having the serialized Object protobuffer message as the value of the
+**NOTE**: Having the serialized Object message as the value of the
 `$ROOT/objects/by-uuid/` key namespace's valued keys allows the `runm-metadata`
 service to answer queries like "get me the tags on this object" with an
 efficient single key fetch operation.
+
+The `$ROOT/property-definitions/by-uuid/` key namespace has a set of valued
+keys describing the property definitions known to the system.
 
 The `$ROOT/partitions/` key namespace has two key namespaces below it that
 implement indexes into partitions, called `by-name` and `by-uuid`. In addition
@@ -214,21 +221,17 @@ layout:
 $PROPERTY_DEFINITIONS (e.g. $ROOT/partitions/d79706e01fbd4e48aae89209061cdb71/property-definitions/)
   by-type/
     runm.image/
-      architecture -> serialized PropertySchema protobuffer message
+      9ef32862afd54a32b4a6c5f11c590061 -> 9ef32862afd54a32b4a6c5f11c590061
+      f287341160ee4feba4012eb7f8125b82 -> f287341160ee4feba4012eb7f8125b82
     runm.machine/
-      appgroup -> serialized PropertySchema protobuffer message
+      f2aaa1bffbba4d5e860404176564347e
 ```
 
 Above shows an example key namespace for `$PROPERTY_DEFINITIONS` in a partition
-where an administrator has defined two property schemas, one for `runm.image`
-object types with a property key of "architecture" and another for
-`runm.machine` object types with a property key of "appgroup". Under the key
-namespace representing the property schemas for an object type (e.g.
-`$PROPERTY_DEFINITIONS/by-type/runm.image`) are additional key namespaces, one for
-each property key that has a schema defined for it. The valued keys in those
-key namespaces have values that are the serialized Protobuffer message
-representing the [property definition](../../../proto/defs/property.proto)
-itself.
+where an administrator has defined three property schemas, two for `runm.image`
+object types and another for `runm.machine` object types. The values of the
+keys are UUIDs that can be looked up in the primary
+`$ROOT/property-definitions/by-uuid/` index.
 
 ### The `$PROPERTIES` key namespace
 

@@ -9,38 +9,48 @@ import (
 
 	"github.com/runmachine-io/runmachine/pkg/errors"
 	"github.com/runmachine-io/runmachine/pkg/metadata/types"
+	"github.com/runmachine-io/runmachine/pkg/util"
 	pb "github.com/runmachine-io/runmachine/proto"
 )
 
 const (
-	// The $PROPERTY_DEFINITIONS key namespace is a shortcut to:
-	// $ROOT/partitions/by-uuid/{partition_uuid}/property-definitions
+	// The primary key index of property definitions
+	_PROPERTY_DEFINITIONS_BY_UUID_KEY = "property-definitions/by-uuid/"
+	// A per-partition index of property definitions by type. The full key
+	// includes the object type followed by a slash and the property
+	// definition's UUID, which is used as the lookup into the primary key by
+	// UUID. This allows us to accomodate multiple property definitions for a
+	// single object type within a partition -- since property definitions may
+	// be specified for a particular project.
 	_PROPERTY_DEFINITIONS_BY_TYPE_KEY = "property-definitions/by-type/"
 )
 
-// PropertyDefinitionDelete removes a property definition from storage and
-// triggers a recalculation of the object type's schema
-func (s *Store) PropertyDefinitionDeleteByPK(
-	pk *types.PropertyDefinitionPK,
+// PropertyDefinitionDelete removes a property definition from storage, removes
+// any indexes that may have been created for it and triggers a recalculation
+// of the object type's schema
+func (s *Store) PropertyDefinitionDelete(
+	pdwr *types.PropertyDefinitionWithReferences,
 ) error {
 	ctx, cancel := s.requestCtx()
 	defer cancel()
 
-	kv := s.kvPartition(pk.Partition)
-	key := _PROPERTY_DEFINITIONS_BY_TYPE_KEY +
-		pk.ObjectType + "/" +
-		pk.PropertyKey
+	pk := _PROPERTY_DEFINITIONS_BY_UUID_KEY + pdwr.Definition.Uuid
+	byTypeKey := _PARTITIONS_KEY + pdwr.Partition.Uuid + "/" +
+		_PROPERTY_DEFINITIONS_BY_TYPE_KEY + pdwr.Type.Code + "/" +
+		pdwr.Definition.Uuid
 
 	// creates all the indexes and the objects/by-uuid/ entry using a
 	// transaction that ensures if another thread modified anything underneath
 	// us, we return an error
 	then := []etcd.Op{
-		// Delete the entry for the property definition
-		etcd.OpDelete(key),
+		// Delete the primary entry for the property definition
+		etcd.OpDelete(pk),
+		// Delete the index by type in the partition
+		etcd.OpDelete(byTypeKey),
 	}
 	// TODO(jaypipes): Should we put some If(...) clause in here that verifies
 	// the property definition key existed? Not sure it's worth it, really...
-	resp, err := kv.Txn(ctx).Then(then...).Commit()
+	resp, err := s.kv.Txn(ctx).Then(then...).Commit()
 
 	if err != nil {
 		s.log.ERR("failed to create txn in etcd: %v", err)
@@ -54,20 +64,17 @@ func (s *Store) PropertyDefinitionDeleteByPK(
 
 // PropertyDefinitionGetByPK returns a property definition by partition UUID,
 // object type and property key.
-func (s *Store) PropertyDefinitionGetByPK(
-	pk *types.PropertyDefinitionPK,
+func (s *Store) PropertyDefinitionGetByUuid(
+	uuid string,
 ) (*pb.PropertyDefinition, error) {
 	ctx, cancel := s.requestCtx()
 	defer cancel()
 
-	kv := s.kvPartition(pk.Partition)
-	key := _PROPERTY_DEFINITIONS_BY_TYPE_KEY +
-		pk.ObjectType + "/" +
-		pk.PropertyKey
+	pk := _PROPERTY_DEFINITIONS_BY_UUID_KEY + util.NormalizeUuid(uuid)
 
-	gr, err := kv.Get(ctx, key, etcd.WithPrefix())
+	gr, err := s.kv.Get(ctx, pk, etcd.WithPrefix())
 	if err != nil {
-		s.log.ERR("error getting key %s: %v", key, err)
+		s.log.ERR("error getting key %s: %v", pk, err)
 		return nil, err
 	}
 	if gr.Count == 0 {
@@ -98,8 +105,7 @@ func (s *Store) PropertyDefinitionList(
 			return nil, err
 		}
 		for _, obj := range filterObjs {
-			key := obj.Partition + ":" + obj.Type + ":" + obj.Key
-			objs[key] = obj
+			objs[obj.Uuid] = obj
 		}
 	}
 	res := make([]*pb.PropertyDefinition, len(objs))
@@ -175,45 +181,23 @@ func (s *Store) PropertyDefinitionListWithReferences(
 	return res, nil
 }
 
-// propertyDefinitionsGetByFilter evaluates a single supplied PropertyDefinitionFilter
-// that has been populated with a valid Partition, ObjectType and property key
-// to filter by
+// propertyDefinitionsGetByFilter evaluates a single supplied
+// PropertyDefinitionFilter that has been populated with a valid Partition,
+// ObjectType and property key to filter by
 func (s *Store) propertyDefinitionsGetByFilter(
 	filter *types.PropertyDefinitionFilter,
 ) ([]*pb.PropertyDefinition, error) {
 	ctx, cancel := s.requestCtx()
 	defer cancel()
 
-	kv := s.kvPartition(filter.Partition.Uuid)
-
 	opts := []etcd.OpOption{
 		// TODO(jaypipes): Factor the sorting/limiting/pagination out into a
 		// separate utility
 		etcd.WithSort(etcd.SortByKey, etcd.SortAscend),
+		etcd.WithPrefix(),
 	}
 
-	// The filter may have a nil ObjectType. If that's the case, we're listing
-	// property definitions of all object types and the sieve below will do our
-	// filtering on any supplied property key. If we *do* have a non-nil
-	// ObjectType in the filter, then we can ask etcd to do our filtering for
-	// use using a more restrictive etcd.Get key string...
-	var key string
-	if filter.Type != nil {
-		key = _PROPERTY_DEFINITIONS_BY_TYPE_KEY + filter.Type.Code + "/"
-		if filter.Search != "" {
-			key += filter.Search
-			if filter.UsePrefix {
-				opts = append(opts, etcd.WithPrefix())
-			}
-		} else {
-			opts = append(opts, etcd.WithPrefix())
-		}
-	} else {
-		key = _PROPERTY_DEFINITIONS_BY_TYPE_KEY
-		opts = append(opts, etcd.WithPrefix())
-	}
-
-	resp, err := kv.Get(ctx, key, opts...)
+	resp, err := s.kv.Get(ctx, _PROPERTY_DEFINITIONS_BY_UUID_KEY, opts...)
 	if err != nil {
 		s.log.ERR("error listing property definitions: %v", err)
 		return nil, err
@@ -229,17 +213,28 @@ func (s *Store) propertyDefinitionsGetByFilter(
 		if err = proto.Unmarshal(kv.Value, obj); err != nil {
 			return nil, err
 		}
-		// See comment above about possibly have a nil ObjectType in the
-		// filter. If this is the case, we need to evaluate the returned
-		// schemas to see if they meet any supplied property key filter
-		// values...
-		if filter.Type == nil && filter.Search != "" {
+		if filter.Uuid != "" {
+			if filter.Uuid != obj.Uuid {
+				continue
+			}
+		}
+		if filter.Partition != nil {
+			if filter.Partition.Uuid != obj.Partition {
+				continue
+			}
+		}
+		if filter.Type != nil {
+			if filter.Type.Code != obj.Type {
+				continue
+			}
+		}
+		if filter.Key != "" {
 			if filter.UsePrefix {
-				if !strings.HasPrefix(obj.Key, filter.Search) {
+				if !strings.HasPrefix(obj.Key, filter.Key) {
 					continue
 				}
 			} else {
-				if obj.Key != filter.Search {
+				if obj.Key != filter.Key {
 					continue
 				}
 			}
@@ -252,20 +247,25 @@ func (s *Store) propertyDefinitionsGetByFilter(
 	return res[:x], nil
 }
 
-// PropertyDefinitionCreate writes the supplied PropertyDefinition object to the key at
-// $PARTITION/property-definitions/by-type/{object_type}/{property_key}/{version}
-// and returns a fully-referenced property definition object that was created.
+// PropertyDefinitionCreate writes a PropertyDefinition object to the primary
+// index and creates all necessary secondary indexes inside the appropriate
+// partition key namespace.
 func (s *Store) PropertyDefinitionCreate(
 	pdwr *types.PropertyDefinitionWithReferences,
 ) (*types.PropertyDefinitionWithReferences, error) {
 	ctx, cancel := s.requestCtx()
 	defer cancel()
 
-	partUuid := pdwr.Partition.Uuid
-	objType := pdwr.Type.Code
-	propDefKey := pdwr.Definition.Key
-	kv := s.kvPartition(partUuid)
-	key := _PROPERTY_DEFINITIONS_BY_TYPE_KEY + objType + "/" + propDefKey
+	if pdwr.Definition.Uuid == "" {
+		pdwr.Definition.Uuid = util.NewNormalizedUuid()
+	} else {
+		pdwr.Definition.Uuid = util.NormalizeUuid(pdwr.Definition.Uuid)
+	}
+
+	pk := _PROPERTY_DEFINITIONS_BY_UUID_KEY + pdwr.Definition.Uuid
+	byTypeKey := _PARTITIONS_KEY + pdwr.Partition.Uuid + "/" +
+		_PROPERTY_DEFINITIONS_BY_TYPE_KEY + pdwr.Type.Code + "/" +
+		pdwr.Definition.Uuid
 
 	value, err := proto.Marshal(pdwr.Definition)
 	if err != nil {
@@ -273,17 +273,21 @@ func (s *Store) PropertyDefinitionCreate(
 	}
 
 	// create the property definition using a transaction that ensures another
-	// thread hasn't created a property definition with the same key underneath us
-	onSuccess := etcd.OpPut(key, string(value))
+	// thread hasn't created a property definition with the same key underneath
+	// us
+	onSuccess := []etcd.Op{
+		etcd.OpPut(pk, string(value)),
+		etcd.OpPut(byTypeKey, pdwr.Definition.Uuid),
+	}
 	// Ensure the key doesn't yet exist
-	compare := etcd.Compare(etcd.Version(key), "=", 0)
-	resp, err := kv.Txn(ctx).If(compare).Then(onSuccess).Commit()
+	compare := etcd.Compare(etcd.Version(pk), "=", 0)
+	resp, err := s.kv.Txn(ctx).If(compare).Then(onSuccess...).Commit()
 
 	if err != nil {
 		s.log.ERR("failed to create txn in etcd: %v", err)
 		return nil, err
 	} else if resp.Succeeded == false {
-		s.log.L3("another thread already created key %s.", key)
+		s.log.L3("another thread already created key %s.", pk)
 		return nil, errors.ErrGenerationConflict
 	}
 	return pdwr, nil

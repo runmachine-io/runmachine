@@ -98,6 +98,10 @@ var (
 		codes.FailedPrecondition,
 		"at least one property definition filter is required.",
 	)
+	ErrPropertyDefinitionFilterInvalid = status.Errorf(
+		codes.FailedPrecondition,
+		"invalid property definition filter.",
+	)
 	ErrPropertyDefinitionDeleteFailed = status.Errorf(
 		codes.FailedPrecondition,
 		"failed to delete property definition (check response errors collection).",

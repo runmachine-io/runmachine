@@ -121,8 +121,10 @@ message PropertyDefinition {
     string type = 2;
     // The property key to apply the property definition to. e.g. "architecture"
     string key = 3;
+    // The property definition's globally-unique identifier
+    string uuid = 4;
     // true if this property key must be set on objects of this type
-    bool is_required = 4;
+    bool is_required = 6;
     // Describes the format and type constraints of the value of the property
     PropertySchema schema = 50;
     // Collection of access permissions applied to this property
@@ -133,8 +135,9 @@ message PropertyDefinition {
 message PropertyDefinitionFilter {
     PartitionFilter partition = 1;
     ObjectTypeFilter type = 2;
+    string uuid = 3;
     // A search term on the property definition's property key
-    string search = 3;
+    string key = 4;
     // Indicates the search should be a prefix expression
-    bool use_prefix = 4;
+    bool use_prefix = 5;
 }

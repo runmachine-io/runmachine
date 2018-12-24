@@ -133,21 +133,23 @@ func (s *Server) expandPropertyDefinitionFilter(
 	// we supplied no partition filters, then go ahead and just return a single
 	// types.PropertyDefinitionFilter with the search term and prefix indicator for
 	// the property key.
-	if filter.Search != "" {
+	if filter.Key != "" || filter.Uuid != "" {
 		if len(res) > 0 {
 			// Now that we've expanded our partitions and object types, add in the
 			// original PropertyDefinitionFilter's Search and UsePrefix for each
 			// types.PropertyDefinitionFilter we've created
 			for _, pf := range res {
-				pf.Search = filter.Search
+				pf.Key = filter.Key
 				pf.UsePrefix = filter.UsePrefix
+				pf.Uuid = filter.Uuid
 			}
 		} else {
 			res = append(
 				res,
 				&types.PropertyDefinitionFilter{
-					Search:    filter.Search,
+					Key:       filter.Key,
 					UsePrefix: filter.UsePrefix,
+					Uuid:      filter.Uuid,
 				},
 			)
 		}

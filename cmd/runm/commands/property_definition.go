@@ -105,6 +105,7 @@ func printPropertyDefinition(obj *pb.PropertyDefinition) {
 	fmt.Printf("Partition:    %s\n", obj.Partition)
 	fmt.Printf("Type:         %s\n", obj.Type)
 	fmt.Printf("Key:          %s\n", obj.Key)
+	fmt.Printf("UUID:         %s\n", obj.Uuid)
 	fmt.Printf("Required:     %s\n", strconv.FormatBool(obj.IsRequired))
 	if len(obj.Permissions) > 0 {
 		fmt.Printf("Permissions:\n")

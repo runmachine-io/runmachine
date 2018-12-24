@@ -212,18 +212,21 @@ func (s *Server) validateObjectProperty(
 	key string,
 	value string,
 ) (*pb.Property, error) {
-	propDef, err := s.store.PropertyDefinitionGetByPK(
-		&types.PropertyDefinitionPK{
-			Partition:   partition.Uuid,
-			ObjectType:  objType.Code,
-			PropertyKey: key,
+	pds, err := s.store.PropertyDefinitionList(
+		[]*types.PropertyDefinitionFilter{
+			&types.PropertyDefinitionFilter{
+				Partition: partition,
+				Type:      objType,
+				Key:       key,
+			},
 		},
 	)
-	if err != nil && err != errors.ErrNotFound {
+	if err != nil {
 		return nil, err
 	}
-	if propDef != nil {
-		err := s.validateValueWithSchema(value, propDef.Schema)
+	if len(pds) > 0 {
+		pd := pds[0]
+		err := s.validateValueWithSchema(value, pd.Schema)
 		if err != nil {
 			return nil, errors.ErrFailedPropertyDefinitionValidation(key, err)
 		}

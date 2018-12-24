@@ -29,6 +29,7 @@ expressions to filter by. $field may be any of the following:
 - partition: UUID or name of the partition the property definition belongs to
 - type: code of the object type (:see runm object-type list)
 - key: the property key to list property definitions for
+- uuid: the UUID of the property definition itself
 
 The $value should be an identifier or name for the $field. You can use an
 asterisk (*) to indicate a prefix match. For example, to list all property
@@ -47,6 +48,10 @@ objects that are a partition called part0:
 
 --filter "type=runm.machine partition=part0" \
 --filter "type=runm.image partition=part0"
+
+Find a property definition with a UUID of "f287341160ee4feba4012eb7f8125b82":
+
+--filter "uuid=f287341160ee4feba4012eb7f8125b82"
 `
 )
 
@@ -107,8 +112,10 @@ func buildPropertyDefinitionFilters() []*pb.PropertyDefinitionFilter {
 					Search:    value,
 					UsePrefix: usePrefix,
 				}
+			case "uuid":
+				filter.Uuid = value
 			case "key":
-				filter.Search = value
+				filter.Key = value
 				filter.UsePrefix = usePrefix
 			default:
 				fmt.Fprintf(
@@ -153,6 +160,7 @@ func propertyDefinitionList(cmd *cobra.Command, args []string) {
 		"Partition",
 		"Type",
 		"Key",
+		"UUID",
 		"Required?",
 	}
 	rows := make([][]string, len(msgs))
@@ -161,6 +169,7 @@ func propertyDefinitionList(cmd *cobra.Command, args []string) {
 			obj.Partition,
 			obj.Type,
 			obj.Key,
+			obj.Uuid,
 			strconv.FormatBool(obj.IsRequired),
 		}
 	}

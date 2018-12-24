@@ -42,13 +42,9 @@ func (s *Server) PropertyDefinitionDelete(
 	resErrors := make([]string, 0)
 	numDeleted := uint64(0)
 	for _, pdwr := range pdwrs {
-		pk := &types.PropertyDefinitionPK{
-			Partition:   pdwr.Partition.Uuid,
-			ObjectType:  pdwr.Type.Code,
-			PropertyKey: pdwr.Definition.Key,
-		}
+		pk := pdwr.Definition.Uuid
 		s.log.L3("deleting property definition '%s'...", pk)
-		if err = s.store.PropertyDefinitionDeleteByPK(pk); err != nil {
+		if err = s.store.PropertyDefinitionDelete(pdwr); err != nil {
 			resErrors = append(resErrors, err.Error())
 		}
 		// TODO(jaypipes): Send an event notification
@@ -77,11 +73,17 @@ func (s *Server) PropertyDefinitionGet(
 
 	// TODO(jaypipes): AUTHZ check user can read property definitions
 
-	if req.Filter == nil || req.Filter.Search == "" {
+	if req.Filter == nil {
 		return nil, ErrPropertyDefinitionFilterRequired
 	}
-	if req.Filter.Type == nil {
-		return nil, ErrObjectTypeRequired
+	if req.Filter.Key == "" {
+		if req.Filter.Uuid == "" {
+			return nil, ErrPropertyDefinitionFilterInvalid
+		}
+	} else {
+		if req.Filter.Type == nil {
+			return nil, ErrObjectTypeRequired
+		}
 	}
 	filters, err := s.expandPropertyDefinitionFilter(req.Session, req.Filter)
 	if err != nil {
@@ -92,7 +94,7 @@ func (s *Server) PropertyDefinitionGet(
 		// an unknown error after logging it.
 		s.log.ERR(
 			"failed retrieving property definition with search filter %s: %s",
-			req.Filter.Search,
+			req.Filter.Key,
 			err,
 		)
 		return nil, ErrUnknown
@@ -215,26 +217,23 @@ func (s *Server) PropertyDefinitionSet(
 	}
 
 	def := pdwr.Definition
-	pk := &types.PropertyDefinitionPK{
-		Partition:   pdwr.Partition.Uuid,
-		ObjectType:  pdwr.Type.Code,
-		PropertyKey: def.Key,
-	}
 
-	existing, err := s.store.PropertyDefinitionGetByPK(pk)
-	if err != nil {
-		if err != errors.ErrNotFound {
-			s.log.ERR(
-				"Failed trying to find existing property definition '%s': %s",
-				pk,
-				err,
-			)
-			// NOTE(jaypipes): don't return internal errors
-			return nil, ErrUnknown
-		}
-	} else {
-		def = existing
-	}
+	// existing, err := s.store.PropertyDefinitionGet(p)
+	//if err != nil {
+	//	if err != errors.ErrNotFound {
+	//		s.log.ERR(
+	//			"Failed trying to find existing property definition '%s': %s",
+	//			pk,
+	//			err,
+	//		)
+	//		// NOTE(jaypipes): don't return internal errors
+	//		return nil, ErrUnknown
+	//	}
+	//} else {
+	//	def = existing
+	//}
+	var existing *pb.PropertyDefinition
+	pk := pdwr.Partition.Uuid + ":" + pdwr.Type.Code + ":" + def.Key
 
 	if existing == nil {
 		s.log.L3("creating new property definition '%s'...", pk)

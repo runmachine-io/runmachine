@@ -10,20 +10,24 @@ import (
 	pb "github.com/runmachine-io/runmachine/proto"
 )
 
+type PropertyDefinitionMatcher interface {
+	Matches(obj *pb.PropertyDefinition) bool
+}
+
 // A specialized filter class that has already looked up specific partition and
 // object types (expanded from user-supplied partition and type filter
 // strings). Users pass pb.PropertyDefinitionFilter messages which contain
 // optional pb.PartitionFilter and pb.ObjectTypeFilter messages. Those may be
 // expanded (due to UsePrefix = true) to a set of partition UUIDs and/or object
-// type codes. We then create zero or more of these ObjectListFilter structs
-// that represent a specific filter on partition UUID and object type, along
-// with the the property definition's key
+// type codes. We then create zero or more of these PropertyDefinitionFilter
+// structs that represent a specific filter on partition UUID and object type,
+// along with the the property definition's key
 type PropertyDefinitionFilter struct {
-	Partition *pb.Partition
-	Type      *pb.ObjectType
-	Uuid      string
-	Key       string
-	UsePrefix bool
+	Partition  *PartitionCondition
+	ObjectType *ObjectTypeCondition
+	Uuid       string
+	Key        string
+	UsePrefix  bool
 }
 
 func (f *PropertyDefinitionFilter) Matches(obj *pb.PropertyDefinition) bool {
@@ -32,15 +36,11 @@ func (f *PropertyDefinitionFilter) Matches(obj *pb.PropertyDefinition) bool {
 			return false
 		}
 	}
-	if f.Partition != nil {
-		if f.Partition.Uuid != obj.Partition {
-			return false
-		}
+	if !f.Partition.Matches(obj) {
+		return false
 	}
-	if f.Type != nil {
-		if f.Type.Code != obj.Type {
-			return false
-		}
+	if !f.ObjectType.Matches(obj) {
+		return false
 	}
 	if f.Key != "" {
 		if f.UsePrefix {
@@ -57,16 +57,16 @@ func (f *PropertyDefinitionFilter) Matches(obj *pb.PropertyDefinition) bool {
 }
 
 func (f *PropertyDefinitionFilter) IsEmpty() bool {
-	return f.Partition == nil && f.Type == nil && f.Key == "" && f.Uuid == ""
+	return f.Partition == nil && f.ObjectType == nil && f.Key == "" && f.Uuid == ""
 }
 
 func (f *PropertyDefinitionFilter) String() string {
 	attrMap := make(map[string]string, 0)
 	if f.Partition != nil {
-		attrMap["partition"] = f.Partition.Uuid
+		attrMap["partition"] = f.Partition.Partition.Uuid
 	}
-	if f.Type != nil {
-		attrMap["object_type"] = f.Type.Code
+	if f.ObjectType != nil {
+		attrMap["object_type"] = f.ObjectType.ObjectType.Code
 	}
 	if f.Uuid != "" {
 		attrMap["uuid"] = f.Uuid

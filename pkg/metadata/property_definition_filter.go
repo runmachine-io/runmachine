@@ -12,7 +12,7 @@ import (
 func (s *Server) defaultPropertyDefinitionFilter(
 	session *pb.Session,
 ) (*types.PropertyDefinitionFilter, error) {
-	part, err := s.store.PartitionGet(session.Partition)
+	p, err := s.store.PartitionGet(session.Partition)
 	if err != nil {
 		if err == errors.ErrNotFound {
 			// Just return nil since clearly we can have no
@@ -27,7 +27,10 @@ func (s *Server) defaultPropertyDefinitionFilter(
 		return nil, err
 	}
 	return &types.PropertyDefinitionFilter{
-		Partition: part,
+		Partition: &types.PartitionCondition{
+			Op:        types.OP_EQUAL,
+			Partition: p,
+		},
 	}, nil
 }
 
@@ -105,14 +108,23 @@ func (s *Server) expandPropertyDefinitionFilter(
 		for _, p := range partitions {
 			if len(objTypes) == 0 {
 				f := &types.PropertyDefinitionFilter{
-					Partition: p,
+					Partition: &types.PartitionCondition{
+						Op:        types.OP_EQUAL,
+						Partition: p,
+					},
 				}
 				res = append(res, f)
 			} else {
 				for _, ot := range objTypes {
 					f := &types.PropertyDefinitionFilter{
-						Partition: p,
-						Type:      ot,
+						Partition: &types.PartitionCondition{
+							Op:        types.OP_EQUAL,
+							Partition: p,
+						},
+						ObjectType: &types.ObjectTypeCondition{
+							Op:         types.OP_EQUAL,
+							ObjectType: ot,
+						},
 					}
 					res = append(res, f)
 				}
@@ -121,7 +133,10 @@ func (s *Server) expandPropertyDefinitionFilter(
 	} else if len(objTypes) > 0 {
 		for _, ot := range objTypes {
 			f := &types.PropertyDefinitionFilter{
-				Type: ot,
+				ObjectType: &types.ObjectTypeCondition{
+					Op:         types.OP_EQUAL,
+					ObjectType: ot,
+				},
 			}
 			res = append(res, f)
 		}

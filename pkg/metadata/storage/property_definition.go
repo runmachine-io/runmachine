@@ -146,11 +146,10 @@ func (s *Store) PropertyDefinitionListWithReferences(
 	return res, nil
 }
 
-// propertyDefinitionsGetByFilter evaluates a single supplied
-// PropertyDefinitionFilter that has been populated with a valid Partition,
-// ObjectType and property key to filter by
+// propertyDefinitionsGetByFilter evaluates a single supplied matcher against
+// the known property definitions
 func (s *Store) propertyDefinitionsGetByFilter(
-	filter *types.PropertyDefinitionFilter,
+	matcher types.PropertyDefinitionMatcher,
 ) ([]*pb.PropertyDefinition, error) {
 	ctx, cancel := s.requestCtx()
 	defer cancel()
@@ -178,7 +177,7 @@ func (s *Store) propertyDefinitionsGetByFilter(
 		if err = proto.Unmarshal(kv.Value, obj); err != nil {
 			return nil, err
 		}
-		if !filter.Matches(obj) {
+		if !matcher.Matches(obj) {
 			continue
 		}
 		res[x] = obj

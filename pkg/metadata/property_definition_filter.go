@@ -156,17 +156,25 @@ func (s *Server) expandPropertyDefinitionFilter(
 			for _, pf := range res {
 				pf.Key = filter.Key
 				pf.UsePrefix = filter.UsePrefix
-				pf.Uuid = filter.Uuid
+				if filter.Uuid != "" {
+					pf.Uuid = &types.UuidCondition{
+						Op:   types.OP_EQUAL,
+						Uuid: filter.Uuid,
+					}
+				}
 			}
 		} else {
-			res = append(
-				res,
-				&types.PropertyDefinitionFilter{
-					Key:       filter.Key,
-					UsePrefix: filter.UsePrefix,
-					Uuid:      filter.Uuid,
-				},
-			)
+			pf := &types.PropertyDefinitionFilter{
+				Key:       filter.Key,
+				UsePrefix: filter.UsePrefix,
+			}
+			if filter.Uuid != "" {
+				pf.Uuid = &types.UuidCondition{
+					Op:   types.OP_EQUAL,
+					Uuid: filter.Uuid,
+				}
+			}
+			res = append(res, pf)
 		}
 	}
 	return res, nil

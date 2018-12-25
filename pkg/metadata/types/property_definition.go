@@ -25,16 +25,14 @@ type PropertyDefinitionMatcher interface {
 type PropertyDefinitionFilter struct {
 	Partition  *PartitionCondition
 	ObjectType *ObjectTypeCondition
-	Uuid       string
+	Uuid       *UuidCondition
 	Key        string
 	UsePrefix  bool
 }
 
 func (f *PropertyDefinitionFilter) Matches(obj *pb.PropertyDefinition) bool {
-	if f.Uuid != "" {
-		if f.Uuid != obj.Uuid {
-			return false
-		}
+	if !f.Uuid.Matches(obj) {
+		return false
 	}
 	if !f.Partition.Matches(obj) {
 		return false
@@ -57,7 +55,7 @@ func (f *PropertyDefinitionFilter) Matches(obj *pb.PropertyDefinition) bool {
 }
 
 func (f *PropertyDefinitionFilter) IsEmpty() bool {
-	return f.Partition == nil && f.ObjectType == nil && f.Key == "" && f.Uuid == ""
+	return f.Partition == nil && f.ObjectType == nil && f.Key == "" && f.Uuid == nil
 }
 
 func (f *PropertyDefinitionFilter) String() string {
@@ -68,8 +66,8 @@ func (f *PropertyDefinitionFilter) String() string {
 	if f.ObjectType != nil {
 		attrMap["object_type"] = f.ObjectType.ObjectType.Code
 	}
-	if f.Uuid != "" {
-		attrMap["uuid"] = f.Uuid
+	if f.Uuid != nil {
+		attrMap["uuid"] = f.Uuid.Uuid
 	}
 	if f.Key != "" {
 		attrMap["key"] = f.Key

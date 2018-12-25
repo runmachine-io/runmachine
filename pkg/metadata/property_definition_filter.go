@@ -149,24 +149,22 @@ func (s *Server) expandPropertyDefinitionFilter(
 	// types.PropertyDefinitionFilter with the search term and prefix indicator for
 	// the property key.
 	if filter.Key != "" || filter.Uuid != "" {
-		if len(res) > 0 {
-			// Now that we've expanded our partitions and object types, add in the
-			// original PropertyDefinitionFilter's Search and UsePrefix for each
-			// types.PropertyDefinitionFilter we've created
-			for _, pf := range res {
-				pf.Key = filter.Key
-				pf.UsePrefix = filter.UsePrefix
-				if filter.Uuid != "" {
-					pf.Uuid = &types.UuidCondition{
-						Op:   types.OP_EQUAL,
-						Uuid: filter.Uuid,
-					}
+		if len(res) == 0 {
+			res = append(res, &types.PropertyDefinitionFilter{})
+		}
+		// Now that we've expanded our partitions and object types, add in the
+		// original PropertyDefinitionFilter's Search and UsePrefix for each
+		// types.PropertyDefinitionFilter we've created
+		for _, pf := range res {
+			if filter.Key != "" {
+				op := types.OP_EQUAL
+				if filter.UsePrefix {
+					op = types.OP_GREATER_THAN_EQUAL
 				}
-			}
-		} else {
-			pf := &types.PropertyDefinitionFilter{
-				Key:       filter.Key,
-				UsePrefix: filter.UsePrefix,
+				pf.PropertyKey = &types.PropertyKeyCondition{
+					Op:          op,
+					PropertyKey: filter.Key,
+				}
 			}
 			if filter.Uuid != "" {
 				pf.Uuid = &types.UuidCondition{
@@ -174,7 +172,6 @@ func (s *Server) expandPropertyDefinitionFilter(
 					Uuid: filter.Uuid,
 				}
 			}
-			res = append(res, pf)
 		}
 	}
 	return res, nil

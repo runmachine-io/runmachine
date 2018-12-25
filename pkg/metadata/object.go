@@ -223,7 +223,10 @@ func (s *Server) validateObjectProperty(
 					Op:         types.OP_EQUAL,
 					ObjectType: objType,
 				},
-				Key: key,
+				PropertyKey: &types.PropertyKeyCondition{
+					Op:          types.OP_EQUAL,
+					PropertyKey: key,
+				},
 			},
 		},
 	)

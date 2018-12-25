@@ -1,16 +1,20 @@
 package types
 
-import pb "github.com/runmachine-io/runmachine/proto"
+import (
+	"strings"
+
+	pb "github.com/runmachine-io/runmachine/proto"
+)
 
 type Op int
 
 const (
-	OP_EQUAL            Op = 0
-	OP_NOT_EQUAL           = 1
-	OP_GREAT_THAN          = 2
-	OP_GREAT_THAN_EQUAL    = 3
-	OP_LESS_THAN           = 4
-	OP_LESS_THAN_EQUAL     = 5
+	OP_EQUAL              Op = 0
+	OP_NOT_EQUAL             = 1
+	OP_GREATER_THAN          = 2
+	OP_GREATER_THAN_EQUAL    = 3
+	OP_LESSER_THAN           = 4
+	OP_LESSER_THAN_EQUAL     = 5
 )
 
 type HasPartition interface {
@@ -81,6 +85,32 @@ func (c *UuidCondition) Matches(obj HasUuid) bool {
 		return c.Uuid == cmp
 	case OP_NOT_EQUAL:
 		return c.Uuid != cmp
+	default:
+		return false
+	}
+}
+
+type HasKey interface {
+	GetKey() string
+}
+
+type PropertyKeyCondition struct {
+	Op          Op
+	PropertyKey string
+}
+
+func (c *PropertyKeyCondition) Matches(obj HasKey) bool {
+	if c == nil || c.PropertyKey == "" {
+		return true
+	}
+	cmp := obj.GetKey()
+	switch c.Op {
+	case OP_EQUAL:
+		return c.PropertyKey == cmp
+	case OP_NOT_EQUAL:
+		return c.PropertyKey != cmp
+	case OP_GREATER_THAN_EQUAL:
+		return strings.HasPrefix(cmp, c.PropertyKey)
 	default:
 		return false
 	}

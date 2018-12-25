@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"strconv"
-	"strings"
 
 	apitypes "github.com/runmachine-io/runmachine/pkg/api/types"
 	pb "github.com/runmachine-io/runmachine/proto"
@@ -23,11 +22,10 @@ type PropertyDefinitionMatcher interface {
 // structs that represent a specific filter on partition UUID and object type,
 // along with the the property definition's key
 type PropertyDefinitionFilter struct {
-	Partition  *PartitionCondition
-	ObjectType *ObjectTypeCondition
-	Uuid       *UuidCondition
-	Key        string
-	UsePrefix  bool
+	Partition   *PartitionCondition
+	ObjectType  *ObjectTypeCondition
+	Uuid        *UuidCondition
+	PropertyKey *PropertyKeyCondition
 }
 
 func (f *PropertyDefinitionFilter) Matches(obj *pb.PropertyDefinition) bool {
@@ -40,22 +38,14 @@ func (f *PropertyDefinitionFilter) Matches(obj *pb.PropertyDefinition) bool {
 	if !f.ObjectType.Matches(obj) {
 		return false
 	}
-	if f.Key != "" {
-		if f.UsePrefix {
-			if !strings.HasPrefix(obj.Key, f.Key) {
-				return false
-			}
-		} else {
-			if f.Key != obj.Key {
-				return false
-			}
-		}
+	if !f.PropertyKey.Matches(obj) {
+		return false
 	}
 	return true
 }
 
 func (f *PropertyDefinitionFilter) IsEmpty() bool {
-	return f.Partition == nil && f.ObjectType == nil && f.Key == "" && f.Uuid == nil
+	return f.Partition == nil && f.ObjectType == nil && f.PropertyKey == nil && f.Uuid == nil
 }
 
 func (f *PropertyDefinitionFilter) String() string {
@@ -69,9 +59,11 @@ func (f *PropertyDefinitionFilter) String() string {
 	if f.Uuid != nil {
 		attrMap["uuid"] = f.Uuid.Uuid
 	}
-	if f.Key != "" {
-		attrMap["key"] = f.Key
-		attrMap["use_prefix"] = strconv.FormatBool(f.UsePrefix)
+	if f.PropertyKey != nil {
+		attrMap["key"] = f.PropertyKey.PropertyKey
+		attrMap["use_prefix"] = strconv.FormatBool(
+			f.PropertyKey.Op == OP_GREATER_THAN_EQUAL,
+		)
 	}
 	attrs := ""
 	x := 0

@@ -3,7 +3,6 @@ package types
 import (
 	"fmt"
 	"strconv"
-	"strings"
 
 	pb "github.com/runmachine-io/runmachine/proto"
 )
@@ -24,9 +23,8 @@ type ObjectFilter struct {
 	Partition  *PartitionCondition
 	ObjectType *ObjectTypeCondition
 	Uuid       *UuidCondition
+	Name       *NameCondition
 	Project    string
-	Search     string
-	UsePrefix  bool
 	// TODO(jaypipes): Add support for property and tag filters
 }
 
@@ -40,27 +38,19 @@ func (f *ObjectFilter) Matches(obj *pb.Object) bool {
 	if !f.ObjectType.Matches(obj) {
 		return false
 	}
+	if !f.Name.Matches(obj) {
+		return false
+	}
 	if f.Project != "" && obj.Project != "" {
 		if obj.Project != f.Project {
 			return false
-		}
-	}
-	if f.Search != "" {
-		if f.UsePrefix {
-			if !strings.HasPrefix(obj.Name, f.Search) {
-				return false
-			}
-		} else {
-			if obj.Name != f.Search {
-				return false
-			}
 		}
 	}
 	return true
 }
 
 func (f *ObjectFilter) IsEmpty() bool {
-	return f.Partition == nil && f.ObjectType == nil && f.Uuid == nil && f.Project == "" && f.Search == ""
+	return f.Partition == nil && f.ObjectType == nil && f.Uuid == nil && f.Project == "" && f.Name == nil
 }
 
 func (f *ObjectFilter) String() string {
@@ -77,9 +67,11 @@ func (f *ObjectFilter) String() string {
 	if f.Project != "" {
 		attrMap["project"] = f.Project
 	}
-	if f.Search != "" {
-		attrMap["search"] = f.Search
-		attrMap["use_prefix"] = strconv.FormatBool(f.UsePrefix)
+	if f.Name != nil {
+		attrMap["key"] = f.Name.Name
+		attrMap["use_prefix"] = strconv.FormatBool(
+			f.Name.Op == OP_GREATER_THAN_EQUAL,
+		)
 	}
 	attrs := ""
 	x := 0

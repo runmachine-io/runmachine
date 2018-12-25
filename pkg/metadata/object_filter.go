@@ -167,8 +167,14 @@ func (s *Server) expandObjectFilter(
 						Uuid: util.NormalizeUuid(filter.Search),
 					}
 				} else {
-					pf.Search = filter.Search
-					pf.UsePrefix = filter.UsePrefix
+					op := types.OP_EQUAL
+					if filter.UsePrefix {
+						op = types.OP_GREATER_THAN_EQUAL
+					}
+					pf.Name = &types.NameCondition{
+						Op:   op,
+						Name: filter.Search,
+					}
 				}
 			}
 			pf.Project = filter.Project

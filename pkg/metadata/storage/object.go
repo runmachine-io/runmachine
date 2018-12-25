@@ -211,7 +211,7 @@ func (s *Store) objectsGetByFilter(
 		}
 		return []*pb.Object{obj}, nil
 	}
-	if filter.Search != "" {
+	if filter.Name != nil {
 		// OK, we were asked to search for one or more objects having a
 		// supplied name (optionally have the name as a prefix).
 		//
@@ -236,16 +236,16 @@ func (s *Store) objectsGetByFilter(
 						filter.Partition.Partition.Uuid,
 						filter.ObjectType.ObjectType.Code,
 						filter.Project,
-						filter.Search,
-						filter.UsePrefix,
+						filter.Name.Name,
+						filter.Name.Op != types.OP_EQUAL,
 					)
 				}
 			} else {
 				return s.objectsGetByNameIndex(
 					filter.Partition.Partition.Uuid,
 					filter.ObjectType.ObjectType.Code,
-					filter.Search,
-					filter.UsePrefix,
+					filter.Name.Name,
+					filter.Name.Op != types.OP_EQUAL,
 				)
 			}
 		}

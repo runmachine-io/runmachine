@@ -41,7 +41,7 @@ var propertyDefinitionGetCommand = &cobra.Command{
 
 func setupPropertyDefinitionGetFlags() {
 	propertyDefinitionGetCommand.Flags().StringArrayVarP(
-		&cliPropertyDefinitionFilters,
+		&cliFilters,
 		"filter", "f",
 		nil,
 		usagePropertyDefinitionFilterOption,

@@ -7,34 +7,44 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/net/context"
 
-	"github.com/runmachine-io/runmachine/pkg/util"
 	pb "github.com/runmachine-io/runmachine/proto"
 )
 
 const (
-	usageObjectGetType = `specify the object type.
+	usageObjectGet = `Show information for a single object
 
-Required when <search> is not a UUID.
+There are two call signatures to this command.
+
+The first is to specify a single CLI argument that should be the UUID of the
+object you wish to show:
+
+  runm object get 4f4f54c9bfb44cce9a02d4daf6f79ea3
+
+The second is to specify a --filter option string that returns a single
+object.
+
+  runm object get --filter "type=runm.image name=fedora23"
+
+Specifying a --filter option string that returns more than one obect will
+result in a MultipleRecordsFound error.
+
+The --filter option string will ignored when also supplying a <UUID> argument.
 `
 )
 
-var (
-	// CLI-provided --type value
-	cliObjectGetType string
-)
-
 var objectGetCommand = &cobra.Command{
-	Use:   "get <search>",
+	Use:   "get [<UUID>]",
 	Short: "Show information for a single object",
-	Args:  cobra.ExactArgs(1),
 	Run:   objectGet,
+	Long:  usageObjectGet,
 }
 
 func setupObjectGetFlags() {
-	objectGetCommand.Flags().StringVarP(
-		&cliObjectGetType,
-		"type", "t", "",
-		usageObjectGetType,
+	objectGetCommand.Flags().StringArrayVarP(
+		&cliFilters,
+		"filter", "f",
+		nil,
+		usageObjectFilterOption,
 	)
 }
 
@@ -49,21 +59,35 @@ func objectGet(cmd *cobra.Command, args []string) {
 	client := pb.NewRunmMetadataClient(conn)
 
 	session := getSession()
-	uuidOrName := args[0]
-	filter := &pb.ObjectFilter{
-		Search:    uuidOrName,
-		UsePrefix: false,
+
+	var filter *pb.ObjectFilter
+
+	if len(args) > 1 {
+		fmt.Fprintf(
+			os.Stderr,
+			"Error: either specify a <UUID> argument or a single "+
+				"--filter option string\n",
+		)
+		cmd.Help()
+		os.Exit(1)
 	}
 
-	if !util.IsUuidLike(uuidOrName) {
-		if cliObjectGetType == "" {
-			fmt.Fprintf(os.Stderr, "Error: --type required when <search> is not a UUID\n")
+	if len(args) == 1 {
+		filter = &pb.ObjectFilter{
+			Uuid: args[0],
+		}
+	} else {
+		filters := buildObjectFilters()
+		if len(filters) != 1 {
+			fmt.Fprintf(
+				os.Stderr,
+				"Error: either specify a <UUID> argument or a single "+
+					"--filter option string\n",
+			)
+			cmd.Help()
 			os.Exit(1)
 		}
-		filter.Type = &pb.ObjectTypeFilter{
-			Search:    cliObjectGetType,
-			UsePrefix: false,
-		}
+		filter = filters[0]
 	}
 	obj, err := client.ObjectGet(
 		context.Background(),

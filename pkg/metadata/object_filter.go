@@ -152,7 +152,7 @@ func (s *Server) expandObjectFilter(
 	// partition filters, then go ahead and just return a single
 	// types.ObjectFilter with the search term and prefix indicator for the
 	// object.
-	if filter.Search != "" || filter.Project != "" {
+	if filter.Name != "" || filter.Uuid != "" || filter.Project != "" {
 		if len(res) == 0 {
 			res = append(res, &types.ObjectFilter{})
 		}
@@ -160,21 +160,20 @@ func (s *Server) expandObjectFilter(
 		// original ObjectFilter's Search and UsePrefix for each
 		// types.ObjectFilter we've created
 		for _, pf := range res {
-			if filter.Search != "" {
-				if util.IsUuidLike(filter.Search) {
-					pf.Uuid = &types.UuidCondition{
-						Op:   types.OP_EQUAL,
-						Uuid: util.NormalizeUuid(filter.Search),
-					}
-				} else {
-					op := types.OP_EQUAL
-					if filter.UsePrefix {
-						op = types.OP_GREATER_THAN_EQUAL
-					}
-					pf.Name = &types.NameCondition{
-						Op:   op,
-						Name: filter.Search,
-					}
+			if filter.Uuid != "" {
+				pf.Uuid = &types.UuidCondition{
+					Op:   types.OP_EQUAL,
+					Uuid: util.NormalizeUuid(filter.Uuid),
+				}
+			}
+			if filter.Name != "" {
+				op := types.OP_EQUAL
+				if filter.UsePrefix {
+					op = types.OP_GREATER_THAN_EQUAL
+				}
+				pf.Name = &types.NameCondition{
+					Op:   op,
+					Name: filter.Name,
 				}
 			}
 			pf.Project = filter.Project

@@ -59,6 +59,8 @@ var (
 	listSort   string
 	// filepath to read a document to send to the server for create/update operations
 	cliObjectDocPath string
+	// CLI-provided set of --filter options
+	cliFilters = []string{}
 )
 
 func exitIfConnectErr(err error) {

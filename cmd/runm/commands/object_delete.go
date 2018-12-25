@@ -20,10 +20,10 @@ var objectDeleteCommand = &cobra.Command{
 
 func setupObjectDeleteFlags() {
 	objectDeleteCommand.Flags().StringArrayVarP(
-		&cliObjectFilters, // defined in cmd/runm/commands/object_list.go
+		&cliFilters,
 		"filter", "f",
 		nil,
-		usageObjectFilterOption, // defined in cmd/runm/commands/object_list.go
+		usageObjectFilterOption,
 	)
 }
 

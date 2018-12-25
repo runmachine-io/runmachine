@@ -81,7 +81,7 @@ func (s *Server) ObjectGet(
 		// an unknown error after logging it.
 		s.log.ERR(
 			"failed to retrieve object with search filter %s: %s",
-			req.Filter.Search,
+			req.Filter,
 			err,
 		)
 		return nil, ErrUnknown

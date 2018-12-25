@@ -165,14 +165,12 @@ and the object metadata (properties and tags) in the partition:
 ```
 $PARTITION (e.g. $ROOT/partitions/d79706e01fbd4e48aae89209061cdb71/)
   objects/
-  property-definitions/
   properties/
   tags/
 ```
 
 We will refer to the `$PARTITION/objects/` key namespace as `$OBJECT` from here
-on. Similarly, we will refer to `$PARTITION/property-definitions/` as just
-`$PROPERTY_DEFINITIONS`, `$PARTITION/properties/` as just `$PROPERTIES` and
+on. Similarly, we will refer to `$PARTITION/properties/` as just `$PROPERTIES` and
 `$PARTITION/tags,` as just `$TAGS`. Each of these key namespaces is described
 in detail in the following sections.
 
@@ -210,28 +208,6 @@ means that these objects are not specific to a project, and therefore the
 `$OBJECTS/by-type/runm.provider_group/by-name` is the only index key namespace
 for these types of objects (there is no `by-project/` sub key namespace under
 the object type).
-
-### The `$PROPERTY_DEFINITIONS` key namespace
-
-The `$PROPERTY_DEFINITIONS` key namespace stores information about the property
-schemas defined within a partition. The key namespace itself has a very simple
-layout:
-
-```
-$PROPERTY_DEFINITIONS (e.g. $ROOT/partitions/d79706e01fbd4e48aae89209061cdb71/property-definitions/)
-  by-type/
-    runm.image/
-      9ef32862afd54a32b4a6c5f11c590061 -> 9ef32862afd54a32b4a6c5f11c590061
-      f287341160ee4feba4012eb7f8125b82 -> f287341160ee4feba4012eb7f8125b82
-    runm.machine/
-      f2aaa1bffbba4d5e860404176564347e
-```
-
-Above shows an example key namespace for `$PROPERTY_DEFINITIONS` in a partition
-where an administrator has defined three property schemas, two for `runm.image`
-object types and another for `runm.machine` object types. The values of the
-keys are UUIDs that can be looked up in the primary
-`$ROOT/property-definitions/by-uuid/` index.
 
 ### The `$PROPERTIES` key namespace
 

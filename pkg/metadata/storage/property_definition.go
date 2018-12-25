@@ -2,7 +2,6 @@ package storage
 
 import (
 	"fmt"
-	"strings"
 
 	etcd "github.com/coreos/etcd/clientv3"
 	"github.com/gogo/protobuf/proto"
@@ -35,9 +34,6 @@ func (s *Store) PropertyDefinitionDelete(
 	defer cancel()
 
 	pk := _PROPERTY_DEFINITIONS_BY_UUID_KEY + pdwr.Definition.Uuid
-	byTypeKey := _PARTITIONS_KEY + pdwr.Partition.Uuid + "/" +
-		_PROPERTY_DEFINITIONS_BY_TYPE_KEY + pdwr.Type.Code + "/" +
-		pdwr.Definition.Uuid
 
 	// creates all the indexes and the objects/by-uuid/ entry using a
 	// transaction that ensures if another thread modified anything underneath
@@ -45,8 +41,6 @@ func (s *Store) PropertyDefinitionDelete(
 	then := []etcd.Op{
 		// Delete the primary entry for the property definition
 		etcd.OpDelete(pk),
-		// Delete the index by type in the partition
-		etcd.OpDelete(byTypeKey),
 	}
 	// TODO(jaypipes): Should we put some If(...) clause in here that verifies
 	// the property definition key existed? Not sure it's worth it, really...
@@ -60,35 +54,6 @@ func (s *Store) PropertyDefinitionDelete(
 		return errors.ErrUnknown
 	}
 	return nil
-}
-
-// PropertyDefinitionGetByPK returns a property definition by partition UUID,
-// object type and property key.
-func (s *Store) PropertyDefinitionGetByUuid(
-	uuid string,
-) (*pb.PropertyDefinition, error) {
-	ctx, cancel := s.requestCtx()
-	defer cancel()
-
-	pk := _PROPERTY_DEFINITIONS_BY_UUID_KEY + util.NormalizeUuid(uuid)
-
-	gr, err := s.kv.Get(ctx, pk, etcd.WithPrefix())
-	if err != nil {
-		s.log.ERR("error getting key %s: %v", pk, err)
-		return nil, err
-	}
-	if gr.Count == 0 {
-		return nil, errors.ErrNotFound
-	} else if gr.Count > 1 {
-		return nil, errors.ErrMultipleRecords
-	}
-
-	obj := &pb.PropertyDefinition{}
-	if err = proto.Unmarshal(gr.Kvs[0].Value, obj); err != nil {
-		return nil, err
-	}
-
-	return obj, nil
 }
 
 // PropertyDefinitionList returns a slice of pointers to PropertyDefinition protobuffer
@@ -213,31 +178,8 @@ func (s *Store) propertyDefinitionsGetByFilter(
 		if err = proto.Unmarshal(kv.Value, obj); err != nil {
 			return nil, err
 		}
-		if filter.Uuid != "" {
-			if filter.Uuid != obj.Uuid {
-				continue
-			}
-		}
-		if filter.Partition != nil {
-			if filter.Partition.Uuid != obj.Partition {
-				continue
-			}
-		}
-		if filter.Type != nil {
-			if filter.Type.Code != obj.Type {
-				continue
-			}
-		}
-		if filter.Key != "" {
-			if filter.UsePrefix {
-				if !strings.HasPrefix(obj.Key, filter.Key) {
-					continue
-				}
-			} else {
-				if obj.Key != filter.Key {
-					continue
-				}
-			}
+		if !filter.Matches(obj) {
+			continue
 		}
 		res[x] = obj
 		x += 1
@@ -263,9 +205,6 @@ func (s *Store) PropertyDefinitionCreate(
 	}
 
 	pk := _PROPERTY_DEFINITIONS_BY_UUID_KEY + pdwr.Definition.Uuid
-	byTypeKey := _PARTITIONS_KEY + pdwr.Partition.Uuid + "/" +
-		_PROPERTY_DEFINITIONS_BY_TYPE_KEY + pdwr.Type.Code + "/" +
-		pdwr.Definition.Uuid
 
 	value, err := proto.Marshal(pdwr.Definition)
 	if err != nil {
@@ -277,7 +216,6 @@ func (s *Store) PropertyDefinitionCreate(
 	// us
 	onSuccess := []etcd.Op{
 		etcd.OpPut(pk, string(value)),
-		etcd.OpPut(byTypeKey, pdwr.Definition.Uuid),
 	}
 	// Ensure the key doesn't yet exist
 	compare := etcd.Compare(etcd.Version(pk), "=", 0)

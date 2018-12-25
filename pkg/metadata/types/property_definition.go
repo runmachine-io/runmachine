@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 
 	apitypes "github.com/runmachine-io/runmachine/pkg/api/types"
 	pb "github.com/runmachine-io/runmachine/proto"
@@ -11,10 +12,10 @@ import (
 
 // A specialized filter class that has already looked up specific partition and
 // object types (expanded from user-supplied partition and type filter
-// strings). Users pass pb.PropertyDefinitionFilter messages which contain optional
-// pb.PartitionFilter and pb.ObjectTypeFilter messages. Those may be expanded
-// (due to UsePrefix = true) to a set of partition UUIDs and/or object type
-// codes. We then create zero or more of these ObjectListFilter structs
+// strings). Users pass pb.PropertyDefinitionFilter messages which contain
+// optional pb.PartitionFilter and pb.ObjectTypeFilter messages. Those may be
+// expanded (due to UsePrefix = true) to a set of partition UUIDs and/or object
+// type codes. We then create zero or more of these ObjectListFilter structs
 // that represent a specific filter on partition UUID and object type, along
 // with the the property definition's key
 type PropertyDefinitionFilter struct {
@@ -23,6 +24,36 @@ type PropertyDefinitionFilter struct {
 	Uuid      string
 	Key       string
 	UsePrefix bool
+}
+
+func (f *PropertyDefinitionFilter) Matches(obj *pb.PropertyDefinition) bool {
+	if f.Uuid != "" {
+		if f.Uuid != obj.Uuid {
+			return false
+		}
+	}
+	if f.Partition != nil {
+		if f.Partition.Uuid != obj.Partition {
+			return false
+		}
+	}
+	if f.Type != nil {
+		if f.Type.Code != obj.Type {
+			return false
+		}
+	}
+	if f.Key != "" {
+		if f.UsePrefix {
+			if !strings.HasPrefix(obj.Key, f.Key) {
+				return false
+			}
+		} else {
+			if f.Key != obj.Key {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 func (f *PropertyDefinitionFilter) IsEmpty() bool {

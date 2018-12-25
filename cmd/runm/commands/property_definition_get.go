@@ -11,59 +11,40 @@ import (
 )
 
 const (
-	usagePropDefGetUuidOpt       = `search by the property definition's UUID`
-	usagePropDefGetObjectTypeOpt = `search by the property definition's object type
+	usagePropertyDefinitionGet = `Show information for a single property definition
 
-NOTE: Using this option will require specifying the property definition's key
-using the --key CLI option.
+There are two call signatures to this command.
+
+The first is to specify a single CLI argument that should be the UUID of the
+property definition you wish to show:
+
+  runm property-definition get 4f4f54c9bfb44cce9a02d4daf6f79ea3
+
+The second is to specify a --filter option string that returns a single
+property definition.
+
+  runm property-definition get --filter "type=runm.image key=architecture"
+
+Specifying a --filter option string that returns more than one property
+definition will result in a MultipleRecordsFound error.
+
+The --filter option string will ignored when also supplying a <UUID> argument.
 `
-	usagePropDefGetKeyOpt = `search by the property definition's key
-
-NOTE: Using this option will require specifying the property definition's
-object type using the --object-type CLI option.
-`
-	usagePropDefGetPartitionOpt = `optional partition filter.
-
-If not set, defaults to the partition used in the user's session.
-`
-)
-
-var (
-	// Search by UUID
-	cliPropDefGetUuid string
-	// Search by object type (and key)
-	cliPropDefGetObjectType string
-	cliPropDefGetKey        string
-	// partition override. if empty, we use the session's partition
-	cliPropDefGetPartition string
 )
 
 var propertyDefinitionGetCommand = &cobra.Command{
-	Use:   "get",
+	Use:   "get [<UUID>]",
 	Short: "Show information for a single property definition",
 	Run:   propertyDefinitionGet,
+	Long:  usagePropertyDefinitionGet,
 }
 
 func setupPropertyDefinitionGetFlags() {
-	propertyDefinitionGetCommand.Flags().StringVarP(
-		&cliPropDefGetUuid,
-		"uuid", "", "",
-		usagePropDefGetUuidOpt,
-	)
-	propertyDefinitionGetCommand.Flags().StringVarP(
-		&cliPropDefGetObjectType,
-		"object-type", "", "",
-		usagePropDefGetObjectTypeOpt,
-	)
-	propertyDefinitionGetCommand.Flags().StringVarP(
-		&cliPropDefGetKey,
-		"key", "", "",
-		usagePropDefGetKeyOpt,
-	)
-	propertyDefinitionGetCommand.Flags().StringVarP(
-		&cliPropDefGetPartition,
-		"partition", "", "",
-		usagePropDefGetPartitionOpt,
+	propertyDefinitionGetCommand.Flags().StringArrayVarP(
+		&cliPropertyDefinitionFilters,
+		"filter", "f",
+		nil,
+		usagePropertyDefinitionFilterOption,
 	)
 }
 
@@ -79,29 +60,34 @@ func propertyDefinitionGet(cmd *cobra.Command, args []string) {
 
 	session := getSession()
 
-	filter := &pb.PropertyDefinitionFilter{}
+	var filter *pb.PropertyDefinitionFilter
 
-	if cliPropDefGetUuid != "" {
-		filter.Uuid = cliPropDefGetUuid
+	if len(args) > 1 {
+		fmt.Fprintf(
+			os.Stderr,
+			"Error: either specify a <UUID> argument or a single "+
+				"--filter option string\n",
+		)
+		cmd.Help()
+		os.Exit(1)
+	}
+
+	if len(args) == 1 {
+		filter = &pb.PropertyDefinitionFilter{
+			Uuid: args[0],
+		}
 	} else {
-		if cliPropDefGetObjectType == "" || cliPropDefGetKey == "" {
+		filters := buildPropertyDefinitionFilters()
+		if len(filters) != 1 {
 			fmt.Fprintf(
 				os.Stderr,
-				"Error: either specify --uuid or specify *BOTH* "+
-					"--object-type <TYPE> and --key <KEY>\n",
+				"Error: either specify a <UUID> argument or a single "+
+					"--filter option string\n",
 			)
+			cmd.Help()
 			os.Exit(1)
 		}
-		filter.Type = &pb.ObjectTypeFilter{
-			Search: cliPropDefGetObjectType,
-		}
-		filter.Key = cliPropDefGetKey
-	}
-	if cliPropDefGetPartition != "" {
-		filter.Partition = &pb.PartitionFilter{
-			Search:    cliPropDefGetPartition,
-			UsePrefix: false,
-		}
+		filter = filters[0]
 	}
 
 	req := &pb.PropertyDefinitionGetRequest{

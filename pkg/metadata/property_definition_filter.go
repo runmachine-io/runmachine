@@ -12,7 +12,7 @@ import (
 func (s *Server) defaultPropertyDefinitionFilter(
 	session *pb.Session,
 ) (*types.PropertyDefinitionFilter, error) {
-	part, err := s.store.PartitionGet(session.Partition)
+	p, err := s.store.PartitionGet(session.Partition)
 	if err != nil {
 		if err == errors.ErrNotFound {
 			// Just return nil since clearly we can have no
@@ -27,7 +27,10 @@ func (s *Server) defaultPropertyDefinitionFilter(
 		return nil, err
 	}
 	return &types.PropertyDefinitionFilter{
-		Partition: part,
+		Partition: &types.PartitionCondition{
+			Op:        types.OP_EQUAL,
+			Partition: p,
+		},
 	}, nil
 }
 
@@ -105,14 +108,23 @@ func (s *Server) expandPropertyDefinitionFilter(
 		for _, p := range partitions {
 			if len(objTypes) == 0 {
 				f := &types.PropertyDefinitionFilter{
-					Partition: p,
+					Partition: &types.PartitionCondition{
+						Op:        types.OP_EQUAL,
+						Partition: p,
+					},
 				}
 				res = append(res, f)
 			} else {
 				for _, ot := range objTypes {
 					f := &types.PropertyDefinitionFilter{
-						Partition: p,
-						Type:      ot,
+						Partition: &types.PartitionCondition{
+							Op:        types.OP_EQUAL,
+							Partition: p,
+						},
+						ObjectType: &types.ObjectTypeCondition{
+							Op:         types.OP_EQUAL,
+							ObjectType: ot,
+						},
 					}
 					res = append(res, f)
 				}
@@ -121,7 +133,10 @@ func (s *Server) expandPropertyDefinitionFilter(
 	} else if len(objTypes) > 0 {
 		for _, ot := range objTypes {
 			f := &types.PropertyDefinitionFilter{
-				Type: ot,
+				ObjectType: &types.ObjectTypeCondition{
+					Op:         types.OP_EQUAL,
+					ObjectType: ot,
+				},
 			}
 			res = append(res, f)
 		}
@@ -134,24 +149,29 @@ func (s *Server) expandPropertyDefinitionFilter(
 	// types.PropertyDefinitionFilter with the search term and prefix indicator for
 	// the property key.
 	if filter.Key != "" || filter.Uuid != "" {
-		if len(res) > 0 {
-			// Now that we've expanded our partitions and object types, add in the
-			// original PropertyDefinitionFilter's Search and UsePrefix for each
-			// types.PropertyDefinitionFilter we've created
-			for _, pf := range res {
-				pf.Key = filter.Key
-				pf.UsePrefix = filter.UsePrefix
-				pf.Uuid = filter.Uuid
+		if len(res) == 0 {
+			res = append(res, &types.PropertyDefinitionFilter{})
+		}
+		// Now that we've expanded our partitions and object types, add in the
+		// original PropertyDefinitionFilter's Search and UsePrefix for each
+		// types.PropertyDefinitionFilter we've created
+		for _, pf := range res {
+			if filter.Key != "" {
+				op := types.OP_EQUAL
+				if filter.UsePrefix {
+					op = types.OP_GREATER_THAN_EQUAL
+				}
+				pf.PropertyKey = &types.PropertyKeyCondition{
+					Op:          op,
+					PropertyKey: filter.Key,
+				}
 			}
-		} else {
-			res = append(
-				res,
-				&types.PropertyDefinitionFilter{
-					Key:       filter.Key,
-					UsePrefix: filter.UsePrefix,
-					Uuid:      filter.Uuid,
-				},
-			)
+			if filter.Uuid != "" {
+				pf.Uuid = &types.UuidCondition{
+					Op:   types.OP_EQUAL,
+					Uuid: filter.Uuid,
+				}
+			}
 		}
 	}
 	return res, nil

@@ -81,7 +81,7 @@ func (s *Server) ObjectGet(
 		// an unknown error after logging it.
 		s.log.ERR(
 			"failed to retrieve object with search filter %s: %s",
-			req.Filter.Search,
+			req.Filter,
 			err,
 		)
 		return nil, ErrUnknown
@@ -215,9 +215,18 @@ func (s *Server) validateObjectProperty(
 	pds, err := s.store.PropertyDefinitionList(
 		[]*types.PropertyDefinitionFilter{
 			&types.PropertyDefinitionFilter{
-				Partition: partition,
-				Type:      objType,
-				Key:       key,
+				Partition: &types.PartitionCondition{
+					Op:        types.OP_EQUAL,
+					Partition: partition,
+				},
+				ObjectType: &types.ObjectTypeCondition{
+					Op:         types.OP_EQUAL,
+					ObjectType: objType,
+				},
+				PropertyKey: &types.PropertyKeyCondition{
+					Op:          types.OP_EQUAL,
+					PropertyKey: key,
+				},
 			},
 		},
 	)

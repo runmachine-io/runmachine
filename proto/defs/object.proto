@@ -50,8 +50,9 @@ message ObjectFilter {
     // The project the object must belong to, if the object type scope of this
     // object is PROJECT
     string project = 3;
-    // A search term on the object's UUID or name
-    string search = 4;
-    // Indicates the search should be a prefix expression
-    bool use_prefix = 5;
+    string uuid = 4;
+    // A search term on the object's name
+    string name = 5;
+    // Indicates the search on name should be a prefix expression
+    bool use_prefix = 6;
 }

@@ -9,40 +9,61 @@ import (
 	pb "github.com/runmachine-io/runmachine/proto"
 )
 
+type PropertyDefinitionMatcher interface {
+	Matches(obj *pb.PropertyDefinition) bool
+}
+
 // A specialized filter class that has already looked up specific partition and
 // object types (expanded from user-supplied partition and type filter
-// strings). Users pass pb.PropertyDefinitionFilter messages which contain optional
-// pb.PartitionFilter and pb.ObjectTypeFilter messages. Those may be expanded
-// (due to UsePrefix = true) to a set of partition UUIDs and/or object type
-// codes. We then create zero or more of these ObjectListFilter structs
-// that represent a specific filter on partition UUID and object type, along
-// with the the property definition's key
+// strings). Users pass pb.PropertyDefinitionFilter messages which contain
+// optional pb.PartitionFilter and pb.ObjectTypeFilter messages. Those may be
+// expanded (due to UsePrefix = true) to a set of partition UUIDs and/or object
+// type codes. We then create zero or more of these PropertyDefinitionFilter
+// structs that represent a specific filter on partition UUID and object type,
+// along with the the property definition's key
 type PropertyDefinitionFilter struct {
-	Partition *pb.Partition
-	Type      *pb.ObjectType
-	Uuid      string
-	Key       string
-	UsePrefix bool
+	Partition   *PartitionCondition
+	ObjectType  *ObjectTypeCondition
+	Uuid        *UuidCondition
+	PropertyKey *PropertyKeyCondition
+}
+
+func (f *PropertyDefinitionFilter) Matches(obj *pb.PropertyDefinition) bool {
+	if !f.Uuid.Matches(obj) {
+		return false
+	}
+	if !f.Partition.Matches(obj) {
+		return false
+	}
+	if !f.ObjectType.Matches(obj) {
+		return false
+	}
+	if !f.PropertyKey.Matches(obj) {
+		return false
+	}
+	return true
 }
 
 func (f *PropertyDefinitionFilter) IsEmpty() bool {
-	return f.Partition == nil && f.Type == nil && f.Key == "" && f.Uuid == ""
+	return f.Partition == nil && f.ObjectType == nil && f.PropertyKey == nil && f.Uuid == nil
 }
 
 func (f *PropertyDefinitionFilter) String() string {
 	attrMap := make(map[string]string, 0)
 	if f.Partition != nil {
-		attrMap["partition"] = f.Partition.Uuid
+		attrMap["partition"] = f.Partition.Partition.Uuid
 	}
-	if f.Type != nil {
-		attrMap["object_type"] = f.Type.Code
+	if f.ObjectType != nil {
+		attrMap["object_type"] = f.ObjectType.ObjectType.Code
 	}
-	if f.Uuid != "" {
-		attrMap["uuid"] = f.Uuid
+	if f.Uuid != nil {
+		attrMap["uuid"] = f.Uuid.Uuid
 	}
-	if f.Key != "" {
-		attrMap["key"] = f.Key
-		attrMap["use_prefix"] = strconv.FormatBool(f.UsePrefix)
+	if f.PropertyKey != nil {
+		attrMap["key"] = f.PropertyKey.PropertyKey
+		attrMap["use_prefix"] = strconv.FormatBool(
+			f.PropertyKey.Op == OP_GREATER_THAN_EQUAL,
+		)
 	}
 	attrs := ""
 	x := 0

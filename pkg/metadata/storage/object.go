@@ -2,7 +2,6 @@ package storage
 
 import (
 	"fmt"
-	"strings"
 
 	etcd "github.com/coreos/etcd/clientv3"
 	"github.com/golang/protobuf/proto"
@@ -90,7 +89,7 @@ func (s *Store) ObjectDelete(
 // ObjectList returns a slice of pointers to Object protobuffer messages
 // matching a set of supplied filters.
 func (s *Store) ObjectList(
-	any []*types.ObjectListFilter,
+	any []*types.ObjectFilter,
 ) ([]*pb.Object, error) {
 	if len(any) == 0 {
 		return s.objectsGetAll()
@@ -102,13 +101,13 @@ func (s *Store) ObjectList(
 
 	for _, filter := range any {
 		if filter.IsEmpty() {
-			s.log.ERR("received empty types.ObjectListFilter in ObjectList()")
+			s.log.ERR("received empty types.ObjectFilter in ObjectList()")
 			continue
 		}
-		// If the types.ObjectListFilter contains a value for the Search field,
+		// If the types.ObjectFilter contains a value for the Search field,
 		// that means we need to look up objects by UUID or name (with an
 		// optional prefix for the name). If no Search field is present, that
-		// means that in order to evaluate this types.ObjectListFilter we'll be
+		// means that in order to evaluate this types.ObjectFilter we'll be
 		// searching on ranges of objects by type, partition or project.
 		filterObjs, err := s.objectsGetByFilter(filter)
 		if err != nil {
@@ -137,7 +136,7 @@ func (s *Store) ObjectList(
 // ObjectListWithReferences returns a slice of pointers to ObjectWithReference
 // structs that have had Partition and ObjectType relations expanded inline.
 func (s *Store) ObjectListWithReferences(
-	any []*types.ObjectListFilter,
+	any []*types.ObjectFilter,
 ) ([]*types.ObjectWithReferences, error) {
 	objects, err := s.ObjectList(any)
 	if err != nil {
@@ -194,72 +193,60 @@ func (s *Store) ObjectListWithReferences(
 }
 
 func (s *Store) objectsGetByFilter(
-	filter *types.ObjectListFilter,
+	filter *types.ObjectFilter,
 ) ([]*pb.Object, error) {
-	if filter.Search != "" {
-		if util.IsUuidLike(filter.Search) {
-			// If the filter specifies a Search and it looks like a UUID, then
-			// all we need to do is grab the object from the primary
-			// objects/by-uuid/ index and check that any other fields match the
-			// object's fields. If so, just return the UUID
-			normUuid := util.NormalizeUuid(filter.Search)
-			obj, err := s.objectGetByUuid(normUuid)
-			if err != nil {
-				return nil, err
-			}
-			if filter.Partition != nil {
-				if obj.Partition != filter.Partition.Uuid {
-					return nil, errors.ErrNotFound
-				}
-			}
-			if filter.Type != nil {
-				if obj.Type != filter.Type.Code {
-					return nil, errors.ErrNotFound
-				}
-			}
-			if filter.Project != "" && obj.Project != "" {
-				if obj.Project != filter.Project {
-					return nil, errors.ErrNotFound
-				}
-			}
-			return []*pb.Object{obj}, nil
-		} else {
-			// OK, we were asked to search for one or more objects having a
-			// supplied name (optionally have the name as a prefix).
-			//
-			// If the object type has been specified, things can be searched
-			// more efficiently because the object type's scope will tell us
-			// whether the name index for the object is going to be be object
-			// type and name or object type, project and name.
-			//
-			// If no object type was specified, we will need to do a full range
-			// scan on all objects by the primary objects/by-uuid/ index and
-			// manually check to see if the deserialized Object's name has the
-			// requested name...
-			if filter.Type != nil && filter.Partition != nil {
-				if filter.Type.Scope == pb.ObjectTypeScope_PROJECT {
-					if filter.Project != "" {
-						// Just drop through if we don't have a project because
-						// we won't be able to look up a project-scoped object
-						// type when no project was specified, so we'll do the
-						// less efficient range-scan sieve pattern to solve
-						// this filter
-						return s.objectsGetByProjectNameIndex(
-							filter.Partition.Uuid,
-							filter.Type.Code,
-							filter.Project,
-							filter.Search,
-							filter.UsePrefix,
-						)
-					}
-				} else {
-					return s.objectsGetByNameIndex(
-						filter.Partition.Uuid,
-						filter.Type.Code,
-						filter.Search,
-						filter.UsePrefix,
+	if filter.Uuid != nil {
+		// If the filter specifies a Search and it looks like a UUID, then
+		// all we need to do is grab the object from the primary
+		// objects/by-uuid/ index and check that any other fields match the
+		// object's fields. If so, just return the UUID
+		obj, err := s.objectGetByUuid(filter.Uuid.Uuid)
+		if err != nil {
+			return nil, err
+		}
+		// The filter may have contained more matchers than UUID, so apply
+		// those here too...
+		if !filter.Matches(obj) {
+			return nil, errors.ErrNotFound
+		}
+		return []*pb.Object{obj}, nil
+	}
+	if filter.Name != nil {
+		// OK, we were asked to search for one or more objects having a
+		// supplied name (optionally have the name as a prefix).
+		//
+		// If the object type has been specified, things can be searched
+		// more efficiently because the object type's scope will tell us
+		// whether the name index for the object is going to be be object
+		// type and name or object type, project and name.
+		//
+		// If no object type was specified, we will need to do a full range
+		// scan on all objects by the primary objects/by-uuid/ index and
+		// manually check to see if the deserialized Object's name has the
+		// requested name...
+		if filter.ObjectType != nil && filter.Partition != nil {
+			if filter.ObjectType.ObjectType.Scope == pb.ObjectTypeScope_PROJECT {
+				if filter.Project != "" {
+					// Just drop through if we don't have a project because
+					// we won't be able to look up a project-scoped object
+					// type when no project was specified, so we'll do the
+					// less efficient range-scan sieve pattern to solve
+					// this filter
+					return s.objectsGetByProjectNameIndex(
+						filter.Partition.Partition.Uuid,
+						filter.ObjectType.ObjectType.Code,
+						filter.Project,
+						filter.Name.Name,
+						filter.Name.Op != types.OP_EQUAL,
 					)
 				}
+			} else {
+				return s.objectsGetByNameIndex(
+					filter.Partition.Partition.Uuid,
+					filter.ObjectType.ObjectType.Code,
+					filter.Name.Name,
+					filter.Name.Op != types.OP_EQUAL,
+				)
 			}
 		}
 	}
@@ -277,31 +264,8 @@ func (s *Store) objectsGetByFilter(
 	for _, obj := range objects {
 		// Use a sieve pattern, only adding the object to our results if it
 		// passes all match expressions
-		if filter.Partition != nil {
-			if obj.Partition != filter.Partition.Uuid {
-				continue
-			}
-		}
-		if filter.Type != nil {
-			if obj.Type != filter.Type.Code {
-				continue
-			}
-		}
-		if filter.Project != "" && obj.Project != "" {
-			if obj.Project != filter.Project {
-				continue
-			}
-		}
-		if filter.Search != "" {
-			if filter.UsePrefix {
-				if !strings.HasPrefix(obj.Name, filter.Search) {
-					continue
-				}
-			} else {
-				if obj.Name != filter.Search {
-					continue
-				}
-			}
+		if !filter.Matches(obj) {
+			continue
 		}
 		res = append(res, obj)
 	}

@@ -20,10 +20,10 @@ var propertyDefinitionDeleteCommand = &cobra.Command{
 
 func setupPropertyDefinitionDeleteFlags() {
 	propertyDefinitionDeleteCommand.Flags().StringArrayVarP(
-		&cliPropertyDefinitionFilters, // defined in cmd/runm/commands/property_definition_list.go
+		&cliFilters,
 		"filter", "f",
 		nil,
-		usagePropertyDefinitionFilterOption, // defined in cmd/runm/commands/property_definition_list.go
+		usagePropertyDefinitionFilterOption,
 	)
 }
 

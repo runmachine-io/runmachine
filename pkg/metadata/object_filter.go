@@ -3,6 +3,7 @@ package metadata
 import (
 	"github.com/runmachine-io/runmachine/pkg/errors"
 	"github.com/runmachine-io/runmachine/pkg/metadata/types"
+	"github.com/runmachine-io/runmachine/pkg/util"
 	pb "github.com/runmachine-io/runmachine/proto"
 )
 
@@ -159,9 +160,18 @@ func (s *Server) expandObjectFilter(
 		// original ObjectFilter's Search and UsePrefix for each
 		// types.ObjectFilter we've created
 		for _, pf := range res {
+			if filter.Search != "" {
+				if util.IsUuidLike(filter.Search) {
+					pf.Uuid = &types.UuidCondition{
+						Op:   types.OP_EQUAL,
+						Uuid: util.NormalizeUuid(filter.Search),
+					}
+				} else {
+					pf.Search = filter.Search
+					pf.UsePrefix = filter.UsePrefix
+				}
+			}
 			pf.Project = filter.Project
-			pf.Search = filter.Search
-			pf.UsePrefix = filter.UsePrefix
 		}
 	}
 	return res, nil

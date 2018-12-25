@@ -195,58 +195,58 @@ func (s *Store) ObjectListWithReferences(
 func (s *Store) objectsGetByFilter(
 	filter *types.ObjectFilter,
 ) ([]*pb.Object, error) {
+	if filter.Uuid != nil {
+		// If the filter specifies a Search and it looks like a UUID, then
+		// all we need to do is grab the object from the primary
+		// objects/by-uuid/ index and check that any other fields match the
+		// object's fields. If so, just return the UUID
+		obj, err := s.objectGetByUuid(filter.Uuid.Uuid)
+		if err != nil {
+			return nil, err
+		}
+		// The filter may have contained more matchers than UUID, so apply
+		// those here too...
+		if !filter.Matches(obj) {
+			return nil, errors.ErrNotFound
+		}
+		return []*pb.Object{obj}, nil
+	}
 	if filter.Search != "" {
-		if util.IsUuidLike(filter.Search) {
-			// If the filter specifies a Search and it looks like a UUID, then
-			// all we need to do is grab the object from the primary
-			// objects/by-uuid/ index and check that any other fields match the
-			// object's fields. If so, just return the UUID
-			normUuid := util.NormalizeUuid(filter.Search)
-			obj, err := s.objectGetByUuid(normUuid)
-			if err != nil {
-				return nil, err
-			}
-			if !filter.Matches(obj) {
-				return nil, errors.ErrNotFound
-			}
-			return []*pb.Object{obj}, nil
-		} else {
-			// OK, we were asked to search for one or more objects having a
-			// supplied name (optionally have the name as a prefix).
-			//
-			// If the object type has been specified, things can be searched
-			// more efficiently because the object type's scope will tell us
-			// whether the name index for the object is going to be be object
-			// type and name or object type, project and name.
-			//
-			// If no object type was specified, we will need to do a full range
-			// scan on all objects by the primary objects/by-uuid/ index and
-			// manually check to see if the deserialized Object's name has the
-			// requested name...
-			if filter.ObjectType != nil && filter.Partition != nil {
-				if filter.ObjectType.ObjectType.Scope == pb.ObjectTypeScope_PROJECT {
-					if filter.Project != "" {
-						// Just drop through if we don't have a project because
-						// we won't be able to look up a project-scoped object
-						// type when no project was specified, so we'll do the
-						// less efficient range-scan sieve pattern to solve
-						// this filter
-						return s.objectsGetByProjectNameIndex(
-							filter.Partition.Partition.Uuid,
-							filter.ObjectType.ObjectType.Code,
-							filter.Project,
-							filter.Search,
-							filter.UsePrefix,
-						)
-					}
-				} else {
-					return s.objectsGetByNameIndex(
+		// OK, we were asked to search for one or more objects having a
+		// supplied name (optionally have the name as a prefix).
+		//
+		// If the object type has been specified, things can be searched
+		// more efficiently because the object type's scope will tell us
+		// whether the name index for the object is going to be be object
+		// type and name or object type, project and name.
+		//
+		// If no object type was specified, we will need to do a full range
+		// scan on all objects by the primary objects/by-uuid/ index and
+		// manually check to see if the deserialized Object's name has the
+		// requested name...
+		if filter.ObjectType != nil && filter.Partition != nil {
+			if filter.ObjectType.ObjectType.Scope == pb.ObjectTypeScope_PROJECT {
+				if filter.Project != "" {
+					// Just drop through if we don't have a project because
+					// we won't be able to look up a project-scoped object
+					// type when no project was specified, so we'll do the
+					// less efficient range-scan sieve pattern to solve
+					// this filter
+					return s.objectsGetByProjectNameIndex(
 						filter.Partition.Partition.Uuid,
 						filter.ObjectType.ObjectType.Code,
+						filter.Project,
 						filter.Search,
 						filter.UsePrefix,
 					)
 				}
+			} else {
+				return s.objectsGetByNameIndex(
+					filter.Partition.Partition.Uuid,
+					filter.ObjectType.ObjectType.Code,
+					filter.Search,
+					filter.UsePrefix,
+				)
 			}
 		}
 	}

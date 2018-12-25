@@ -5,7 +5,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/runmachine-io/runmachine/pkg/util"
 	pb "github.com/runmachine-io/runmachine/proto"
 )
 
@@ -24,6 +23,7 @@ type ObjectMatcher interface {
 type ObjectFilter struct {
 	Partition  *PartitionCondition
 	ObjectType *ObjectTypeCondition
+	Uuid       *UuidCondition
 	Project    string
 	Search     string
 	UsePrefix  bool
@@ -31,6 +31,9 @@ type ObjectFilter struct {
 }
 
 func (f *ObjectFilter) Matches(obj *pb.Object) bool {
+	if !f.Uuid.Matches(obj) {
+		return false
+	}
 	if !f.Partition.Matches(obj) {
 		return false
 	}
@@ -43,20 +46,13 @@ func (f *ObjectFilter) Matches(obj *pb.Object) bool {
 		}
 	}
 	if f.Search != "" {
-		// TODO(jaypipes): Remove this when using UuidCondition
-		if util.IsUuidLike(f.Search) {
-			if obj.Uuid != util.NormalizeUuid(f.Search) {
+		if f.UsePrefix {
+			if !strings.HasPrefix(obj.Name, f.Search) {
 				return false
 			}
 		} else {
-			if f.UsePrefix {
-				if !strings.HasPrefix(obj.Name, f.Search) {
-					return false
-				}
-			} else {
-				if obj.Name != f.Search {
-					return false
-				}
+			if obj.Name != f.Search {
+				return false
 			}
 		}
 	}
@@ -64,7 +60,7 @@ func (f *ObjectFilter) Matches(obj *pb.Object) bool {
 }
 
 func (f *ObjectFilter) IsEmpty() bool {
-	return f.Partition == nil && f.ObjectType == nil && f.Project == "" && f.Search == ""
+	return f.Partition == nil && f.ObjectType == nil && f.Uuid == nil && f.Project == "" && f.Search == ""
 }
 
 func (f *ObjectFilter) String() string {
@@ -74,6 +70,9 @@ func (f *ObjectFilter) String() string {
 	}
 	if f.ObjectType != nil {
 		attrMap["object_type"] = f.ObjectType.ObjectType.Code
+	}
+	if f.Uuid != nil {
+		attrMap["uuid"] = f.Uuid.Uuid
 	}
 	if f.Project != "" {
 		attrMap["project"] = f.Project

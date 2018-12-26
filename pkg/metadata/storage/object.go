@@ -45,10 +45,7 @@ func (s *Store) objectByNameIndexKey(owr *types.ObjectWithReferences) (string, e
 	return "", fmt.Errorf("Unknown object type scope: %s", owr.Type.Scope)
 }
 
-// ObjectDelete removes an object from storage along with any index records the
-// object may have had. The supplied Object message is expected to have already
-// been pulled from etcd storage and therefore contain an already-normalized
-// UUID, a valid object type and partition, etc.
+// ObjectDelete removes an object from backend storage
 func (s *Store) ObjectDelete(
 	owr *types.ObjectWithReferences,
 ) error {
@@ -86,37 +83,37 @@ func (s *Store) ObjectDelete(
 	return nil
 }
 
-// ObjectList returns a slice of pointers to Object protobuffer messages
-// matching a set of supplied filters.
+// ObjectList returns a slice of pointers to objects matching any of the
+// supplied filters
 func (s *Store) ObjectList(
-	any []*types.ObjectFilter,
+	any []*types.ObjectCondition,
 ) ([]*pb.Object, error) {
 	if len(any) == 0 {
 		return s.objectsGetAll()
 	}
-	// We iterate over our filters, evaluating each and OR'ing them together
+	// We iterate over our conditions, evaluating each and OR'ing them together
 	// into this map of object UUID to pb.Object message. This map is used to
-	// group objects with the same UUID that match multiple filters.
+	// group objects with the same UUID that match multiple conditions.
 	objs := make(map[string]*pb.Object, 0)
 
-	for _, filter := range any {
-		if filter.IsEmpty() {
-			s.log.ERR("received empty types.ObjectFilter in ObjectList()")
+	for _, cond := range any {
+		if cond.IsEmpty() {
+			s.log.ERR("received empty types.ObjectCondition in ObjectList()")
 			continue
 		}
-		// If the types.ObjectFilter contains a value for the Search field,
+		// If the types.ObjectCondition contains a value for the Search field,
 		// that means we need to look up objects by UUID or name (with an
 		// optional prefix for the name). If no Search field is present, that
-		// means that in order to evaluate this types.ObjectFilter we'll be
+		// means that in order to evaluate this types.ObjectCondition we'll be
 		// searching on ranges of objects by type, partition or project.
-		filterObjs, err := s.objectsGetByFilter(filter)
+		filtered, err := s.objectsGetMatching(cond)
 		if err != nil {
 			if err == errors.ErrNotFound {
 				continue // Remember, we need to OR together the filters
 			}
 			return nil, err
 		}
-		for _, obj := range filterObjs {
+		for _, obj := range filtered {
 			objs[obj.Uuid] = obj
 		}
 	}
@@ -136,20 +133,17 @@ func (s *Store) ObjectList(
 // ObjectListWithReferences returns a slice of pointers to ObjectWithReference
 // structs that have had Partition and ObjectType relations expanded inline.
 func (s *Store) ObjectListWithReferences(
-	any []*types.ObjectFilter,
+	any []*types.ObjectCondition,
 ) ([]*types.ObjectWithReferences, error) {
 	objects, err := s.ObjectList(any)
 	if err != nil {
 		return nil, err
 	}
 
-	// NOTE(jaypipes): store.ObjectDelete() accepts a single argument of type
-	// ObjectWithReferences. Here, we have two maps for Partition and
-	// ObjectType messages that we fetch by partition UUID or object type code
-	// while iterating over the objects to delete. These Partition and
-	// ObjectType messages are included in the ObjectWithReferences structs
-	// that are passed to ObjectDelete. Gotta love implementing joins in
-	// Golang/memory... :(
+	// We have two maps for Partition and ObjectType messages that we fetch by
+	// partition UUID or object type code while iterating over the objects to
+	// delete. These Partition and ObjectType messages are included in the
+	// ObjectWithReferences structs that are passed around.
 	partitions := make(map[string]*pb.Partition, 0)
 	objTypes := make(map[string]*pb.ObjectType, 0)
 	res := make([]*types.ObjectWithReferences, len(objects))
@@ -192,26 +186,26 @@ func (s *Store) ObjectListWithReferences(
 	return res, nil
 }
 
-func (s *Store) objectsGetByFilter(
-	filter *types.ObjectFilter,
+func (s *Store) objectsGetMatching(
+	cond *types.ObjectCondition,
 ) ([]*pb.Object, error) {
-	if filter.Uuid != nil {
+	if cond.Uuid != nil {
 		// If the filter specifies a Search and it looks like a UUID, then
 		// all we need to do is grab the object from the primary
 		// objects/by-uuid/ index and check that any other fields match the
 		// object's fields. If so, just return the UUID
-		obj, err := s.objectGetByUuid(filter.Uuid.Uuid)
+		obj, err := s.objectGetByUuid(cond.Uuid.Uuid)
 		if err != nil {
 			return nil, err
 		}
 		// The filter may have contained more matchers than UUID, so apply
 		// those here too...
-		if !filter.Matches(obj) {
+		if !cond.Matches(obj) {
 			return nil, errors.ErrNotFound
 		}
 		return []*pb.Object{obj}, nil
 	}
-	if filter.Name != nil {
+	if cond.Name != nil {
 		// OK, we were asked to search for one or more objects having a
 		// supplied name (optionally have the name as a prefix).
 		//
@@ -224,35 +218,35 @@ func (s *Store) objectsGetByFilter(
 		// scan on all objects by the primary objects/by-uuid/ index and
 		// manually check to see if the deserialized Object's name has the
 		// requested name...
-		if filter.ObjectType != nil && filter.Partition != nil {
-			if filter.ObjectType.ObjectType.Scope == pb.ObjectTypeScope_PROJECT {
-				if filter.Project != "" {
+		if cond.ObjectType != nil && cond.Partition != nil {
+			if cond.ObjectType.ObjectType.Scope == pb.ObjectTypeScope_PROJECT {
+				if cond.Project != "" {
 					// Just drop through if we don't have a project because
 					// we won't be able to look up a project-scoped object
 					// type when no project was specified, so we'll do the
 					// less efficient range-scan sieve pattern to solve
-					// this filter
+					// this cond
 					return s.objectsGetByProjectNameIndex(
-						filter.Partition.Partition.Uuid,
-						filter.ObjectType.ObjectType.Code,
-						filter.Project,
-						filter.Name.Name,
-						filter.Name.Op != types.OP_EQUAL,
+						cond.Partition.Partition.Uuid,
+						cond.ObjectType.ObjectType.Code,
+						cond.Project,
+						cond.Name.Name,
+						cond.Name.Op != types.OP_EQUAL,
 					)
 				}
 			} else {
 				return s.objectsGetByNameIndex(
-					filter.Partition.Partition.Uuid,
-					filter.ObjectType.ObjectType.Code,
-					filter.Name.Name,
-					filter.Name.Op != types.OP_EQUAL,
+					cond.Partition.Partition.Uuid,
+					cond.ObjectType.ObjectType.Code,
+					cond.Name.Name,
+					cond.Name.Op != types.OP_EQUAL,
 				)
 			}
 		}
 	}
 
 	// This is called when we have no filter on object UUID/name or we have a
-	// filter on name but not object type. We will get all objects and filter
+	// filter on name but not object type. We will get all objects and cond
 	// out any objects that don't meet the supplied partition UUID, project and
 	// object type code filters.
 	objects, err := s.objectsGetAll()
@@ -264,7 +258,7 @@ func (s *Store) objectsGetByFilter(
 	for _, obj := range objects {
 		// Use a sieve pattern, only adding the object to our results if it
 		// passes all match expressions
-		if !filter.Matches(obj) {
+		if !cond.Matches(obj) {
 			continue
 		}
 		res = append(res, obj)

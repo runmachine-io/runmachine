@@ -41,9 +41,8 @@ func (c *PartitionCondition) Matches(obj HasPartition) bool {
 	}
 }
 
-// TODO(jaypipes): Change this back to ObjectType
-type HasType interface {
-	GetType() string
+type HasObjectType interface {
+	GetObjectType() string
 }
 
 type ObjectTypeCondition struct {
@@ -51,11 +50,11 @@ type ObjectTypeCondition struct {
 	ObjectType *pb.ObjectType
 }
 
-func (c *ObjectTypeCondition) Matches(obj HasType) bool {
+func (c *ObjectTypeCondition) Matches(obj HasObjectType) bool {
 	if c == nil || c.ObjectType == nil {
 		return true
 	}
-	cmp := obj.GetType()
+	cmp := obj.GetObjectType()
 	switch c.Op {
 	case OP_EQUAL:
 		return c.ObjectType.Code == cmp

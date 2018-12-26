@@ -14,7 +14,7 @@ type Object struct {
 	// Identifier of the partition the object belongs to
 	Partition string `yaml:"partition"`
 	// Code for the type of object this is
-	Type string `yaml:"type"`
+	ObjectType string `yaml:"object_type"`
 	// Optional identifier of the project the object belongs to. Only required
 	// if the object's type is project-scoped
 	Project string `yaml:"project"`

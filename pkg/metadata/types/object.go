@@ -86,7 +86,7 @@ func (f *ObjectCondition) String() string {
 // which are guaranteed to be pre-validated and their relations already
 // expanded.
 type ObjectWithReferences struct {
-	Object    *pb.Object
-	Partition *pb.Partition
-	Type      *pb.ObjectType
+	Object     *pb.Object
+	Partition  *pb.Partition
+	ObjectType *pb.ObjectType
 }

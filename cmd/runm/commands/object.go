@@ -99,7 +99,7 @@ func buildObjectFilters() []*pb.ObjectFilter {
 					UsePrefix: usePrefix,
 				}
 			case "type":
-				filter.Type = &pb.ObjectTypeFilter{
+				filter.ObjectType = &pb.ObjectTypeFilter{
 					Search:    value,
 					UsePrefix: usePrefix,
 				}
@@ -127,7 +127,7 @@ func buildObjectFilters() []*pb.ObjectFilter {
 
 func printObject(obj *pb.Object) {
 	fmt.Printf("Partition:   %s\n", obj.Partition)
-	fmt.Printf("Type:        %s\n", obj.Type)
+	fmt.Printf("Object Type: %s\n", obj.ObjectType)
 	fmt.Printf("UUID:        %s\n", obj.Uuid)
 	fmt.Printf("Name:        %s\n", obj.Name)
 	if obj.Project != "" {

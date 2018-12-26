@@ -79,7 +79,7 @@ func (f *PropertyDefinitionCondition) String() string {
 // pre-validated and their relations already expanded.
 type PropertyDefinitionWithReferences struct {
 	Partition  *pb.Partition
-	Type       *pb.ObjectType
+	ObjectType *pb.ObjectType
 	Definition *pb.PropertyDefinition
 }
 

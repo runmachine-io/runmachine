@@ -93,30 +93,30 @@ func (s *Store) PropertyDefinitionListWithReferences(
 						"type %s",
 					obj.Partition,
 					obj.Key,
-					obj.Type,
+					obj.ObjectType,
 				)
 				s.log.ERR(msg)
 				return nil, errors.ErrPartitionNotFound(obj.Partition)
 			}
 		}
-		ot, ok := objTypes[obj.Type]
+		ot, ok := objTypes[obj.ObjectType]
 		if !ok {
-			ot, err = s.ObjectTypeGet(obj.Type)
+			ot, err = s.ObjectTypeGet(obj.ObjectType)
 			if err != nil {
 				msg := fmt.Sprintf(
 					"failed to find object type %s while attempting to delete "+
 						"property definition with property key %s in partition %s",
-					obj.Type,
+					obj.ObjectType,
 					obj.Key,
 					obj.Partition,
 				)
 				s.log.ERR(msg)
-				return nil, errors.ErrObjectTypeNotFound(obj.Type)
+				return nil, errors.ErrObjectTypeNotFound(obj.ObjectType)
 			}
 		}
 		owr := &types.PropertyDefinitionWithReferences{
 			Partition:  part,
-			Type:       ot,
+			ObjectType: ot,
 			Definition: obj,
 		}
 		res[x] = owr

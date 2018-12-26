@@ -88,10 +88,10 @@ func (s *Server) expandPropertyDefinitionFilter(
 		partitions = append(partitions, part)
 	}
 
-	if filter.Type != nil {
+	if filter.ObjectType != nil {
 		// Verify that the object type even exists
 		objTypes, err = s.store.ObjectTypeList(
-			[]*pb.ObjectTypeFilter{filter.Type},
+			[]*pb.ObjectTypeFilter{filter.ObjectType},
 		)
 		if err != nil {
 			return nil, err

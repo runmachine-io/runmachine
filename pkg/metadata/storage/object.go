@@ -29,20 +29,20 @@ const (
 // project-scoped or not, the object's name index will contain the object's
 // project along with the object type and name.
 func (s *Store) objectByNameIndexKey(owr *types.ObjectWithReferences) (string, error) {
-	switch owr.Type.Scope {
+	switch owr.ObjectType.Scope {
 	case pb.ObjectTypeScope_PARTITION:
 		// $PARTITION/objects/by-type/{type}/by-name/{name}
 		return _PARTITIONS_KEY + owr.Partition.Uuid + "/" +
-			_OBJECTS_BY_TYPE_KEY + owr.Type.Code + "/" +
+			_OBJECTS_BY_TYPE_KEY + owr.ObjectType.Code + "/" +
 			_BY_NAME_KEY + owr.Object.Name, nil
 	case pb.ObjectTypeScope_PROJECT:
 		// $PARTITION/objects/by-type/{type}/by-project/{project}/by-name/{name}
 		return _PARTITIONS_KEY + owr.Partition.Uuid + "/" +
-			_OBJECTS_BY_TYPE_KEY + owr.Type.Code + "/" +
+			_OBJECTS_BY_TYPE_KEY + owr.ObjectType.Code + "/" +
 			_BY_PROJECT_KEY + owr.Object.Project + "/" +
 			_BY_NAME_KEY + owr.Object.Name, nil
 	}
-	return "", fmt.Errorf("Unknown object type scope: %s", owr.Type.Scope)
+	return "", fmt.Errorf("Unknown object type scope: %s", owr.ObjectType.Scope)
 }
 
 // ObjectDelete removes an object from backend storage
@@ -162,24 +162,24 @@ func (s *Store) ObjectListWithReferences(
 				return nil, errors.ErrPartitionNotFound(obj.Partition)
 			}
 		}
-		ot, ok := objTypes[obj.Type]
+		ot, ok := objTypes[obj.ObjectType]
 		if !ok {
-			ot, err = s.ObjectTypeGet(obj.Type)
+			ot, err = s.ObjectTypeGet(obj.ObjectType)
 			if err != nil {
 				msg := fmt.Sprintf(
 					"failed to find object type %s while attempting to delete "+
 						"object with UUID %s",
-					obj.Type,
+					obj.ObjectType,
 					obj.Uuid,
 				)
 				s.log.ERR(msg)
-				return nil, errors.ErrObjectTypeNotFound(obj.Type)
+				return nil, errors.ErrObjectTypeNotFound(obj.ObjectType)
 			}
 		}
 		owr := &types.ObjectWithReferences{
-			Partition: part,
-			Type:      ot,
-			Object:    obj,
+			Partition:  part,
+			ObjectType: ot,
+			Object:     obj,
 		}
 		res[x] = owr
 	}

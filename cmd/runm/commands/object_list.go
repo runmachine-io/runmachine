@@ -56,7 +56,7 @@ func objectList(cmd *cobra.Command, args []string) {
 	}
 	headers := []string{
 		"Partition",
-		"Type",
+		"Object Type",
 		"UUID",
 		"Name",
 		"Project",
@@ -65,7 +65,7 @@ func objectList(cmd *cobra.Command, args []string) {
 	for x, obj := range msgs {
 		rows[x] = []string{
 			obj.Partition,
-			obj.Type,
+			obj.ObjectType,
 			obj.Uuid,
 			obj.Name,
 			obj.Project,

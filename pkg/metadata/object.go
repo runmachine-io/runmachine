@@ -147,7 +147,7 @@ func (s *Server) validateObjectSetRequest(
 	}
 
 	// Simple input data validations
-	if obj.Type == "" {
+	if obj.ObjectType == "" {
 		return nil, ErrObjectTypeRequired
 	}
 	if obj.Partition == "" {
@@ -165,10 +165,10 @@ func (s *Server) validateObjectSetRequest(
 		return nil, errors.ErrUnknown
 	}
 
-	objType, err := s.store.ObjectTypeGet(obj.Type)
+	objType, err := s.store.ObjectTypeGet(obj.ObjectType)
 	if err != nil {
 		if err == errors.ErrNotFound {
-			return nil, errObjectTypeNotFound(obj.Type)
+			return nil, errObjectTypeNotFound(obj.ObjectType)
 		}
 		// We don't want to leak internal implementation errors...
 		s.log.ERR("failed when validating object type in object set: %s", err)
@@ -189,11 +189,11 @@ func (s *Server) validateObjectSetRequest(
 	}
 
 	return &types.ObjectWithReferences{
-		Partition: part,
-		Type:      objType,
+		Partition:  part,
+		ObjectType: objType,
 		Object: &pb.Object{
 			Partition:  part.Uuid,
-			Type:       objType.Code,
+			ObjectType: objType.Code,
 			Project:    obj.Project,
 			Name:       obj.Name,
 			Uuid:       obj.Uuid,
@@ -213,8 +213,8 @@ func (s *Server) validateObjectProperty(
 	value string,
 ) (*pb.Property, error) {
 	pds, err := s.store.PropertyDefinitionList(
-		[]*types.PropertyDefinitionFilter{
-			&types.PropertyDefinitionFilter{
+		[]*types.PropertyDefinitionCondition{
+			&types.PropertyDefinitionCondition{
 				Partition: &types.PartitionCondition{
 					Op:        types.OP_EQUAL,
 					Partition: partition,
@@ -277,7 +277,7 @@ func (s *Server) ObjectSet(
 	if newObject {
 		s.log.L3(
 			"creating new object of type %s in partition %s with name %s...",
-			owr.Type.Code,
+			owr.ObjectType.Code,
 			owr.Partition.Uuid,
 			owr.Object.Name,
 		)
@@ -288,7 +288,7 @@ func (s *Server) ObjectSet(
 		s.log.L1(
 			"created new object with UUID %s of type %s in partition %s with name %s",
 			changed.Object.Uuid,
-			owr.Type.Code,
+			owr.ObjectType.Code,
 			owr.Partition.Uuid,
 			owr.Object.Name,
 		)

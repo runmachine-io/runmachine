@@ -11,15 +11,10 @@ type ObjectMatcher interface {
 	Matches(obj *pb.Object) bool
 }
 
-// A specialized filter class that has already looked up specific partition and
-// object types (expanded from user-supplied partition and type filter
-// strings). Users pass pb.ObjectFilter messages which contain optional
-// pb.PartitionFilter and pb.ObjectTypeFilter messages. Those may be expanded
-// (due to UsePrefix = true) to a set of partition UUIDs and/or object type
-// codes. We then create zero or more of these ObjectFilter structs
-// that represent a specific filter on partition UUID and object type, along
-// with the the object's name/UUID and UsePrefix flag.
-type ObjectFilter struct {
+// ObjectCondition is a class used in filtering objects.  Optional partition
+// and object type PKs have already been expanded from user-supplied partition
+// and type filter strings
+type ObjectCondition struct {
 	Partition  *PartitionCondition
 	ObjectType *ObjectTypeCondition
 	Uuid       *UuidCondition
@@ -28,7 +23,7 @@ type ObjectFilter struct {
 	// TODO(jaypipes): Add support for property and tag filters
 }
 
-func (f *ObjectFilter) Matches(obj *pb.Object) bool {
+func (f *ObjectCondition) Matches(obj *pb.Object) bool {
 	if !f.Uuid.Matches(obj) {
 		return false
 	}
@@ -49,11 +44,11 @@ func (f *ObjectFilter) Matches(obj *pb.Object) bool {
 	return true
 }
 
-func (f *ObjectFilter) IsEmpty() bool {
+func (f *ObjectCondition) IsEmpty() bool {
 	return f.Partition == nil && f.ObjectType == nil && f.Uuid == nil && f.Project == "" && f.Name == nil
 }
 
-func (f *ObjectFilter) String() string {
+func (f *ObjectCondition) String() string {
 	attrMap := make(map[string]string, 0)
 	if f.Partition != nil {
 		attrMap["partition"] = f.Partition.Partition.Uuid
@@ -81,7 +76,7 @@ func (f *ObjectFilter) String() string {
 		}
 		attrs += k + "=" + v
 	}
-	return fmt.Sprintf("ObjectFilter(%s)", attrs)
+	return fmt.Sprintf("ObjectCondition(%s)", attrs)
 }
 
 // ObjectWithReferences is a concrete struct containing pointers to
@@ -91,7 +86,7 @@ func (f *ObjectFilter) String() string {
 // which are guaranteed to be pre-validated and their relations already
 // expanded.
 type ObjectWithReferences struct {
-	Object    *pb.Object
-	Partition *pb.Partition
-	Type      *pb.ObjectType
+	Object     *pb.Object
+	Partition  *pb.Partition
+	ObjectType *pb.ObjectType
 }

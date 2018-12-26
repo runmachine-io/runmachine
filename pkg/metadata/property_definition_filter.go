@@ -11,7 +11,7 @@ import (
 // the partition that the user's session is on.
 func (s *Server) defaultPropertyDefinitionFilter(
 	session *pb.Session,
-) (*types.PropertyDefinitionFilter, error) {
+) (*types.PropertyDefinitionCondition, error) {
 	p, err := s.store.PartitionGet(session.Partition)
 	if err != nil {
 		if err == errors.ErrNotFound {
@@ -26,7 +26,7 @@ func (s *Server) defaultPropertyDefinitionFilter(
 		}
 		return nil, err
 	}
-	return &types.PropertyDefinitionFilter{
+	return &types.PropertyDefinitionCondition{
 		Partition: &types.PartitionCondition{
 			Op:        types.OP_EQUAL,
 			Partition: p,
@@ -37,22 +37,22 @@ func (s *Server) defaultPropertyDefinitionFilter(
 // expandPropertyDefinitionFilter is used to expand an
 // PropertyDefinitionFilter, which may contain PartitionFilter and
 // ObjectTypeFilter objects that themselves may resolve to multiple partitions
-// or object types, to a set of types.PropertyDefinitionFilter objects. A
-// types.PropertyDefinitionFilter is used to describe a filter on objects in a
+// or object types, to a set of types.PropertyDefinitionCondition objects. A
+// types.PropertyDefinitionCondition is used to describe a filter on objects in a
 // *specific* partition and having a *specific* object type.
 func (s *Server) expandPropertyDefinitionFilter(
 	session *pb.Session,
 	filter *pb.PropertyDefinitionFilter,
-) ([]*types.PropertyDefinitionFilter, error) {
-	res := make([]*types.PropertyDefinitionFilter, 0)
+) ([]*types.PropertyDefinitionCondition, error) {
+	res := make([]*types.PropertyDefinitionCondition, 0)
 	var err error
 	// A set of partition UUIDs that we'll create
-	// types.PropertyDefinitionFilters with.  These are the UUIDs of any
+	// types.PropertyDefinitionConditions with.  These are the UUIDs of any
 	// partitions that match the PartitionFilter in the supplied
 	// pb.PropertyDefinitionFilter
 	var partitions []*pb.Partition
 	// A set of object type codes that we'll create
-	// types.PropertyDefinitionFilters with. These are the codes of object
+	// types.PropertyDefinitionConditions with. These are the codes of object
 	// types that match the ObjectTypeFilter in the supplied
 	// PropertyDefinitionFilter
 	var objTypes []*pb.ObjectType
@@ -88,10 +88,10 @@ func (s *Server) expandPropertyDefinitionFilter(
 		partitions = append(partitions, part)
 	}
 
-	if filter.Type != nil {
+	if filter.ObjectType != nil {
 		// Verify that the object type even exists
 		objTypes, err = s.store.ObjectTypeList(
-			[]*pb.ObjectTypeFilter{filter.Type},
+			[]*pb.ObjectTypeFilter{filter.ObjectType},
 		)
 		if err != nil {
 			return nil, err
@@ -102,12 +102,12 @@ func (s *Server) expandPropertyDefinitionFilter(
 	}
 
 	// OK, if we've expanded partition or object type, we need to construct
-	// types.PropertyDefinitionFilter objects containing the combination of all the
+	// types.PropertyDefinitionCondition objects containing the combination of all the
 	// expanded partitions and object types.
 	if len(partitions) > 0 {
 		for _, p := range partitions {
 			if len(objTypes) == 0 {
-				f := &types.PropertyDefinitionFilter{
+				f := &types.PropertyDefinitionCondition{
 					Partition: &types.PartitionCondition{
 						Op:        types.OP_EQUAL,
 						Partition: p,
@@ -116,7 +116,7 @@ func (s *Server) expandPropertyDefinitionFilter(
 				res = append(res, f)
 			} else {
 				for _, ot := range objTypes {
-					f := &types.PropertyDefinitionFilter{
+					f := &types.PropertyDefinitionCondition{
 						Partition: &types.PartitionCondition{
 							Op:        types.OP_EQUAL,
 							Partition: p,
@@ -132,7 +132,7 @@ func (s *Server) expandPropertyDefinitionFilter(
 		}
 	} else if len(objTypes) > 0 {
 		for _, ot := range objTypes {
-			f := &types.PropertyDefinitionFilter{
+			f := &types.PropertyDefinitionCondition{
 				ObjectType: &types.ObjectTypeCondition{
 					Op:         types.OP_EQUAL,
 					ObjectType: ot,
@@ -143,18 +143,18 @@ func (s *Server) expandPropertyDefinitionFilter(
 	}
 
 	// If we've expanded the supplied partition filters into multiple
-	// types.PropertyDefinitionFilters, then we need to add our supplied
+	// types.PropertyDefinitionConditions, then we need to add our supplied
 	// PropertyDefinitionFilter's search and use prefix for the property key.  If
 	// we supplied no partition filters, then go ahead and just return a single
-	// types.PropertyDefinitionFilter with the search term and prefix indicator for
+	// types.PropertyDefinitionCondition with the search term and prefix indicator for
 	// the property key.
 	if filter.Key != "" || filter.Uuid != "" {
 		if len(res) == 0 {
-			res = append(res, &types.PropertyDefinitionFilter{})
+			res = append(res, &types.PropertyDefinitionCondition{})
 		}
 		// Now that we've expanded our partitions and object types, add in the
 		// original PropertyDefinitionFilter's Search and UsePrefix for each
-		// types.PropertyDefinitionFilter we've created
+		// types.PropertyDefinitionCondition we've created
 		for _, pf := range res {
 			if filter.Key != "" {
 				op := types.OP_EQUAL
@@ -181,13 +181,13 @@ func (s *Server) expandPropertyDefinitionFilter(
 // PropertyDefinitionFilter protobuffer messages. It then expands those supplied
 // PropertyDefinitionFilter messages if they contain partition or object type
 // filters that have a prefix. If no PropertyDefinitionFilter messages are passed
-// to this method, it returns the default types.PropertyDefinitionFilter which will
+// to this method, it returns the default types.PropertyDefinitionCondition which will
 // return all property definitions for the Session's partition
 func (s *Server) normalizePropertyDefinitionFilters(
 	session *pb.Session,
 	any []*pb.PropertyDefinitionFilter,
-) ([]*types.PropertyDefinitionFilter, error) {
-	res := make([]*types.PropertyDefinitionFilter, 0)
+) ([]*types.PropertyDefinitionCondition, error) {
+	res := make([]*types.PropertyDefinitionCondition, 0)
 	for _, filter := range any {
 		if pfs, err := s.expandPropertyDefinitionFilter(session, filter); err != nil {
 			if err == errors.ErrNotFound {

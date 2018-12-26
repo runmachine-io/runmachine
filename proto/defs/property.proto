@@ -118,7 +118,7 @@ message PropertyDefinition {
     string partition = 1;
     // String code of the object type the property definition applies to. e.g.
     // "runm.machine"
-    string type = 2;
+    string object_type = 2;
     // The property key to apply the property definition to. e.g. "architecture"
     string key = 3;
     // The property definition's globally-unique identifier
@@ -134,7 +134,7 @@ message PropertyDefinition {
 // Used in matching property definition records
 message PropertyDefinitionFilter {
     PartitionFilter partition = 1;
-    ObjectTypeFilter type = 2;
+    ObjectTypeFilter object_type = 2;
     string uuid = 3;
     // A search term on the property definition's property key
     string key = 4;

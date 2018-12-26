@@ -81,7 +81,7 @@ func (s *Server) PropertyDefinitionGet(
 			return nil, ErrPropertyDefinitionFilterInvalid
 		}
 	} else {
-		if req.Filter.Type == nil {
+		if req.Filter.ObjectType == nil {
 			return nil, ErrObjectTypeRequired
 		}
 	}
@@ -160,7 +160,9 @@ func (s *Server) validatePropertyDefinitionSetRequest(
 		return nil, err
 	}
 	if err := def.Validate(); err != nil {
-		return nil, errors.ErrInvalidPropertyDefinition(def.Type, def.Key, err)
+		return nil, errors.ErrInvalidPropertyDefinition(
+			def.ObjectType, def.Key, err,
+		)
 	}
 
 	// Validate the referred to type and partition actually exist
@@ -175,10 +177,10 @@ func (s *Server) validatePropertyDefinitionSetRequest(
 		return nil, errors.ErrUnknown
 	}
 
-	objType, err := s.store.ObjectTypeGet(def.Type)
+	objType, err := s.store.ObjectTypeGet(def.ObjectType)
 	if err != nil {
 		if err == errors.ErrNotFound {
-			return nil, errObjectTypeNotFound(def.Type)
+			return nil, errObjectTypeNotFound(def.ObjectType)
 		}
 		// We don't want to leak internal implementation errors...
 		s.log.ERR("failed validating object type in object set: %s", err)
@@ -188,11 +190,11 @@ func (s *Server) validatePropertyDefinitionSetRequest(
 	// TODO(jaypipes): Validate if the user specified access permissions
 
 	return &types.PropertyDefinitionWithReferences{
-		Partition: part,
-		Type:      objType,
+		Partition:  part,
+		ObjectType: objType,
 		Definition: &pb.PropertyDefinition{
 			Partition:   part.Uuid,
-			Type:        objType.Code,
+			ObjectType:  objType.Code,
 			Key:         def.Key,
 			IsRequired:  def.Required,
 			Permissions: types.APItoPBPropertyPermissions(def.Permissions),
@@ -233,7 +235,7 @@ func (s *Server) PropertyDefinitionSet(
 	//	def = existing
 	//}
 	var existing *pb.PropertyDefinition
-	pk := pdwr.Partition.Uuid + ":" + pdwr.Type.Code + ":" + def.Key
+	pk := pdwr.Partition.Uuid + ":" + pdwr.ObjectType.Code + ":" + def.Key
 
 	if existing == nil {
 		s.log.L3("creating new property definition '%s'...", pk)

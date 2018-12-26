@@ -118,7 +118,7 @@ func buildPropertyDefinitionFilters() []*pb.PropertyDefinitionFilter {
 					UsePrefix: usePrefix,
 				}
 			case "type":
-				filter.Type = &pb.ObjectTypeFilter{
+				filter.ObjectType = &pb.ObjectTypeFilter{
 					Search:    value,
 					UsePrefix: usePrefix,
 				}
@@ -199,7 +199,7 @@ func printPropertyPermission(obj *pb.PropertyPermission) {
 
 func printPropertyDefinition(obj *pb.PropertyDefinition) {
 	fmt.Printf("Partition:    %s\n", obj.Partition)
-	fmt.Printf("Type:         %s\n", obj.Type)
+	fmt.Printf("Object Type:  %s\n", obj.ObjectType)
 	fmt.Printf("Key:          %s\n", obj.Key)
 	fmt.Printf("UUID:         %s\n", obj.Uuid)
 	fmt.Printf("Required:     %s\n", strconv.FormatBool(obj.IsRequired))

@@ -12,7 +12,7 @@ import (
 // partition that the user's session is on.
 func (s *Server) defaultObjectFilter(
 	session *pb.Session,
-) (*types.ObjectFilter, error) {
+) (*types.ObjectCondition, error) {
 	p, err := s.store.PartitionGet(session.Partition)
 	if err != nil {
 		if err == errors.ErrNotFound {
@@ -27,7 +27,7 @@ func (s *Server) defaultObjectFilter(
 		}
 		return nil, err
 	}
-	return &types.ObjectFilter{
+	return &types.ObjectCondition{
 		Partition: &types.PartitionCondition{
 			Op:        types.OP_EQUAL,
 			Partition: p,
@@ -38,20 +38,20 @@ func (s *Server) defaultObjectFilter(
 
 // expandObjectFilter is used to expand an ObjectFilter, which may contain
 // PartitionFilter and ObjectTypeFilter objects that themselves may resolve to
-// multiple partitions or object types, to a set of types.ObjectFilter
-// objects. A types.ObjectFilter is used to describe a filter on objects in
+// multiple partitions or object types, to a set of types.ObjectCondition
+// objects. A types.ObjectCondition is used to describe a filter on objects in
 // a *specific* partition and having a *specific* object type.
 func (s *Server) expandObjectFilter(
 	session *pb.Session,
 	filter *pb.ObjectFilter,
-) ([]*types.ObjectFilter, error) {
-	res := make([]*types.ObjectFilter, 0)
+) ([]*types.ObjectCondition, error) {
+	res := make([]*types.ObjectCondition, 0)
 	var err error
-	// A set of partition UUIDs that we'll create types.ObjectFilters with.
+	// A set of partition UUIDs that we'll create types.ObjectConditions with.
 	// These are the UUIDs of any partitions that match the PartitionFilter in
 	// the supplied pb.ObjectFilter
 	var partitions []*pb.Partition
-	// A set of object type codes that we'll create types.ObjectFilters
+	// A set of object type codes that we'll create types.ObjectConditions
 	// with. These are the codes of object types that match the
 	// ObjectTypeFilter in the supplied ObjectFilter
 	var objTypes []*pb.ObjectType
@@ -85,9 +85,11 @@ func (s *Server) expandObjectFilter(
 		partitions = append(partitions, part)
 	}
 
-	if filter.Type != nil {
+	if filter.ObjectType != nil {
 		// Verify that the object type even exists
-		objTypes, err = s.store.ObjectTypeList([]*pb.ObjectTypeFilter{filter.Type})
+		objTypes, err = s.store.ObjectTypeList(
+			[]*pb.ObjectTypeFilter{filter.ObjectType},
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -106,12 +108,12 @@ func (s *Server) expandObjectFilter(
 	}
 
 	// OK, if we've expanded partition or object type, we need to construct
-	// types.ObjectFilter objects containing the combination of all the
+	// types.ObjectCondition objects containing the combination of all the
 	// expanded partitions and object types.
 	if len(partitions) > 0 {
 		for _, p := range partitions {
 			if len(objTypes) == 0 {
-				f := &types.ObjectFilter{
+				f := &types.ObjectCondition{
 					Partition: &types.PartitionCondition{
 						Op:        types.OP_EQUAL,
 						Partition: p,
@@ -120,7 +122,7 @@ func (s *Server) expandObjectFilter(
 				res = append(res, f)
 			} else {
 				for _, ot := range objTypes {
-					f := &types.ObjectFilter{
+					f := &types.ObjectCondition{
 						Partition: &types.PartitionCondition{
 							Op:        types.OP_EQUAL,
 							Partition: p,
@@ -136,7 +138,7 @@ func (s *Server) expandObjectFilter(
 		}
 	} else if len(objTypes) > 0 {
 		for _, ot := range objTypes {
-			f := &types.ObjectFilter{
+			f := &types.ObjectCondition{
 				ObjectType: &types.ObjectTypeCondition{
 					Op:         types.OP_EQUAL,
 					ObjectType: ot,
@@ -147,18 +149,18 @@ func (s *Server) expandObjectFilter(
 	}
 
 	// If we've expanded the supplied partition filters into multiple
-	// types.ObjectFilters, then we need to add our supplied ObjectFilter's
+	// types.ObjectConditions, then we need to add our supplied ObjectFilter's
 	// search and use prefix for the object's UUID/name. If we supplied no
 	// partition filters, then go ahead and just return a single
-	// types.ObjectFilter with the search term and prefix indicator for the
+	// types.ObjectCondition with the search term and prefix indicator for the
 	// object.
 	if filter.Name != "" || filter.Uuid != "" || filter.Project != "" {
 		if len(res) == 0 {
-			res = append(res, &types.ObjectFilter{})
+			res = append(res, &types.ObjectCondition{})
 		}
 		// Now that we've expanded our partitions and object types, add in the
 		// original ObjectFilter's Search and UsePrefix for each
-		// types.ObjectFilter we've created
+		// types.ObjectCondition we've created
 		for _, pf := range res {
 			if filter.Uuid != "" {
 				pf.Uuid = &types.UuidCondition{
@@ -186,13 +188,13 @@ func (s *Server) expandObjectFilter(
 // ObjectFilter messages. It then expands those supplied ObjectFilter messages
 // if they contain partition or object type filters that have a prefix. If no
 // ObjectFilter messages are passed to this method, it returns the default
-// types.ObjectFilter which will return all objects for the Session's partition
+// types.ObjectCondition which will return all objects for the Session's partition
 // and project.
 func (s *Server) normalizeObjectFilters(
 	session *pb.Session,
 	any []*pb.ObjectFilter,
-) ([]*types.ObjectFilter, error) {
-	res := make([]*types.ObjectFilter, 0)
+) ([]*types.ObjectCondition, error) {
+	res := make([]*types.ObjectCondition, 0)
 	for _, filter := range any {
 		if pfs, err := s.expandObjectFilter(session, filter); err != nil {
 			if err == errors.ErrNotFound {

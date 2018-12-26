@@ -15,18 +15,9 @@ import (
 const (
 	// The primary key index of property definitions
 	_PROPERTY_DEFINITIONS_BY_UUID_KEY = "property-definitions/by-uuid/"
-	// A per-partition index of property definitions by type. The full key
-	// includes the object type followed by a slash and the property
-	// definition's UUID, which is used as the lookup into the primary key by
-	// UUID. This allows us to accomodate multiple property definitions for a
-	// single object type within a partition -- since property definitions may
-	// be specified for a particular project.
-	_PROPERTY_DEFINITIONS_BY_TYPE_KEY = "property-definitions/by-type/"
 )
 
-// PropertyDefinitionDelete removes a property definition from storage, removes
-// any indexes that may have been created for it and triggers a recalculation
-// of the object type's schema
+// PropertyDefinitionDelete removes a property definition from storage
 func (s *Store) PropertyDefinitionDelete(
 	pdwr *types.PropertyDefinitionWithReferences,
 ) error {
@@ -35,16 +26,7 @@ func (s *Store) PropertyDefinitionDelete(
 
 	pk := _PROPERTY_DEFINITIONS_BY_UUID_KEY + pdwr.Definition.Uuid
 
-	// creates all the indexes and the objects/by-uuid/ entry using a
-	// transaction that ensures if another thread modified anything underneath
-	// us, we return an error
-	then := []etcd.Op{
-		// Delete the primary entry for the property definition
-		etcd.OpDelete(pk),
-	}
-	// TODO(jaypipes): Should we put some If(...) clause in here that verifies
-	// the property definition key existed? Not sure it's worth it, really...
-	resp, err := s.kv.Txn(ctx).Then(then...).Commit()
+	resp, err := s.kv.Txn(ctx).Then(etcd.OpDelete(pk)).Commit()
 
 	if err != nil {
 		s.log.ERR("failed to create txn in etcd: %v", err)
@@ -56,16 +38,16 @@ func (s *Store) PropertyDefinitionDelete(
 	return nil
 }
 
-// PropertyDefinitionList returns a slice of pointers to PropertyDefinition protobuffer
-// messages matching a set of supplied filters.
+// PropertyDefinitionList returns a slice of property definitions matching any
+// of a set of supplied filters.
 func (s *Store) PropertyDefinitionList(
-	any []*types.PropertyDefinitionFilter,
+	any []*types.PropertyDefinitionCondition,
 ) ([]*pb.PropertyDefinition, error) {
 	// Each filter is evaluated in an OR fashion, so we keep a hashmap of
 	// property definition keys in order to return unique results
 	objs := make(map[string]*pb.PropertyDefinition, 0)
 	for _, filter := range any {
-		filterObjs, err := s.propertyDefinitionsGetByFilter(filter)
+		filterObjs, err := s.propertyDefinitionsGetMatching(filter)
 		if err != nil {
 			return nil, err
 		}
@@ -86,21 +68,17 @@ func (s *Store) PropertyDefinitionList(
 // PropertyDefinitionWithReference structs that have had Partition and
 // ObjectType relations expanded inline.
 func (s *Store) PropertyDefinitionListWithReferences(
-	any []*types.PropertyDefinitionFilter,
+	any []*types.PropertyDefinitionCondition,
 ) ([]*types.PropertyDefinitionWithReferences, error) {
 	objects, err := s.PropertyDefinitionList(any)
 	if err != nil {
 		return nil, err
 	}
 
-	// NOTE(jaypipes): store.PropertyDefinitionDelete() accepts a single
-	// argument of type PropertyDefinitionWithReferences. Here, we have two
-	// maps for Partition and ObjectType messages that we fetch by partition
-	// UUID or object type code while iterating over the objects to delete.
-	// These Partition and ObjectType messages are included in the
-	// PropertyDefinitionWithReferences structs that are passed to
-	// PropertyDefinitionDelete. Gotta love implementing joins in
-	// Golang/memory... :(
+	// We have two maps for Partition and ObjectType messages that we fetch by
+	// partition UUID or object type code while iterating over the objects to
+	// delete. These Partition and ObjectType messages are included in the
+	// PropertyDefinitionWithReferences structs that are passed around.
 	partitions := make(map[string]*pb.Partition, 0)
 	objTypes := make(map[string]*pb.ObjectType, 0)
 	res := make([]*types.PropertyDefinitionWithReferences, len(objects))
@@ -115,30 +93,30 @@ func (s *Store) PropertyDefinitionListWithReferences(
 						"type %s",
 					obj.Partition,
 					obj.Key,
-					obj.Type,
+					obj.ObjectType,
 				)
 				s.log.ERR(msg)
 				return nil, errors.ErrPartitionNotFound(obj.Partition)
 			}
 		}
-		ot, ok := objTypes[obj.Type]
+		ot, ok := objTypes[obj.ObjectType]
 		if !ok {
-			ot, err = s.ObjectTypeGet(obj.Type)
+			ot, err = s.ObjectTypeGet(obj.ObjectType)
 			if err != nil {
 				msg := fmt.Sprintf(
 					"failed to find object type %s while attempting to delete "+
 						"property definition with property key %s in partition %s",
-					obj.Type,
+					obj.ObjectType,
 					obj.Key,
 					obj.Partition,
 				)
 				s.log.ERR(msg)
-				return nil, errors.ErrObjectTypeNotFound(obj.Type)
+				return nil, errors.ErrObjectTypeNotFound(obj.ObjectType)
 			}
 		}
 		owr := &types.PropertyDefinitionWithReferences{
 			Partition:  part,
-			Type:       ot,
+			ObjectType: ot,
 			Definition: obj,
 		}
 		res[x] = owr
@@ -146,17 +124,16 @@ func (s *Store) PropertyDefinitionListWithReferences(
 	return res, nil
 }
 
-// propertyDefinitionsGetByFilter evaluates a single supplied matcher against
-// the known property definitions
-func (s *Store) propertyDefinitionsGetByFilter(
+// propertyDefinitionsGetMatching evaluates a single supplied matcher against
+// the known property definitions. Returned property definitions are sorted by
+// UUID.
+func (s *Store) propertyDefinitionsGetMatching(
 	matcher types.PropertyDefinitionMatcher,
 ) ([]*pb.PropertyDefinition, error) {
 	ctx, cancel := s.requestCtx()
 	defer cancel()
 
 	opts := []etcd.OpOption{
-		// TODO(jaypipes): Factor the sorting/limiting/pagination out into a
-		// separate utility
 		etcd.WithSort(etcd.SortByKey, etcd.SortAscend),
 		etcd.WithPrefix(),
 	}
@@ -188,9 +165,7 @@ func (s *Store) propertyDefinitionsGetByFilter(
 	return res[:x], nil
 }
 
-// PropertyDefinitionCreate writes a PropertyDefinition object to the primary
-// index and creates all necessary secondary indexes inside the appropriate
-// partition key namespace.
+// PropertyDefinitionCreate writes a property definition to backend storage
 func (s *Store) PropertyDefinitionCreate(
 	pdwr *types.PropertyDefinitionWithReferences,
 ) (*types.PropertyDefinitionWithReferences, error) {

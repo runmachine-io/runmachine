@@ -213,8 +213,8 @@ func (s *Server) validateObjectProperty(
 	value string,
 ) (*pb.Property, error) {
 	pds, err := s.store.PropertyDefinitionList(
-		[]*types.PropertyDefinitionFilter{
-			&types.PropertyDefinitionFilter{
+		[]*types.PropertyDefinitionCondition{
+			&types.PropertyDefinitionCondition{
 				Partition: &types.PartitionCondition{
 					Op:        types.OP_EQUAL,
 					Partition: partition,

@@ -7,6 +7,7 @@ import (
 	"github.com/golang/protobuf/proto"
 
 	"github.com/runmachine-io/runmachine/pkg/errors"
+	"github.com/runmachine-io/runmachine/pkg/metadata/conditions"
 	"github.com/runmachine-io/runmachine/pkg/metadata/types"
 	"github.com/runmachine-io/runmachine/pkg/util"
 	pb "github.com/runmachine-io/runmachine/proto"
@@ -86,7 +87,7 @@ func (s *Store) ObjectDelete(
 // ObjectList returns a slice of pointers to objects matching any of the
 // supplied filters
 func (s *Store) ObjectList(
-	any []*types.ObjectCondition,
+	any []*conditions.ObjectCondition,
 ) ([]*pb.Object, error) {
 	if len(any) == 0 {
 		return s.objectsGetAll()
@@ -133,7 +134,7 @@ func (s *Store) ObjectList(
 // ObjectListWithReferences returns a slice of pointers to ObjectWithReference
 // structs that have had Partition and ObjectType relations expanded inline.
 func (s *Store) ObjectListWithReferences(
-	any []*types.ObjectCondition,
+	any []*conditions.ObjectCondition,
 ) ([]*types.ObjectWithReferences, error) {
 	objects, err := s.ObjectList(any)
 	if err != nil {
@@ -187,7 +188,7 @@ func (s *Store) ObjectListWithReferences(
 }
 
 func (s *Store) objectsGetMatching(
-	cond *types.ObjectCondition,
+	cond *conditions.ObjectCondition,
 ) ([]*pb.Object, error) {
 	if cond.UuidCondition != nil {
 		// If the filter specifies a Search and it looks like a UUID, then
@@ -232,7 +233,7 @@ func (s *Store) objectsGetMatching(
 						cond.ObjectTypeCondition.ObjectType.Code,
 						cond.ProjectCondition,
 						cond.NameCondition.Name,
-						cond.NameCondition.Op != types.OP_EQUAL,
+						cond.NameCondition.Op != conditions.OP_EQUAL,
 					)
 				}
 			} else {
@@ -240,7 +241,7 @@ func (s *Store) objectsGetMatching(
 					cond.PartitionCondition.Partition.Uuid,
 					cond.ObjectTypeCondition.ObjectType.Code,
 					cond.NameCondition.Name,
-					cond.NameCondition.Op != types.OP_EQUAL,
+					cond.NameCondition.Op != conditions.OP_EQUAL,
 				)
 			}
 		}

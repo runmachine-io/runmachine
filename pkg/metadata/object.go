@@ -216,18 +216,9 @@ func (s *Server) validateObjectProperty(
 	pds, err := s.store.PropertyDefinitionList(
 		[]*conditions.PropertyDefinitionCondition{
 			&conditions.PropertyDefinitionCondition{
-				PartitionCondition: &conditions.PartitionCondition{
-					Op:        conditions.OP_EQUAL,
-					Partition: partition,
-				},
-				ObjectTypeCondition: &conditions.ObjectTypeCondition{
-					Op:         conditions.OP_EQUAL,
-					ObjectType: objType,
-				},
-				PropertyKeyCondition: &conditions.PropertyKeyCondition{
-					Op:          conditions.OP_EQUAL,
-					PropertyKey: key,
-				},
+				PartitionCondition:   conditions.PartitionEqual(partition),
+				ObjectTypeCondition:  conditions.ObjectTypeEqual(objType),
+				PropertyKeyCondition: conditions.PropertyKeyEqual(key),
 			},
 		},
 	)

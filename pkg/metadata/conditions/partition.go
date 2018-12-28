@@ -25,3 +25,12 @@ func (c *PartitionCondition) Matches(obj HasPartition) bool {
 		return false
 	}
 }
+
+// PartitionEqual is a helper function that returns a PartitionCondition
+// filtering on an exact Partition object match
+func PartitionEqual(search *pb.Partition) *PartitionCondition {
+	return &PartitionCondition{
+		Op:        OP_EQUAL,
+		Partition: search,
+	}
+}

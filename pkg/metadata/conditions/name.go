@@ -27,3 +27,21 @@ func (c *NameCondition) Matches(obj HasName) bool {
 		return false
 	}
 }
+
+// NameEqual is a helper function that returns a NameCondition filtering on an
+// exact name match
+func NameEqual(search string) *NameCondition {
+	return &NameCondition{
+		Op:   OP_EQUAL,
+		Name: search,
+	}
+}
+
+// NameLike is a helper function that returns a NameCondition filtering on a
+// prefixed name match
+func NameLike(search string) *NameCondition {
+	return &NameCondition{
+		Op:   OP_GREATER_THAN_EQUAL,
+		Name: search,
+	}
+}

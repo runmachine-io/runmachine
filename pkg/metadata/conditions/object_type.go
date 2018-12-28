@@ -25,3 +25,12 @@ func (c *ObjectTypeCondition) Matches(obj HasObjectType) bool {
 		return false
 	}
 }
+
+// ObjectTypeEqual is a helper function that returns a ObjectTypeCondition
+// filtering on an exact ObjectType object match
+func ObjectTypeEqual(search *pb.ObjectType) *ObjectTypeCondition {
+	return &ObjectTypeCondition{
+		Op:         OP_EQUAL,
+		ObjectType: search,
+	}
+}

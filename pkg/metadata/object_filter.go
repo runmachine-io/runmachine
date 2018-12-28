@@ -3,7 +3,6 @@ package metadata
 import (
 	"github.com/runmachine-io/runmachine/pkg/errors"
 	"github.com/runmachine-io/runmachine/pkg/metadata/conditions"
-	"github.com/runmachine-io/runmachine/pkg/util"
 	pb "github.com/runmachine-io/runmachine/proto"
 )
 
@@ -28,11 +27,8 @@ func (s *Server) defaultObjectFilter(
 		return nil, err
 	}
 	return &conditions.ObjectCondition{
-		PartitionCondition: &conditions.PartitionCondition{
-			Op:        conditions.OP_EQUAL,
-			Partition: p,
-		},
-		ProjectCondition: session.Project,
+		PartitionCondition: conditions.PartitionEqual(p),
+		ProjectCondition:   session.Project,
 	}, nil
 }
 
@@ -114,23 +110,14 @@ func (s *Server) expandObjectFilter(
 		for _, p := range partitions {
 			if len(objTypes) == 0 {
 				f := &conditions.ObjectCondition{
-					PartitionCondition: &conditions.PartitionCondition{
-						Op:        conditions.OP_EQUAL,
-						Partition: p,
-					},
+					PartitionCondition: conditions.PartitionEqual(p),
 				}
 				res = append(res, f)
 			} else {
 				for _, ot := range objTypes {
 					f := &conditions.ObjectCondition{
-						PartitionCondition: &conditions.PartitionCondition{
-							Op:        conditions.OP_EQUAL,
-							Partition: p,
-						},
-						ObjectTypeCondition: &conditions.ObjectTypeCondition{
-							Op:         conditions.OP_EQUAL,
-							ObjectType: ot,
-						},
+						PartitionCondition:  conditions.PartitionEqual(p),
+						ObjectTypeCondition: conditions.ObjectTypeEqual(ot),
 					}
 					res = append(res, f)
 				}
@@ -139,10 +126,7 @@ func (s *Server) expandObjectFilter(
 	} else if len(objTypes) > 0 {
 		for _, ot := range objTypes {
 			f := &conditions.ObjectCondition{
-				ObjectTypeCondition: &conditions.ObjectTypeCondition{
-					Op:         conditions.OP_EQUAL,
-					ObjectType: ot,
-				},
+				ObjectTypeCondition: conditions.ObjectTypeEqual(ot),
 			}
 			res = append(res, f)
 		}
@@ -163,19 +147,13 @@ func (s *Server) expandObjectFilter(
 		// conditions.ObjectCondition we've created
 		for _, pf := range res {
 			if filter.Uuid != "" {
-				pf.UuidCondition = &conditions.UuidCondition{
-					Op:   conditions.OP_EQUAL,
-					Uuid: util.NormalizeUuid(filter.Uuid),
-				}
+				pf.UuidCondition = conditions.UuidEqual(filter.Uuid)
 			}
 			if filter.Name != "" {
-				op := conditions.OP_EQUAL
 				if filter.UsePrefix {
-					op = conditions.OP_GREATER_THAN_EQUAL
-				}
-				pf.NameCondition = &conditions.NameCondition{
-					Op:   op,
-					Name: filter.Name,
+					pf.NameCondition = conditions.NameLike(filter.Name)
+				} else {
+					pf.NameCondition = conditions.NameEqual(filter.Name)
 				}
 			}
 			pf.ProjectCondition = filter.Project

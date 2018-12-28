@@ -27,10 +27,7 @@ func (s *Server) defaultPropertyDefinitionFilter(
 		return nil, err
 	}
 	return &conditions.PropertyDefinitionCondition{
-		PartitionCondition: &conditions.PartitionCondition{
-			Op:        conditions.OP_EQUAL,
-			Partition: p,
-		},
+		PartitionCondition: conditions.PartitionEqual(p),
 	}, nil
 }
 
@@ -108,23 +105,14 @@ func (s *Server) expandPropertyDefinitionFilter(
 		for _, p := range partitions {
 			if len(objTypes) == 0 {
 				f := &conditions.PropertyDefinitionCondition{
-					PartitionCondition: &conditions.PartitionCondition{
-						Op:        conditions.OP_EQUAL,
-						Partition: p,
-					},
+					PartitionCondition: conditions.PartitionEqual(p),
 				}
 				res = append(res, f)
 			} else {
 				for _, ot := range objTypes {
 					f := &conditions.PropertyDefinitionCondition{
-						PartitionCondition: &conditions.PartitionCondition{
-							Op:        conditions.OP_EQUAL,
-							Partition: p,
-						},
-						ObjectTypeCondition: &conditions.ObjectTypeCondition{
-							Op:         conditions.OP_EQUAL,
-							ObjectType: ot,
-						},
+						PartitionCondition:  conditions.PartitionEqual(p),
+						ObjectTypeCondition: conditions.ObjectTypeEqual(ot),
 					}
 					res = append(res, f)
 				}
@@ -133,10 +121,7 @@ func (s *Server) expandPropertyDefinitionFilter(
 	} else if len(objTypes) > 0 {
 		for _, ot := range objTypes {
 			f := &conditions.PropertyDefinitionCondition{
-				ObjectTypeCondition: &conditions.ObjectTypeCondition{
-					Op:         conditions.OP_EQUAL,
-					ObjectType: ot,
-				},
+				ObjectTypeCondition: conditions.ObjectTypeEqual(ot),
 			}
 			res = append(res, f)
 		}
@@ -157,20 +142,14 @@ func (s *Server) expandPropertyDefinitionFilter(
 		// types.PropertyDefinitionCondition we've created
 		for _, pf := range res {
 			if filter.Key != "" {
-				op := conditions.OP_EQUAL
 				if filter.UsePrefix {
-					op = conditions.OP_GREATER_THAN_EQUAL
-				}
-				pf.PropertyKeyCondition = &conditions.PropertyKeyCondition{
-					Op:          op,
-					PropertyKey: filter.Key,
+					pf.PropertyKeyCondition = conditions.PropertyKeyLike(filter.Key)
+				} else {
+					pf.PropertyKeyCondition = conditions.PropertyKeyEqual(filter.Key)
 				}
 			}
 			if filter.Uuid != "" {
-				pf.UuidCondition = &conditions.UuidCondition{
-					Op:   conditions.OP_EQUAL,
-					Uuid: filter.Uuid,
-				}
+				pf.UuidCondition = conditions.UuidEqual(filter.Uuid)
 			}
 		}
 	}

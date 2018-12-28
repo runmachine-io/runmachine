@@ -34,6 +34,24 @@ func (c *PropertyKeyCondition) Matches(obj HasKey) bool {
 	}
 }
 
+// PropertyKeyEqual is a helper function that returns a PropertyKeyCondition
+// filtering on an exact property key match
+func PropertyKeyEqual(search string) *PropertyKeyCondition {
+	return &PropertyKeyCondition{
+		Op:          OP_EQUAL,
+		PropertyKey: search,
+	}
+}
+
+// PropertyKeyLike is a helper function that returns a PropertyKeyCondition
+// filtering on a prefixed property key match
+func PropertyKeyLike(search string) *PropertyKeyCondition {
+	return &PropertyKeyCondition{
+		Op:          OP_GREATER_THAN_EQUAL,
+		PropertyKey: search,
+	}
+}
+
 // PropertyDefinitionCondition is a class used in filtering property definitions.
 // Optional partition and object type PKs have already been expanded from
 // user-supplied partition and type filter strings

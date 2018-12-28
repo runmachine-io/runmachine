@@ -23,3 +23,12 @@ func (c *UuidCondition) Matches(obj HasUuid) bool {
 		return false
 	}
 }
+
+// UuidEqual is a helper function that returns a UuidCondition filtering on an
+// exact UUID match
+func UuidEqual(search string) *UuidCondition {
+	return &UuidCondition{
+		Op:   OP_EQUAL,
+		Uuid: search,
+	}
+}

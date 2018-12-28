@@ -2,7 +2,7 @@ package metadata
 
 import (
 	"github.com/runmachine-io/runmachine/pkg/errors"
-	"github.com/runmachine-io/runmachine/pkg/metadata/types"
+	"github.com/runmachine-io/runmachine/pkg/metadata/conditions"
 	pb "github.com/runmachine-io/runmachine/proto"
 )
 
@@ -11,7 +11,7 @@ import (
 // the partition that the user's session is on.
 func (s *Server) defaultPropertyDefinitionFilter(
 	session *pb.Session,
-) (*types.PropertyDefinitionCondition, error) {
+) (*conditions.PropertyDefinitionCondition, error) {
 	p, err := s.store.PartitionGet(session.Partition)
 	if err != nil {
 		if err == errors.ErrNotFound {
@@ -26,11 +26,8 @@ func (s *Server) defaultPropertyDefinitionFilter(
 		}
 		return nil, err
 	}
-	return &types.PropertyDefinitionCondition{
-		Partition: &types.PartitionCondition{
-			Op:        types.OP_EQUAL,
-			Partition: p,
-		},
+	return &conditions.PropertyDefinitionCondition{
+		PartitionCondition: conditions.PartitionEqual(p),
 	}, nil
 }
 
@@ -43,8 +40,8 @@ func (s *Server) defaultPropertyDefinitionFilter(
 func (s *Server) expandPropertyDefinitionFilter(
 	session *pb.Session,
 	filter *pb.PropertyDefinitionFilter,
-) ([]*types.PropertyDefinitionCondition, error) {
-	res := make([]*types.PropertyDefinitionCondition, 0)
+) ([]*conditions.PropertyDefinitionCondition, error) {
+	res := make([]*conditions.PropertyDefinitionCondition, 0)
 	var err error
 	// A set of partition UUIDs that we'll create
 	// types.PropertyDefinitionConditions with.  These are the UUIDs of any
@@ -107,24 +104,15 @@ func (s *Server) expandPropertyDefinitionFilter(
 	if len(partitions) > 0 {
 		for _, p := range partitions {
 			if len(objTypes) == 0 {
-				f := &types.PropertyDefinitionCondition{
-					Partition: &types.PartitionCondition{
-						Op:        types.OP_EQUAL,
-						Partition: p,
-					},
+				f := &conditions.PropertyDefinitionCondition{
+					PartitionCondition: conditions.PartitionEqual(p),
 				}
 				res = append(res, f)
 			} else {
 				for _, ot := range objTypes {
-					f := &types.PropertyDefinitionCondition{
-						Partition: &types.PartitionCondition{
-							Op:        types.OP_EQUAL,
-							Partition: p,
-						},
-						ObjectType: &types.ObjectTypeCondition{
-							Op:         types.OP_EQUAL,
-							ObjectType: ot,
-						},
+					f := &conditions.PropertyDefinitionCondition{
+						PartitionCondition:  conditions.PartitionEqual(p),
+						ObjectTypeCondition: conditions.ObjectTypeEqual(ot),
 					}
 					res = append(res, f)
 				}
@@ -132,11 +120,8 @@ func (s *Server) expandPropertyDefinitionFilter(
 		}
 	} else if len(objTypes) > 0 {
 		for _, ot := range objTypes {
-			f := &types.PropertyDefinitionCondition{
-				ObjectType: &types.ObjectTypeCondition{
-					Op:         types.OP_EQUAL,
-					ObjectType: ot,
-				},
+			f := &conditions.PropertyDefinitionCondition{
+				ObjectTypeCondition: conditions.ObjectTypeEqual(ot),
 			}
 			res = append(res, f)
 		}
@@ -150,27 +135,21 @@ func (s *Server) expandPropertyDefinitionFilter(
 	// the property key.
 	if filter.Key != "" || filter.Uuid != "" {
 		if len(res) == 0 {
-			res = append(res, &types.PropertyDefinitionCondition{})
+			res = append(res, &conditions.PropertyDefinitionCondition{})
 		}
 		// Now that we've expanded our partitions and object types, add in the
 		// original PropertyDefinitionFilter's Search and UsePrefix for each
 		// types.PropertyDefinitionCondition we've created
 		for _, pf := range res {
 			if filter.Key != "" {
-				op := types.OP_EQUAL
 				if filter.UsePrefix {
-					op = types.OP_GREATER_THAN_EQUAL
-				}
-				pf.PropertyKey = &types.PropertyKeyCondition{
-					Op:          op,
-					PropertyKey: filter.Key,
+					pf.PropertyKeyCondition = conditions.PropertyKeyLike(filter.Key)
+				} else {
+					pf.PropertyKeyCondition = conditions.PropertyKeyEqual(filter.Key)
 				}
 			}
 			if filter.Uuid != "" {
-				pf.Uuid = &types.UuidCondition{
-					Op:   types.OP_EQUAL,
-					Uuid: filter.Uuid,
-				}
+				pf.UuidCondition = conditions.UuidEqual(filter.Uuid)
 			}
 		}
 	}
@@ -186,8 +165,8 @@ func (s *Server) expandPropertyDefinitionFilter(
 func (s *Server) normalizePropertyDefinitionFilters(
 	session *pb.Session,
 	any []*pb.PropertyDefinitionFilter,
-) ([]*types.PropertyDefinitionCondition, error) {
-	res := make([]*types.PropertyDefinitionCondition, 0)
+) ([]*conditions.PropertyDefinitionCondition, error) {
+	res := make([]*conditions.PropertyDefinitionCondition, 0)
 	for _, filter := range any {
 		if pfs, err := s.expandPropertyDefinitionFilter(session, filter); err != nil {
 			if err == errors.ErrNotFound {

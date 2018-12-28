@@ -7,6 +7,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 
 	"github.com/runmachine-io/runmachine/pkg/errors"
+	"github.com/runmachine-io/runmachine/pkg/metadata/conditions"
 	"github.com/runmachine-io/runmachine/pkg/metadata/types"
 	"github.com/runmachine-io/runmachine/pkg/util"
 	pb "github.com/runmachine-io/runmachine/proto"
@@ -41,7 +42,7 @@ func (s *Store) PropertyDefinitionDelete(
 // PropertyDefinitionList returns a slice of property definitions matching any
 // of a set of supplied filters.
 func (s *Store) PropertyDefinitionList(
-	any []*types.PropertyDefinitionCondition,
+	any []*conditions.PropertyDefinitionCondition,
 ) ([]*pb.PropertyDefinition, error) {
 	// Each filter is evaluated in an OR fashion, so we keep a hashmap of
 	// property definition keys in order to return unique results
@@ -68,7 +69,7 @@ func (s *Store) PropertyDefinitionList(
 // PropertyDefinitionWithReference structs that have had Partition and
 // ObjectType relations expanded inline.
 func (s *Store) PropertyDefinitionListWithReferences(
-	any []*types.PropertyDefinitionCondition,
+	any []*conditions.PropertyDefinitionCondition,
 ) ([]*types.PropertyDefinitionWithReferences, error) {
 	objects, err := s.PropertyDefinitionList(any)
 	if err != nil {

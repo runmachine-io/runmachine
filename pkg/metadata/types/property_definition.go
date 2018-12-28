@@ -3,7 +3,6 @@ package types
 import (
 	"fmt"
 	"os"
-	"strconv"
 
 	apitypes "github.com/runmachine-io/runmachine/pkg/api/types"
 	pb "github.com/runmachine-io/runmachine/proto"
@@ -11,64 +10,6 @@ import (
 
 type PropertyDefinitionMatcher interface {
 	Matches(obj *pb.PropertyDefinition) bool
-}
-
-// PropertyDefinitionCondition is a class used in filtering property definitions.
-// Optional partition and object type PKs have already been expanded from
-// user-supplied partition and type filter strings
-type PropertyDefinitionCondition struct {
-	Partition   *PartitionCondition
-	ObjectType  *ObjectTypeCondition
-	Uuid        *UuidCondition
-	PropertyKey *PropertyKeyCondition
-}
-
-func (f *PropertyDefinitionCondition) Matches(obj *pb.PropertyDefinition) bool {
-	if !f.Uuid.Matches(obj) {
-		return false
-	}
-	if !f.Partition.Matches(obj) {
-		return false
-	}
-	if !f.ObjectType.Matches(obj) {
-		return false
-	}
-	if !f.PropertyKey.Matches(obj) {
-		return false
-	}
-	return true
-}
-
-func (f *PropertyDefinitionCondition) IsEmpty() bool {
-	return f.Partition == nil && f.ObjectType == nil && f.PropertyKey == nil && f.Uuid == nil
-}
-
-func (f *PropertyDefinitionCondition) String() string {
-	attrMap := make(map[string]string, 0)
-	if f.Partition != nil {
-		attrMap["partition"] = f.Partition.Partition.Uuid
-	}
-	if f.ObjectType != nil {
-		attrMap["object_type"] = f.ObjectType.ObjectType.Code
-	}
-	if f.Uuid != nil {
-		attrMap["uuid"] = f.Uuid.Uuid
-	}
-	if f.PropertyKey != nil {
-		attrMap["key"] = f.PropertyKey.PropertyKey
-		attrMap["use_prefix"] = strconv.FormatBool(
-			f.PropertyKey.Op == OP_GREATER_THAN_EQUAL,
-		)
-	}
-	attrs := ""
-	x := 0
-	for k, v := range attrMap {
-		if x > 0 {
-			attrs += ","
-		}
-		attrs += k + "=" + v
-	}
-	return fmt.Sprintf("PropertyDefinitionCondition(%s)", attrs)
 }
 
 // PropertyDefinitionWithReferences is a concrete struct containing pointers to

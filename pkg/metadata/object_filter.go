@@ -2,8 +2,7 @@ package metadata
 
 import (
 	"github.com/runmachine-io/runmachine/pkg/errors"
-	"github.com/runmachine-io/runmachine/pkg/metadata/types"
-	"github.com/runmachine-io/runmachine/pkg/util"
+	"github.com/runmachine-io/runmachine/pkg/metadata/conditions"
 	pb "github.com/runmachine-io/runmachine/proto"
 )
 
@@ -12,7 +11,7 @@ import (
 // partition that the user's session is on.
 func (s *Server) defaultObjectFilter(
 	session *pb.Session,
-) (*types.ObjectCondition, error) {
+) (*conditions.ObjectCondition, error) {
 	p, err := s.store.PartitionGet(session.Partition)
 	if err != nil {
 		if err == errors.ErrNotFound {
@@ -27,12 +26,9 @@ func (s *Server) defaultObjectFilter(
 		}
 		return nil, err
 	}
-	return &types.ObjectCondition{
-		Partition: &types.PartitionCondition{
-			Op:        types.OP_EQUAL,
-			Partition: p,
-		},
-		Project: session.Project,
+	return &conditions.ObjectCondition{
+		PartitionCondition: conditions.PartitionEqual(p),
+		ProjectCondition:   session.Project,
 	}, nil
 }
 
@@ -44,14 +40,14 @@ func (s *Server) defaultObjectFilter(
 func (s *Server) expandObjectFilter(
 	session *pb.Session,
 	filter *pb.ObjectFilter,
-) ([]*types.ObjectCondition, error) {
-	res := make([]*types.ObjectCondition, 0)
+) ([]*conditions.ObjectCondition, error) {
+	res := make([]*conditions.ObjectCondition, 0)
 	var err error
-	// A set of partition UUIDs that we'll create types.ObjectConditions with.
+	// A set of partition UUIDs that we'll create conditions.ObjectConditions with.
 	// These are the UUIDs of any partitions that match the PartitionFilter in
 	// the supplied pb.ObjectFilter
 	var partitions []*pb.Partition
-	// A set of object type codes that we'll create types.ObjectConditions
+	// A set of object type codes that we'll create conditions.ObjectConditions
 	// with. These are the codes of object types that match the
 	// ObjectTypeFilter in the supplied ObjectFilter
 	var objTypes []*pb.ObjectType
@@ -108,29 +104,20 @@ func (s *Server) expandObjectFilter(
 	}
 
 	// OK, if we've expanded partition or object type, we need to construct
-	// types.ObjectCondition objects containing the combination of all the
+	// conditions.ObjectCondition objects containing the combination of all the
 	// expanded partitions and object types.
 	if len(partitions) > 0 {
 		for _, p := range partitions {
 			if len(objTypes) == 0 {
-				f := &types.ObjectCondition{
-					Partition: &types.PartitionCondition{
-						Op:        types.OP_EQUAL,
-						Partition: p,
-					},
+				f := &conditions.ObjectCondition{
+					PartitionCondition: conditions.PartitionEqual(p),
 				}
 				res = append(res, f)
 			} else {
 				for _, ot := range objTypes {
-					f := &types.ObjectCondition{
-						Partition: &types.PartitionCondition{
-							Op:        types.OP_EQUAL,
-							Partition: p,
-						},
-						ObjectType: &types.ObjectTypeCondition{
-							Op:         types.OP_EQUAL,
-							ObjectType: ot,
-						},
+					f := &conditions.ObjectCondition{
+						PartitionCondition:  conditions.PartitionEqual(p),
+						ObjectTypeCondition: conditions.ObjectTypeEqual(ot),
 					}
 					res = append(res, f)
 				}
@@ -138,11 +125,8 @@ func (s *Server) expandObjectFilter(
 		}
 	} else if len(objTypes) > 0 {
 		for _, ot := range objTypes {
-			f := &types.ObjectCondition{
-				ObjectType: &types.ObjectTypeCondition{
-					Op:         types.OP_EQUAL,
-					ObjectType: ot,
-				},
+			f := &conditions.ObjectCondition{
+				ObjectTypeCondition: conditions.ObjectTypeEqual(ot),
 			}
 			res = append(res, f)
 		}
@@ -156,29 +140,23 @@ func (s *Server) expandObjectFilter(
 	// object.
 	if filter.Name != "" || filter.Uuid != "" || filter.Project != "" {
 		if len(res) == 0 {
-			res = append(res, &types.ObjectCondition{})
+			res = append(res, &conditions.ObjectCondition{})
 		}
-		// Now that we've expanded our partitions and object types, add in the
+		// Now that we've expanded our partitions and object type, add in the
 		// original ObjectFilter's Search and UsePrefix for each
-		// types.ObjectCondition we've created
+		// conditions.ObjectCondition we've created
 		for _, pf := range res {
 			if filter.Uuid != "" {
-				pf.Uuid = &types.UuidCondition{
-					Op:   types.OP_EQUAL,
-					Uuid: util.NormalizeUuid(filter.Uuid),
-				}
+				pf.UuidCondition = conditions.UuidEqual(filter.Uuid)
 			}
 			if filter.Name != "" {
-				op := types.OP_EQUAL
 				if filter.UsePrefix {
-					op = types.OP_GREATER_THAN_EQUAL
-				}
-				pf.Name = &types.NameCondition{
-					Op:   op,
-					Name: filter.Name,
+					pf.NameCondition = conditions.NameLike(filter.Name)
+				} else {
+					pf.NameCondition = conditions.NameEqual(filter.Name)
 				}
 			}
-			pf.Project = filter.Project
+			pf.ProjectCondition = filter.Project
 		}
 	}
 	return res, nil
@@ -193,8 +171,8 @@ func (s *Server) expandObjectFilter(
 func (s *Server) normalizeObjectFilters(
 	session *pb.Session,
 	any []*pb.ObjectFilter,
-) ([]*types.ObjectCondition, error) {
-	res := make([]*types.ObjectCondition, 0)
+) ([]*conditions.ObjectCondition, error) {
+	res := make([]*conditions.ObjectCondition, 0)
 	for _, filter := range any {
 		if pfs, err := s.expandObjectFilter(session, filter); err != nil {
 			if err == errors.ErrNotFound {

@@ -7,6 +7,7 @@ import (
 
 	apitypes "github.com/runmachine-io/runmachine/pkg/api/types"
 	"github.com/runmachine-io/runmachine/pkg/errors"
+	"github.com/runmachine-io/runmachine/pkg/metadata/conditions"
 	"github.com/runmachine-io/runmachine/pkg/metadata/types"
 	pb "github.com/runmachine-io/runmachine/proto"
 )
@@ -213,20 +214,11 @@ func (s *Server) validateObjectProperty(
 	value string,
 ) (*pb.Property, error) {
 	pds, err := s.store.PropertyDefinitionList(
-		[]*types.PropertyDefinitionCondition{
-			&types.PropertyDefinitionCondition{
-				Partition: &types.PartitionCondition{
-					Op:        types.OP_EQUAL,
-					Partition: partition,
-				},
-				ObjectType: &types.ObjectTypeCondition{
-					Op:         types.OP_EQUAL,
-					ObjectType: objType,
-				},
-				PropertyKey: &types.PropertyKeyCondition{
-					Op:          types.OP_EQUAL,
-					PropertyKey: key,
-				},
+		[]*conditions.PropertyDefinitionCondition{
+			&conditions.PropertyDefinitionCondition{
+				PartitionCondition:   conditions.PartitionEqual(partition),
+				ObjectTypeCondition:  conditions.ObjectTypeEqual(objType),
+				PropertyKeyCondition: conditions.PropertyKeyEqual(key),
 			},
 		},
 	)

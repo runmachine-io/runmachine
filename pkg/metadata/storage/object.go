@@ -189,12 +189,12 @@ func (s *Store) ObjectListWithReferences(
 func (s *Store) objectsGetMatching(
 	cond *types.ObjectCondition,
 ) ([]*pb.Object, error) {
-	if cond.Uuid != nil {
+	if cond.UuidCondition != nil {
 		// If the filter specifies a Search and it looks like a UUID, then
 		// all we need to do is grab the object from the primary
 		// objects/by-uuid/ index and check that any other fields match the
 		// object's fields. If so, just return the UUID
-		obj, err := s.objectGetByUuid(cond.Uuid.Uuid)
+		obj, err := s.objectGetByUuid(cond.UuidCondition.Uuid)
 		if err != nil {
 			return nil, err
 		}
@@ -205,7 +205,7 @@ func (s *Store) objectsGetMatching(
 		}
 		return []*pb.Object{obj}, nil
 	}
-	if cond.Name != nil {
+	if cond.NameCondition != nil {
 		// OK, we were asked to search for one or more objects having a
 		// supplied name (optionally have the name as a prefix).
 		//
@@ -218,28 +218,29 @@ func (s *Store) objectsGetMatching(
 		// scan on all objects by the primary objects/by-uuid/ index and
 		// manually check to see if the deserialized Object's name has the
 		// requested name...
-		if cond.ObjectType != nil && cond.Partition != nil {
-			if cond.ObjectType.ObjectType.Scope == pb.ObjectTypeScope_PROJECT {
-				if cond.Project != "" {
+		if cond.ObjectTypeCondition != nil && cond.PartitionCondition != nil {
+			objScope := cond.ObjectTypeCondition.ObjectType.Scope
+			if objScope == pb.ObjectTypeScope_PROJECT {
+				if cond.ProjectCondition != "" {
 					// Just drop through if we don't have a project because
 					// we won't be able to look up a project-scoped object
 					// type when no project was specified, so we'll do the
 					// less efficient range-scan sieve pattern to solve
 					// this cond
 					return s.objectsGetByProjectNameIndex(
-						cond.Partition.Partition.Uuid,
-						cond.ObjectType.ObjectType.Code,
-						cond.Project,
-						cond.Name.Name,
-						cond.Name.Op != types.OP_EQUAL,
+						cond.PartitionCondition.Partition.Uuid,
+						cond.ObjectTypeCondition.ObjectType.Code,
+						cond.ProjectCondition,
+						cond.NameCondition.Name,
+						cond.NameCondition.Op != types.OP_EQUAL,
 					)
 				}
 			} else {
 				return s.objectsGetByNameIndex(
-					cond.Partition.Partition.Uuid,
-					cond.ObjectType.ObjectType.Code,
-					cond.Name.Name,
-					cond.Name.Op != types.OP_EQUAL,
+					cond.PartitionCondition.Partition.Uuid,
+					cond.ObjectTypeCondition.ObjectType.Code,
+					cond.NameCondition.Name,
+					cond.NameCondition.Op != types.OP_EQUAL,
 				)
 			}
 		}

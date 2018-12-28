@@ -28,11 +28,11 @@ func (s *Server) defaultObjectFilter(
 		return nil, err
 	}
 	return &types.ObjectCondition{
-		Partition: &types.PartitionCondition{
+		PartitionCondition: &types.PartitionCondition{
 			Op:        types.OP_EQUAL,
 			Partition: p,
 		},
-		Project: session.Project,
+		ProjectCondition: session.Project,
 	}, nil
 }
 
@@ -114,7 +114,7 @@ func (s *Server) expandObjectFilter(
 		for _, p := range partitions {
 			if len(objTypes) == 0 {
 				f := &types.ObjectCondition{
-					Partition: &types.PartitionCondition{
+					PartitionCondition: &types.PartitionCondition{
 						Op:        types.OP_EQUAL,
 						Partition: p,
 					},
@@ -123,11 +123,11 @@ func (s *Server) expandObjectFilter(
 			} else {
 				for _, ot := range objTypes {
 					f := &types.ObjectCondition{
-						Partition: &types.PartitionCondition{
+						PartitionCondition: &types.PartitionCondition{
 							Op:        types.OP_EQUAL,
 							Partition: p,
 						},
-						ObjectType: &types.ObjectTypeCondition{
+						ObjectTypeCondition: &types.ObjectTypeCondition{
 							Op:         types.OP_EQUAL,
 							ObjectType: ot,
 						},
@@ -139,7 +139,7 @@ func (s *Server) expandObjectFilter(
 	} else if len(objTypes) > 0 {
 		for _, ot := range objTypes {
 			f := &types.ObjectCondition{
-				ObjectType: &types.ObjectTypeCondition{
+				ObjectTypeCondition: &types.ObjectTypeCondition{
 					Op:         types.OP_EQUAL,
 					ObjectType: ot,
 				},
@@ -163,7 +163,7 @@ func (s *Server) expandObjectFilter(
 		// types.ObjectCondition we've created
 		for _, pf := range res {
 			if filter.Uuid != "" {
-				pf.Uuid = &types.UuidCondition{
+				pf.UuidCondition = &types.UuidCondition{
 					Op:   types.OP_EQUAL,
 					Uuid: util.NormalizeUuid(filter.Uuid),
 				}
@@ -173,12 +173,12 @@ func (s *Server) expandObjectFilter(
 				if filter.UsePrefix {
 					op = types.OP_GREATER_THAN_EQUAL
 				}
-				pf.Name = &types.NameCondition{
+				pf.NameCondition = &types.NameCondition{
 					Op:   op,
 					Name: filter.Name,
 				}
 			}
-			pf.Project = filter.Project
+			pf.ProjectCondition = filter.Project
 		}
 	}
 	return res, nil

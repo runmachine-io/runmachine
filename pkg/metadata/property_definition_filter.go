@@ -27,7 +27,7 @@ func (s *Server) defaultPropertyDefinitionFilter(
 		return nil, err
 	}
 	return &types.PropertyDefinitionCondition{
-		Partition: &types.PartitionCondition{
+		PartitionCondition: &types.PartitionCondition{
 			Op:        types.OP_EQUAL,
 			Partition: p,
 		},
@@ -108,7 +108,7 @@ func (s *Server) expandPropertyDefinitionFilter(
 		for _, p := range partitions {
 			if len(objTypes) == 0 {
 				f := &types.PropertyDefinitionCondition{
-					Partition: &types.PartitionCondition{
+					PartitionCondition: &types.PartitionCondition{
 						Op:        types.OP_EQUAL,
 						Partition: p,
 					},
@@ -117,11 +117,11 @@ func (s *Server) expandPropertyDefinitionFilter(
 			} else {
 				for _, ot := range objTypes {
 					f := &types.PropertyDefinitionCondition{
-						Partition: &types.PartitionCondition{
+						PartitionCondition: &types.PartitionCondition{
 							Op:        types.OP_EQUAL,
 							Partition: p,
 						},
-						ObjectType: &types.ObjectTypeCondition{
+						ObjectTypeCondition: &types.ObjectTypeCondition{
 							Op:         types.OP_EQUAL,
 							ObjectType: ot,
 						},
@@ -133,7 +133,7 @@ func (s *Server) expandPropertyDefinitionFilter(
 	} else if len(objTypes) > 0 {
 		for _, ot := range objTypes {
 			f := &types.PropertyDefinitionCondition{
-				ObjectType: &types.ObjectTypeCondition{
+				ObjectTypeCondition: &types.ObjectTypeCondition{
 					Op:         types.OP_EQUAL,
 					ObjectType: ot,
 				},
@@ -161,13 +161,13 @@ func (s *Server) expandPropertyDefinitionFilter(
 				if filter.UsePrefix {
 					op = types.OP_GREATER_THAN_EQUAL
 				}
-				pf.PropertyKey = &types.PropertyKeyCondition{
+				pf.PropertyKeyCondition = &types.PropertyKeyCondition{
 					Op:          op,
 					PropertyKey: filter.Key,
 				}
 			}
 			if filter.Uuid != "" {
-				pf.Uuid = &types.UuidCondition{
+				pf.UuidCondition = &types.UuidCondition{
 					Op:   types.OP_EQUAL,
 					Uuid: filter.Uuid,
 				}

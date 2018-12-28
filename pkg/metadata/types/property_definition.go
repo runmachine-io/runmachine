@@ -17,47 +17,50 @@ type PropertyDefinitionMatcher interface {
 // Optional partition and object type PKs have already been expanded from
 // user-supplied partition and type filter strings
 type PropertyDefinitionCondition struct {
-	Partition   *PartitionCondition
-	ObjectType  *ObjectTypeCondition
-	Uuid        *UuidCondition
-	PropertyKey *PropertyKeyCondition
+	PartitionCondition   *PartitionCondition
+	ObjectTypeCondition  *ObjectTypeCondition
+	UuidCondition        *UuidCondition
+	PropertyKeyCondition *PropertyKeyCondition
 }
 
 func (f *PropertyDefinitionCondition) Matches(obj *pb.PropertyDefinition) bool {
-	if !f.Uuid.Matches(obj) {
+	if !f.UuidCondition.Matches(obj) {
 		return false
 	}
-	if !f.Partition.Matches(obj) {
+	if !f.PartitionCondition.Matches(obj) {
 		return false
 	}
-	if !f.ObjectType.Matches(obj) {
+	if !f.ObjectTypeCondition.Matches(obj) {
 		return false
 	}
-	if !f.PropertyKey.Matches(obj) {
+	if !f.PropertyKeyCondition.Matches(obj) {
 		return false
 	}
 	return true
 }
 
 func (f *PropertyDefinitionCondition) IsEmpty() bool {
-	return f.Partition == nil && f.ObjectType == nil && f.PropertyKey == nil && f.Uuid == nil
+	return f.PartitionCondition == nil &&
+		f.ObjectTypeCondition == nil &&
+		f.PropertyKeyCondition == nil &&
+		f.UuidCondition == nil
 }
 
 func (f *PropertyDefinitionCondition) String() string {
 	attrMap := make(map[string]string, 0)
-	if f.Partition != nil {
-		attrMap["partition"] = f.Partition.Partition.Uuid
+	if f.PartitionCondition != nil {
+		attrMap["partition"] = f.PartitionCondition.Partition.Uuid
 	}
-	if f.ObjectType != nil {
-		attrMap["object_type"] = f.ObjectType.ObjectType.Code
+	if f.ObjectTypeCondition != nil {
+		attrMap["object_type"] = f.ObjectTypeCondition.ObjectType.Code
 	}
-	if f.Uuid != nil {
-		attrMap["uuid"] = f.Uuid.Uuid
+	if f.UuidCondition != nil {
+		attrMap["uuid"] = f.UuidCondition.Uuid
 	}
-	if f.PropertyKey != nil {
-		attrMap["key"] = f.PropertyKey.PropertyKey
+	if f.PropertyKeyCondition != nil {
+		attrMap["key"] = f.PropertyKeyCondition.PropertyKey
 		attrMap["use_prefix"] = strconv.FormatBool(
-			f.PropertyKey.Op == OP_GREATER_THAN_EQUAL,
+			f.PropertyKeyCondition.Op == OP_GREATER_THAN_EQUAL,
 		)
 	}
 	attrs := ""

@@ -15,29 +15,29 @@ type ObjectMatcher interface {
 // and object type PKs have already been expanded from user-supplied partition
 // and type filter strings
 type ObjectCondition struct {
-	Partition  *PartitionCondition
-	ObjectType *ObjectTypeCondition
-	Uuid       *UuidCondition
-	Name       *NameCondition
-	Project    string
+	PartitionCondition  *PartitionCondition
+	ObjectTypeCondition *ObjectTypeCondition
+	UuidCondition       *UuidCondition
+	NameCondition       *NameCondition
+	ProjectCondition    string
 	// TODO(jaypipes): Add support for property and tag filters
 }
 
 func (f *ObjectCondition) Matches(obj *pb.Object) bool {
-	if !f.Uuid.Matches(obj) {
+	if !f.UuidCondition.Matches(obj) {
 		return false
 	}
-	if !f.Partition.Matches(obj) {
+	if !f.PartitionCondition.Matches(obj) {
 		return false
 	}
-	if !f.ObjectType.Matches(obj) {
+	if !f.ObjectTypeCondition.Matches(obj) {
 		return false
 	}
-	if !f.Name.Matches(obj) {
+	if !f.NameCondition.Matches(obj) {
 		return false
 	}
-	if f.Project != "" && obj.Project != "" {
-		if obj.Project != f.Project {
+	if f.ProjectCondition != "" && obj.Project != "" {
+		if obj.Project != f.ProjectCondition {
 			return false
 		}
 	}
@@ -45,27 +45,31 @@ func (f *ObjectCondition) Matches(obj *pb.Object) bool {
 }
 
 func (f *ObjectCondition) IsEmpty() bool {
-	return f.Partition == nil && f.ObjectType == nil && f.Uuid == nil && f.Project == "" && f.Name == nil
+	return f.PartitionCondition == nil &&
+		f.ObjectTypeCondition == nil &&
+		f.UuidCondition == nil &&
+		f.ProjectCondition == "" &&
+		f.NameCondition == nil
 }
 
 func (f *ObjectCondition) String() string {
 	attrMap := make(map[string]string, 0)
-	if f.Partition != nil {
-		attrMap["partition"] = f.Partition.Partition.Uuid
+	if f.PartitionCondition != nil {
+		attrMap["partition"] = f.PartitionCondition.Partition.Uuid
 	}
-	if f.ObjectType != nil {
-		attrMap["object_type"] = f.ObjectType.ObjectType.Code
+	if f.ObjectTypeCondition != nil {
+		attrMap["object_type"] = f.ObjectTypeCondition.ObjectType.Code
 	}
-	if f.Uuid != nil {
-		attrMap["uuid"] = f.Uuid.Uuid
+	if f.UuidCondition != nil {
+		attrMap["uuid"] = f.UuidCondition.Uuid
 	}
-	if f.Project != "" {
-		attrMap["project"] = f.Project
+	if f.ProjectCondition != "" {
+		attrMap["project"] = f.ProjectCondition
 	}
-	if f.Name != nil {
-		attrMap["key"] = f.Name.Name
+	if f.NameCondition != nil {
+		attrMap["key"] = f.NameCondition.Name
 		attrMap["use_prefix"] = strconv.FormatBool(
-			f.Name.Op == OP_GREATER_THAN_EQUAL,
+			f.NameCondition.Op == OP_GREATER_THAN_EQUAL,
 		)
 	}
 	attrs := ""

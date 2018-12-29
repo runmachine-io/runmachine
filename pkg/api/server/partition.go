@@ -30,7 +30,11 @@ func (s *Server) PartitionGet(
 			Search: req.Filter.Search,
 		},
 	}
-	metaobj, err := s.metaclient.PartitionGet(context.Background(), metareq)
+	mc, err := s.metaClient()
+	if err != nil {
+		return nil, err
+	}
+	metaobj, err := mc.PartitionGet(context.Background(), metareq)
 	if err != nil {
 		if err == errors.ErrNotFound {
 			return nil, ErrNotFound
@@ -66,7 +70,11 @@ func (s *Server) PartitionList(
 		Session: metasess,
 		// TODO(jaypipes): Any:     buildPartitionFilters(),
 	}
-	metastream, err := s.metaclient.PartitionList(context.Background(), metareq)
+	mc, err := s.metaClient()
+	if err != nil {
+		return err
+	}
+	metastream, err := mc.PartitionList(context.Background(), metareq)
 	if err != nil {
 		return err
 	}
@@ -74,7 +82,6 @@ func (s *Server) PartitionList(
 	objs := make([]*pb.Partition, 0)
 	for {
 		msg, err := metastream.Recv()
-		s.log.L1("api: metastream.Recv() got %v - %v", msg, err)
 		if err == io.EOF {
 			break
 		}

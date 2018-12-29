@@ -14,10 +14,11 @@ import (
 )
 
 const (
-	cfgPath            = "/etc/runmachine/api"
-	defaultUseTLS      = false
-	defaultBindPort    = 10001
-	defaultServiceName = "runmachine-api"
+	cfgPath                    = "/etc/runmachine/api"
+	defaultUseTLS              = false
+	defaultBindPort            = 10001
+	defaultServiceName         = "runmachine-api"
+	defaultMetadataServiceName = "runmachine-metadata"
 )
 
 var (
@@ -27,12 +28,13 @@ var (
 )
 
 type Config struct {
-	UseTLS      bool
-	CertPath    string
-	KeyPath     string
-	BindHost    string
-	BindPort    int
-	ServiceName string
+	UseTLS              bool
+	CertPath            string
+	KeyPath             string
+	BindHost            string
+	BindPort            int
+	ServiceName         string
+	MetadataServiceName string
 }
 
 func ConfigFromOpts() *Config {
@@ -76,18 +78,26 @@ func ConfigFromOpts() *Config {
 		envutil.WithDefault(
 			"RUNM_API_SERVICE_NAME", defaultServiceName,
 		),
-		"Name to use when registering with the service registry",
+		"Name to use when registering the API service with the service registry",
+	)
+	optMetadataServiceName := flag.String(
+		"metadata-service-name",
+		envutil.WithDefault(
+			"RUNM_METADATA_SERVICE_NAME", defaultMetadataServiceName,
+		),
+		"Name to use when querying the service registry for the metadata service",
 	)
 
 	flag.Parse()
 
 	return &Config{
-		UseTLS:      *optUseTLS,
-		CertPath:    *optCertPath,
-		KeyPath:     *optKeyPath,
-		BindHost:    *optHost,
-		BindPort:    *optPort,
-		ServiceName: *optServiceName,
+		UseTLS:              *optUseTLS,
+		CertPath:            *optCertPath,
+		KeyPath:             *optKeyPath,
+		BindHost:            *optHost,
+		BindPort:            *optPort,
+		ServiceName:         *optServiceName,
+		MetadataServiceName: *optMetadataServiceName,
 	}
 }
 

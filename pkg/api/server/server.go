@@ -2,10 +2,8 @@ package server
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/jaypipes/gsr"
-	"google.golang.org/grpc"
 
 	"github.com/runmachine-io/runmachine/pkg/api/server/config"
 	"github.com/runmachine-io/runmachine/pkg/logging"
@@ -25,8 +23,8 @@ type Server struct {
 
 func (s *Server) Close() {
 	addr := fmt.Sprintf("%s:%d", s.cfg.BindHost, s.cfg.BindPort)
-	s.log.L1(
-		"unregistering %s:%s endpoint in gsr",
+	s.log.L3(
+		"unregistering %s:%s endpoint in gsr...",
 		s.cfg.ServiceName,
 		addr,
 	)
@@ -40,20 +38,6 @@ func (s *Server) Close() {
 	}
 }
 
-func metaConnect(connectHost string, connectPort int) *grpc.ClientConn {
-	var opts []grpc.DialOption
-	// TODO(jaypipes): Don't hardcode this to WithInsecure
-	opts = append(opts, grpc.WithInsecure())
-	addr := fmt.Sprintf("%s:%d", connectHost, connectPort)
-	conn, err := grpc.Dial(addr, opts...)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-		return nil
-	}
-	return conn
-}
-
 func New(
 	cfg *config.Config,
 	log *logging.Logs,
@@ -65,10 +49,7 @@ func New(
 	}
 	log.L2("connected to gsr service registry.")
 
-	conn := metaConnect("172.17.0.3", 10000)
-	metaclient := metapb.NewRunmMetadataClient(conn)
-
-	// Register this runm-metadata service endpoint with the service registry
+	// Register this runm-api service endpoint with the service registry
 	addr := fmt.Sprintf("%s:%d", cfg.BindHost, cfg.BindPort)
 	ep := gsr.Endpoint{
 		Service: &gsr.Service{Name: cfg.ServiceName},
@@ -85,9 +66,8 @@ func New(
 	)
 
 	return &Server{
-		log:        log,
-		cfg:        cfg,
-		registry:   registry,
-		metaclient: metaclient,
+		log:      log,
+		cfg:      cfg,
+		registry: registry,
 	}, nil
 }

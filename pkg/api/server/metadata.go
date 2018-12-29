@@ -3,9 +3,20 @@ package server
 import (
 	"fmt"
 
+	pb "github.com/runmachine-io/runmachine/pkg/api/proto"
 	metapb "github.com/runmachine-io/runmachine/proto"
 	"google.golang.org/grpc"
 )
+
+// metaSession transforms an API protobuffer Session message into a metadata
+// service protobuffer Session message
+func metaSession(sess *pb.Session) *metapb.Session {
+	return &metapb.Session{
+		User:      sess.User,
+		Project:   sess.Project,
+		Partition: sess.Partition,
+	}
+}
 
 // TODO(jaypipes): Add retry behaviour
 func (s *Server) metaConnect(addr string) (*grpc.ClientConn, error) {

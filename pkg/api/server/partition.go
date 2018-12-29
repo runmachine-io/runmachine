@@ -18,14 +18,8 @@ func (s *Server) PartitionGet(
 	if req.Filter == nil || req.Filter.Search == "" {
 		return nil, ErrSearchRequired
 	}
-	sess := req.Session
-	metasess := &metapb.Session{
-		User:      sess.User,
-		Project:   sess.Project,
-		Partition: sess.Partition,
-	}
 	metareq := &metapb.PartitionGetRequest{
-		Session: metasess,
+		Session: metaSession(req.Session),
 		Filter: &metapb.PartitionFilter{
 			Search: req.Filter.Search,
 		},
@@ -60,14 +54,8 @@ func (s *Server) PartitionList(
 	req *pb.PartitionListRequest,
 	stream pb.RunmAPI_PartitionListServer,
 ) error {
-	sess := req.Session
-	metasess := &metapb.Session{
-		User:      sess.User,
-		Project:   sess.Project,
-		Partition: sess.Partition,
-	}
 	metareq := &metapb.PartitionListRequest{
-		Session: metasess,
+		Session: metaSession(req.Session),
 		// TODO(jaypipes): Any:     buildPartitionFilters(),
 	}
 	mc, err := s.metaClient()

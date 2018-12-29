@@ -5,6 +5,7 @@ vendor/
 
 # Don't store generated code in tree
 proto/*.go
+pkg/api/proto/*.go
 
 # Binaries for programs and plugins
 *.exe

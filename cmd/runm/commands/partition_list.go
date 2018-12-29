@@ -8,7 +8,7 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/olekukonko/tablewriter"
-	pb "github.com/runmachine-io/runmachine/proto"
+	apipb "github.com/runmachine-io/runmachine/pkg/api/proto"
 	"github.com/spf13/cobra"
 )
 
@@ -45,8 +45,8 @@ func init() {
 	setupPartitionListFlags()
 }
 
-func buildPartitionFilters() []*pb.PartitionFilter {
-	filters := make([]*pb.PartitionFilter, 0)
+func buildPartitionFilters() []*apipb.PartitionFilter {
+	filters := make([]*apipb.PartitionFilter, 0)
 	for _, f := range cliPartitionFilters {
 		usePrefix := false
 		if strings.HasSuffix(f, "*") {
@@ -55,7 +55,7 @@ func buildPartitionFilters() []*pb.PartitionFilter {
 		}
 		filters = append(
 			filters,
-			&pb.PartitionFilter{
+			&apipb.PartitionFilter{
 				Search:    f,
 				UsePrefix: usePrefix,
 			},
@@ -65,18 +65,18 @@ func buildPartitionFilters() []*pb.PartitionFilter {
 }
 
 func partitionList(cmd *cobra.Command, args []string) {
-	conn := connect()
+	conn := apiConnect()
 	defer conn.Close()
 
-	client := pb.NewRunmMetadataClient(conn)
-	req := &pb.PartitionListRequest{
-		Session: getSession(),
+	client := apipb.NewRunmAPIClient(conn)
+	req := &apipb.PartitionListRequest{
+		Session: apiGetSession(),
 		Any:     buildPartitionFilters(),
 	}
 	stream, err := client.PartitionList(context.Background(), req)
 	exitIfConnectErr(err)
 
-	msgs := make([]*pb.Partition, 0)
+	msgs := make([]*apipb.Partition, 0)
 	for {
 		role, err := stream.Recv()
 		if err == io.EOF {

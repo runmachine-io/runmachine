@@ -10,6 +10,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	apipb "github.com/runmachine-io/runmachine/pkg/api/proto"
 	pb "github.com/runmachine-io/runmachine/proto"
 )
 
@@ -131,6 +132,14 @@ func getSession() *pb.Session {
 		Partition: partition,
 	}
 }
+func apiGetSession() *apipb.Session {
+	sess := getSession()
+	return &apipb.Session{
+		User:      sess.User,
+		Project:   sess.Project,
+		Partition: sess.Partition,
+	}
+}
 
 func connect() *grpc.ClientConn {
 	var opts []grpc.DialOption
@@ -138,6 +147,21 @@ func connect() *grpc.ClientConn {
 	opts = append(opts, grpc.WithInsecure())
 	addr := fmt.Sprintf("%s:%d", connectHost, connectPort)
 	printIf(verbose, "connecting to runm services at %s\n", addr)
+	conn, err := grpc.Dial(addr, opts...)
+	if err != nil {
+		fmt.Println(errConnect)
+		os.Exit(1)
+		return nil
+	}
+	return conn
+}
+
+func apiConnect() *grpc.ClientConn {
+	var opts []grpc.DialOption
+	// TODO(jaypipes): Don't hardcode this to WithInsecure
+	opts = append(opts, grpc.WithInsecure())
+	addr := fmt.Sprintf("%s:%d", apiConnectHost, apiConnectPort)
+	printIf(verbose, "connecting to runm-api service at %s\n", addr)
 	conn, err := grpc.Dial(addr, opts...)
 	if err != nil {
 		fmt.Println(errConnect)

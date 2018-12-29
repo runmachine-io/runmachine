@@ -7,7 +7,7 @@ import (
 	etcd_namespace "github.com/coreos/etcd/clientv3/namespace"
 
 	"github.com/runmachine-io/runmachine/pkg/logging"
-	"github.com/runmachine-io/runmachine/pkg/metadata/config"
+	"github.com/runmachine-io/runmachine/pkg/metadata/server/config"
 )
 
 const (

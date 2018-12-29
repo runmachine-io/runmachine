@@ -1,4 +1,4 @@
-package metadata
+package server
 
 import (
 	"github.com/runmachine-io/runmachine/pkg/errors"

@@ -1,4 +1,4 @@
-package metadata
+package server
 
 import (
 	"fmt"
@@ -6,8 +6,8 @@ import (
 	"github.com/jaypipes/gsr"
 
 	"github.com/runmachine-io/runmachine/pkg/logging"
-	"github.com/runmachine-io/runmachine/pkg/metadata/config"
-	"github.com/runmachine-io/runmachine/pkg/metadata/storage"
+	"github.com/runmachine-io/runmachine/pkg/metadata/server/config"
+	"github.com/runmachine-io/runmachine/pkg/metadata/server/storage"
 )
 
 var (

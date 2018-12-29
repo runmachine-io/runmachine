@@ -1,4 +1,4 @@
-package metadata
+package server
 
 import (
 	pb "github.com/runmachine-io/runmachine/proto"

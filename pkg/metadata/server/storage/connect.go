@@ -10,7 +10,7 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/runmachine-io/runmachine/pkg/logging"
-	"github.com/runmachine-io/runmachine/pkg/metadata/config"
+	"github.com/runmachine-io/runmachine/pkg/metadata/server/config"
 )
 
 // Returns an etcd3 client using an exponential backoff and reconnect strategy.

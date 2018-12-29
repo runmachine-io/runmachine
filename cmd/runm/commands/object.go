@@ -141,6 +141,6 @@ func printObject(obj *pb.Object) {
 	}
 	if obj.Tags != nil {
 		tags := strings.Join(obj.Tags, ",")
-		fmt.Printf("Tags:       %s\n", tags)
+		fmt.Printf("Tags:        %s\n", tags)
 	}
 }

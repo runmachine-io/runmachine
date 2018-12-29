@@ -9,14 +9,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var objectCreateCommand = &cobra.Command{
-	Use:   "create",
-	Short: "Create a new object",
-	Run:   objectCreate,
+var objectSetCommand = &cobra.Command{
+	Use:   "set",
+	Short: "Create or update an object",
+	Run:   objectSet,
 }
 
-func setupObjectCreateFlags() {
-	objectCreateCommand.Flags().StringVarP(
+func setupObjectSetFlags() {
+	objectSetCommand.Flags().StringVarP(
 		&cliObjectDocPath,
 		"file", "f",
 		"",
@@ -25,10 +25,10 @@ func setupObjectCreateFlags() {
 }
 
 func init() {
-	setupObjectCreateFlags()
+	setupObjectSetFlags()
 }
 
-func objectCreate(cmd *cobra.Command, args []string) {
+func objectSet(cmd *cobra.Command, args []string) {
 	conn := connect()
 	defer conn.Close()
 
@@ -43,8 +43,9 @@ func objectCreate(cmd *cobra.Command, args []string) {
 	exitIfError(err)
 	obj := resp.Object
 	if !quiet {
-		printObject(obj)
-	} else {
-		fmt.Println(obj.Uuid)
+		fmt.Printf("ok\n")
+		if verbose {
+			printObject(obj)
+		}
 	}
 }

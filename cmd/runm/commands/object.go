@@ -66,7 +66,7 @@ var objectCommand = &cobra.Command{
 func init() {
 	objectCommand.AddCommand(objectListCommand)
 	objectCommand.AddCommand(objectGetCommand)
-	objectCommand.AddCommand(objectCreateCommand)
+	objectCommand.AddCommand(objectSetCommand)
 	objectCommand.AddCommand(objectDeleteCommand)
 }
 
@@ -141,6 +141,6 @@ func printObject(obj *pb.Object) {
 	}
 	if obj.Tags != nil {
 		tags := strings.Join(obj.Tags, ",")
-		fmt.Printf("Tags:       %s\n", tags)
+		fmt.Printf("Tags:        %s\n", tags)
 	}
 }

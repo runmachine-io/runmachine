@@ -2,6 +2,7 @@ package metadata
 
 import (
 	"context"
+	"reflect"
 
 	yaml "gopkg.in/yaml.v2"
 
@@ -247,46 +248,113 @@ func (s *Server) validateValueWithSchema(
 	return nil
 }
 
+func objectChanged(a, b *types.ObjectWithReferences) bool {
+	if a.Partition.Uuid != b.Partition.Uuid {
+		return true
+	}
+	if a.ObjectType.Code != b.ObjectType.Code {
+		return true
+	}
+	if a.Object.Uuid != b.Object.Uuid {
+		return true
+	}
+	if a.Object.Name != b.Object.Name {
+		return true
+	}
+	if a.Object.Project != b.Object.Project {
+		return true
+	}
+	if !reflect.DeepEqual(a.Object.Tags, b.Object.Tags) {
+		return true
+	}
+	if !reflect.DeepEqual(a.Object.Properties, b.Object.Properties) {
+		return true
+	}
+	return false
+}
+
 func (s *Server) ObjectSet(
 	ctx context.Context,
 	req *pb.ObjectSetRequest,
 ) (*pb.ObjectSetResponse, error) {
 	// TODO(jaypipes): AUTHZ check if user can write objects
 
-	owr, err := s.validateObjectSetRequest(req)
+	input, err := s.validateObjectSetRequest(req)
 	if err != nil {
 		return nil, err
 	}
 
-	newObject := owr.Object.Uuid == ""
-	if !newObject {
-		// Check to see if an object with this UUID exists. If it does, we
-		// switch to the update code path
+	// Determine if this is a new object the user is creating or an existing
+	// one they are updating
+	var existing *types.ObjectWithReferences
+	var cond *conditions.ObjectCondition
+	if input.Object.Uuid != "" {
+		cond = &conditions.ObjectCondition{
+			UuidCondition: conditions.UuidEqual(input.Object.Uuid),
+		}
+	} else {
+		cond = &conditions.ObjectCondition{
+			ObjectTypeCondition: conditions.ObjectTypeEqual(input.ObjectType),
+			NameCondition:       conditions.NameEqual(input.Object.Name),
+		}
+		if input.ObjectType.Scope == pb.ObjectTypeScope_PROJECT {
+			cond.ProjectCondition = input.Object.Project
+		}
+	}
 
+	objs, err := s.store.ObjectListWithReferences(
+		[]*conditions.ObjectCondition{cond},
+	)
+	if err != nil {
+		return nil, err
+	}
+	if len(objs) > 1 {
+		return nil, ErrMultipleRecordsFound
+	} else if len(objs) == 1 {
+		existing = objs[0]
 	}
 
 	var changed *types.ObjectWithReferences
-	if newObject {
+	if existing == nil {
 		s.log.L3(
 			"creating new object of type %s in partition %s with name %s...",
-			owr.ObjectType.Code,
-			owr.Partition.Uuid,
-			owr.Object.Name,
+			input.ObjectType.Code,
+			input.Partition.Uuid,
+			input.Object.Name,
 		)
-		changed, err = s.store.ObjectCreate(owr)
+		changed, err = s.store.ObjectCreate(input)
 		if err != nil {
 			return nil, err
 		}
 		s.log.L1(
 			"created new object with UUID %s of type %s in partition %s with name %s",
 			changed.Object.Uuid,
-			owr.ObjectType.Code,
-			owr.Partition.Uuid,
-			owr.Object.Name,
+			input.ObjectType.Code,
+			input.Partition.Uuid,
+			input.Object.Name,
 		)
 	} else {
-		s.log.L3("updating object with UUID %s", owr.Object.Uuid)
-		// TODO(jaypipes): Implement update code path
+		if input.Object.Uuid == "" {
+			input.Object.Uuid = existing.Object.Uuid
+		}
+		if objectChanged(existing, input) {
+			s.log.L3("updating object with UUID %s...", existing.Object.Uuid)
+			if changed, err = s.store.ObjectUpdate(input); err != nil {
+				s.log.ERR(
+					"failed updating object with UUID %s: %s",
+					existing.Object.Uuid,
+					err,
+				)
+				return nil, ErrUnknown
+			}
+			s.log.L1(
+				"updated object with UUID %s",
+				changed.Object.Uuid,
+			)
+		} else {
+			changed = existing
+			s.log.L3("no changes to object with UUID %s...", existing.Object.Uuid)
+		}
 	}
 
 	return &pb.ObjectSetResponse{

@@ -477,3 +477,50 @@ func (s *Store) ObjectCreate(
 	}
 	return owr, nil
 }
+
+// ObjectUpdate puts the supplied object into backend storage, updating any
+// appropriate indexes. It returns the newly-changed object.
+func (s *Store) ObjectUpdate(
+	owr *types.ObjectWithReferences,
+) (*types.ObjectWithReferences, error) {
+	objUuid := owr.Object.Uuid
+
+	objValue, err := proto.Marshal(owr.Object)
+	if err != nil {
+		s.log.ERR("failed to serialize object: %v", err)
+		return nil, errors.ErrUnknown
+	}
+
+	objByNameKey, err := s.objectByNameIndexKey(owr)
+	if err != nil {
+		return nil, errors.ErrUnknown
+	}
+	objByUuidKey := _OBJECTS_BY_UUID_KEY + objUuid
+
+	ctx, cancel := s.requestCtx()
+	defer cancel()
+
+	// creates all the indexes and the objects/by-uuid/ entry using a
+	// transaction that ensures if another thread modified anything underneath
+	// us, we return an error
+	then := []etcd.Op{
+		// Ensure the index entry for the index by object name exists
+		etcd.OpPut(objByNameKey, objUuid),
+		// Add the entry for the primary index by object UUID
+		etcd.OpPut(objByUuidKey, string(objValue)),
+	}
+	compare := []etcd.Cmp{
+		// Ensure the object value and index by name exists
+		etcd.Compare(etcd.Version(objByNameKey), ">", 0),
+		etcd.Compare(etcd.Version(objByUuidKey), ">", 0),
+	}
+	resp, err := s.kv.Txn(ctx).If(compare...).Then(then...).Commit()
+
+	if err != nil {
+		s.log.ERR("object_update: failed to create txn in etcd: %v", err)
+		return nil, errors.ErrUnknown
+	} else if resp.Succeeded == false {
+		return nil, errors.ErrDuplicate
+	}
+	return owr, nil
+}

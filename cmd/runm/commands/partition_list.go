@@ -5,11 +5,11 @@ import (
 	"os"
 	"strings"
 
+	"github.com/olekukonko/tablewriter"
+	"github.com/spf13/cobra"
 	"golang.org/x/net/context"
 
-	"github.com/olekukonko/tablewriter"
 	apipb "github.com/runmachine-io/runmachine/pkg/api/proto"
-	"github.com/spf13/cobra"
 )
 
 const (

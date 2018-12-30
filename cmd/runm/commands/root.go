@@ -4,10 +4,9 @@ import (
 	"io/ioutil"
 	"log"
 
+	"github.com/jaypipes/envutil"
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc/grpclog"
-
-	"github.com/jaypipes/envutil"
 )
 
 type Logger grpclog.Logger

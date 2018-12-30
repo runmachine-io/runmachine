@@ -9,8 +9,8 @@ import (
 	apitypes "github.com/runmachine-io/runmachine/pkg/api/types"
 	"github.com/runmachine-io/runmachine/pkg/errors"
 	"github.com/runmachine-io/runmachine/pkg/metadata/conditions"
+	pb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
 	"github.com/runmachine-io/runmachine/pkg/metadata/types"
-	pb "github.com/runmachine-io/runmachine/proto"
 )
 
 func (s *Server) ObjectDelete(

@@ -6,7 +6,8 @@ import (
 
 	etcd "github.com/coreos/etcd/clientv3"
 	"github.com/gogo/protobuf/proto"
-	pb "github.com/runmachine-io/runmachine/proto"
+
+	pb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
 )
 
 const (

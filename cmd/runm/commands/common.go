@@ -11,7 +11,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	apipb "github.com/runmachine-io/runmachine/pkg/api/proto"
-	pb "github.com/runmachine-io/runmachine/proto"
+	pb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
 )
 
 const (

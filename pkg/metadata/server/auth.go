@@ -1,7 +1,7 @@
 package server
 
 import (
-	pb "github.com/runmachine-io/runmachine/proto"
+	pb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
 )
 
 func checkSession(sess *pb.Session) error {

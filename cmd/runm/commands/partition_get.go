@@ -3,10 +3,10 @@ package commands
 import (
 	"fmt"
 
+	"github.com/spf13/cobra"
 	"golang.org/x/net/context"
 
 	apipb "github.com/runmachine-io/runmachine/pkg/api/proto"
-	"github.com/spf13/cobra"
 )
 
 var partitionGetCommand = &cobra.Command{

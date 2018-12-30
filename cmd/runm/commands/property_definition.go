@@ -6,9 +6,10 @@ import (
 	"strconv"
 	"strings"
 
-	apitypes "github.com/runmachine-io/runmachine/pkg/api/types"
-	pb "github.com/runmachine-io/runmachine/proto"
 	"github.com/spf13/cobra"
+
+	apitypes "github.com/runmachine-io/runmachine/pkg/api/types"
+	pb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
 )
 
 const (

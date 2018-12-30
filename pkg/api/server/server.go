@@ -7,7 +7,7 @@ import (
 
 	"github.com/runmachine-io/runmachine/pkg/api/server/config"
 	"github.com/runmachine-io/runmachine/pkg/logging"
-	metapb "github.com/runmachine-io/runmachine/proto"
+	metapb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
 )
 
 var (

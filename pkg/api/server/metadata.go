@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	pb "github.com/runmachine-io/runmachine/pkg/api/proto"
-	metapb "github.com/runmachine-io/runmachine/proto"
+	metapb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
 	"google.golang.org/grpc"
 )
 

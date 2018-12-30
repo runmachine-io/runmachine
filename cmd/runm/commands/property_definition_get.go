@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/spf13/cobra"
 	"golang.org/x/net/context"
 
-	pb "github.com/runmachine-io/runmachine/proto"
-	"github.com/spf13/cobra"
+	pb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
 )
 
 const (

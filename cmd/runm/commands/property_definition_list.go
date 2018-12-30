@@ -5,11 +5,11 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/olekukonko/tablewriter"
+	"github.com/spf13/cobra"
 	"golang.org/x/net/context"
 
-	"github.com/olekukonko/tablewriter"
-	pb "github.com/runmachine-io/runmachine/proto"
-	"github.com/spf13/cobra"
+	pb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
 )
 
 var propertyDefinitionListCommand = &cobra.Command{

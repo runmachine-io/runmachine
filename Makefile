@@ -5,6 +5,8 @@ API_PROTO_DIR := $(shell pwd)/pkg/api/proto
 API_PROTO_DEFS_DIR := $(shell pwd)/pkg/api/proto/defs
 META_PROTO_DIR := $(shell pwd)/pkg/metadata/proto
 META_PROTO_DEFS_DIR := $(shell pwd)/pkg/metadata/proto/defs
+RESOURCE_PROTO_DIR := $(shell pwd)/pkg/resource/proto
+RESOURCE_PROTO_DEFS_DIR := $(shell pwd)/pkg/resource/proto/defs
 GO_BIN_DIR := $(GOPATH)/bin
 GO_PROTOC_BIN := $(GO_BIN_DIR)/protoc-gen-go
 PKGS := $(shell go list ./... | grep -v /$(VENDOR)/ | grep -v /$(PROTO)/)
@@ -25,6 +27,10 @@ generated: $(GO_PROTOC_BIN)
 	@protoc -I $(META_PROTO_DEFS_DIR) \
 	       $(META_PROTO_DEFS_DIR)/*.proto \
 	       --go_out=plugins=grpc:$(META_PROTO_DIR) && echo "ok."
+	@echo -n "Generating protobuffer code from resource proto definitions ... "
+	@protoc -I $(RESOURCE_PROTO_DEFS_DIR) \
+	       $(RESOURCE_PROTO_DEFS_DIR)/*.proto \
+	       --go_out=plugins=grpc:$(RESOURCE_PROTO_DIR) && echo "ok."
 	@echo -n "Generating protobuffer code from API proto definitions ... "
 	@protoc -I $(API_PROTO_DEFS_DIR) \
 	       $(API_PROTO_DEFS_DIR)/*.proto \

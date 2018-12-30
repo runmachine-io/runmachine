@@ -2,8 +2,6 @@ syntax = "proto3";
 
 package runm;
 
-import "project.proto";
-import "user.proto";
 import "wrappers.proto";
 
 // A type of consumer of resources in the system -- e.g. a machine or a
@@ -21,7 +19,7 @@ message Consumer {
     ConsumerType type = 1;
     string uuid = 2;
     string name = 3;
-    Project project = 51;
-    User user = 52;
+    string project = 51;
+    string user = 52;
     uint32 generation = 100;
 }

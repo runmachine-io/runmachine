@@ -8,16 +8,12 @@ import "claim.proto";
 import "constraint.proto";
 import "consumer.proto";
 import "distance.proto";
-import "error.proto";
 import "inventory.proto";
-import "partition.proto";
-import "project.proto";
 import "provider.proto";
 import "resource_type.proto";
 import "search.proto";
 import "session.proto";
 import "usage.proto";
-import "user.proto";
 import "wrappers.proto";
 
 // The runm-resource gRPC service manages inventory of the deployment's set of
@@ -218,7 +214,7 @@ message ResourceTypeSetRequest {
 }
 
 message ResourceTypeSetResponse {
-    repeated Error errors = 1;
+    repeated string errors = 1;
     ResourceType resource_type = 2;
 }
 
@@ -238,7 +234,7 @@ message ResourceTypeDeleteRequest {
 }
 
 message ResourceTypeDeleteResponse {
-    repeated Error errors = 1;
+    repeated string errors = 1;
     uint64 num_deleted = 2;
 }
 
@@ -259,7 +255,7 @@ message CapabilitySetRequest {
 }
 
 message CapabilitySetResponse {
-    repeated Error errors = 1;
+    repeated string errors = 1;
     Capability capability = 2;
 }
 
@@ -279,7 +275,7 @@ message CapabilityDeleteRequest {
 }
 
 message CapabilityDeleteResponse {
-    repeated Error errors = 1;
+    repeated string errors = 1;
     uint64 num_deleted = 2;
 }
 
@@ -291,8 +287,8 @@ message ConsumerGetRequest {
 message ConsumerSetFields {
     StringValue name = 1;
     ConsumerType type = 50;
-    Project project = 51;
-    User user = 52;
+    string project = 51;
+    string user = 52;
 }
 
 message ConsumerSetRequest {
@@ -302,7 +298,7 @@ message ConsumerSetRequest {
 }
 
 message ConsumerSetResponse {
-    repeated Error errors = 1;
+    repeated string errors = 1;
     Consumer consumer = 2;
 }
 
@@ -325,7 +321,7 @@ message ConsumerDeleteRequest {
 }
 
 message ConsumerDeleteResponse {
-    repeated Error errors = 1;
+    repeated string errors = 1;
     uint64 num_deleted = 2;
 }
 
@@ -346,7 +342,7 @@ message ConsumerTypeSetRequest {
 }
 
 message ConsumerTypeSetResponse {
-    repeated Error errors = 1;
+    repeated string errors = 1;
     ConsumerType consumer_type = 2;
 }
 
@@ -366,7 +362,7 @@ message ConsumerTypeDeleteRequest {
 }
 
 message ConsumerTypeDeleteResponse {
-    repeated Error errors = 1;
+    repeated string errors = 1;
     uint64 num_deleted = 2;
 }
 
@@ -387,7 +383,7 @@ message DistanceTypeSetRequest {
 }
 
 message DistanceTypeSetResponse {
-    repeated Error errors = 1;
+    repeated string errors = 1;
     DistanceType distance_type = 2;
 }
 
@@ -407,7 +403,7 @@ message DistanceTypeDeleteRequest {
 }
 
 message DistanceTypeDeleteResponse {
-    repeated Error errors = 1;
+    repeated string errors = 1;
     uint64 num_deleted = 2;
 }
 
@@ -430,7 +426,7 @@ message DistanceSetRequest {
 }
 
 message DistanceSetResponse {
-    repeated Error errors = 1;
+    repeated string errors = 1;
     Distance distance = 2;
 }
 
@@ -451,7 +447,7 @@ message DistanceDeleteRequest {
 }
 
 message DistanceDeleteResponse {
-    repeated Error errors = 1;
+    repeated string errors = 1;
     uint64 num_deleted = 2;
 }
 
@@ -472,7 +468,7 @@ message ProviderTypeSetRequest {
 }
 
 message ProviderTypeSetResponse {
-    repeated Error errors = 1;
+    repeated string errors = 1;
     ProviderType provider_type = 2;
 }
 
@@ -492,7 +488,7 @@ message ProviderTypeDeleteRequest {
 }
 
 message ProviderTypeDeleteResponse {
-    repeated Error errors = 1;
+    repeated string errors = 1;
     uint64 num_deleted = 2;
 }
 
@@ -502,7 +498,7 @@ message ProviderGetRequest {
 }
 
 message ProviderSetFields {
-    Partition partition = 1;
+    string partition = 1;
     ProviderType type = 2;
     StringValue name = 3;
     Provider parent = 4;
@@ -515,7 +511,7 @@ message ProviderSetRequest {
 }
 
 message ProviderSetResponse {
-    repeated Error errors = 1;
+    repeated string errors = 1;
     Provider provider = 2;
 }
 
@@ -524,7 +520,7 @@ message ProviderListFilters {
     repeated string identifiers = 1;
 
     // Return providers in any of the following partitions
-    repeated Partition partitions = 2;
+    repeated string partitions = 2;
 
     // Constraints that may be used to query/filter the returned providers. See
     // the documentation in constraint.proto for more information on how these
@@ -569,7 +565,7 @@ message ProviderDeleteRequest {
 }
 
 message ProviderDeleteResponse {
-    repeated Error errors = 1;
+    repeated string errors = 1;
     uint64 num_deleted = 2;
 }
 
@@ -581,7 +577,7 @@ message ProviderCapabilitiesSetRequest {
 }
 
 message ProviderCapabilitiesSetResponse {
-    repeated Error errors = 1;
+    repeated string errors = 1;
     Provider provider = 2;
     uint64 num_added = 3;
     uint64 num_removed = 4;
@@ -608,7 +604,7 @@ message ProviderInventoriesSetRequest {
 }
 
 message ProviderInventoriesSetResponse {
-    repeated Error errors = 1;
+    repeated string errors = 1;
     Provider provider = 2;
     uint64 num_added = 3;
     uint64 num_removed = 4;
@@ -648,7 +644,7 @@ message ProviderDistancesSetRequest {
 }
 
 message ProviderDistancesSetResponse {
-    repeated Error errors = 1;
+    repeated string errors = 1;
     Provider provider = 2;
     uint64 num_added = 3;
     uint64 num_removed = 4;
@@ -676,7 +672,7 @@ message ProviderGroupSetRequest {
 }
 
 message ProviderGroupSetResponse {
-    repeated Error errors = 1;
+    repeated string errors = 1;
     ProviderGroup provider_group = 2;
 }
 
@@ -696,7 +692,7 @@ message ProviderGroupDeleteRequest {
 }
 
 message ProviderGroupDeleteResponse {
-    repeated Error errors = 1;
+    repeated string errors = 1;
     uint64 num_deleted = 2;
 }
 
@@ -708,7 +704,7 @@ message ProviderGroupMembersSetRequest {
 }
 
 message ProviderGroupMembersSetResponse {
-    repeated Error errors = 1;
+    repeated string errors = 1;
     ProviderGroup provider_group = 2;
     uint64 num_added = 3;
     uint64 num_removed = 4;
@@ -770,7 +766,7 @@ message ClaimExecuteRequest {
 }
 
 message ClaimExecuteResponse {
-    repeated Error errors = 1;
+    repeated string errors = 1;
     Claim claim = 2;
 }
 

@@ -4,7 +4,6 @@ package runm;
 
 import "capability.proto";
 import "distance.proto";
-import "partition.proto";
 import "wrappers.proto";
 
 // A type of provider -- e.g. a compute node, a NIC or a shared storage pool
@@ -30,7 +29,7 @@ message ProviderDistance {
 // those resources. Each provider may belong to zero or more provider groups
 // and have capabilities associated with it.
 message Provider {
-    Partition partition = 1;
+    string partition = 1;
     ProviderType type = 2;
     string uuid = 3;
     string name = 4;

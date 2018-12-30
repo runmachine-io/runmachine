@@ -114,10 +114,10 @@ func buildPropertyDefinitionFilters() []*pb.PropertyDefinitionFilter {
 			}
 			switch field {
 			case "partition":
-				filter.Partition = &pb.PartitionFilter{
-					Search:    value,
-					UsePrefix: usePrefix,
-				}
+				//filter.Partition = &pb.PartitionFilter{
+				//	Search:    value,
+				//	UsePrefix: usePrefix,
+				//}
 			case "type":
 				filter.ObjectType = &pb.ObjectTypeFilter{
 					Search:    value,

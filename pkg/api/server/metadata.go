@@ -1,9 +1,11 @@
 package server
 
 import (
+	"context"
 	"fmt"
 
 	pb "github.com/runmachine-io/runmachine/pkg/api/proto"
+	"github.com/runmachine-io/runmachine/pkg/errors"
 	metapb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
 	"google.golang.org/grpc"
 )
@@ -38,6 +40,9 @@ func (s *Server) metaClient() (metapb.RunmMetadataClient, error) {
 	if s.metaclient != nil {
 		return s.metaclient, nil
 	}
+	// TODO(jaypipes): Move this code into a generic ServiceRegistry
+	// struct/interface and allow for randomizing the pick of an endpoint from
+	// multiple endpoints of the same service.
 	var conn *grpc.ClientConn
 	var addr string
 	var err error
@@ -61,4 +66,80 @@ func (s *Server) metaClient() (metapb.RunmMetadataClient, error) {
 	s.metaclient = metapb.NewRunmMetadataClient(conn)
 	s.log.L2("connected to metadata service at %s", addr)
 	return s.metaclient, nil
+}
+
+// metaPartitionByUuid returns a partition record matching the supplied UUID
+// key. If no such partition could be found, returns (nil, ErrNotFound)
+func (s *Server) metaPartitionGetByUuid(
+	sess *pb.Session,
+	uuid string,
+) (*pb.Partition, error) {
+	req := &metapb.PartitionGetRequest{
+		Session: metaSession(sess),
+		Filter: &metapb.PartitionFilter{
+			UuidFilter: &metapb.UuidFilter{
+				Uuid:      uuid,
+				UsePrefix: false,
+			},
+		},
+	}
+	mc, err := s.metaClient()
+	if err != nil {
+		return nil, err
+	}
+	rec, err := mc.PartitionGet(context.Background(), req)
+	if err != nil {
+		if err == errors.ErrNotFound {
+			return nil, ErrNotFound
+		}
+		// We don't want to expose internal errors to the user, so just return
+		// an unknown error after logging it.
+		s.log.ERR(
+			"failed to retrieve partition with UUID %s: %s",
+			uuid, err,
+		)
+		return nil, ErrUnknown
+	}
+	return &pb.Partition{
+		Uuid: rec.Uuid,
+		Name: rec.Name,
+	}, nil
+}
+
+// metaPartitionByName returns a partition record matching the supplied name.
+// If no such partition could be found, returns (nil, ErrNotFound)
+func (s *Server) metaPartitionGetByName(
+	sess *pb.Session,
+	name string,
+) (*pb.Partition, error) {
+	req := &metapb.PartitionGetRequest{
+		Session: metaSession(sess),
+		Filter: &metapb.PartitionFilter{
+			NameFilter: &metapb.NameFilter{
+				Name:      name,
+				UsePrefix: false,
+			},
+		},
+	}
+	mc, err := s.metaClient()
+	if err != nil {
+		return nil, err
+	}
+	rec, err := mc.PartitionGet(context.Background(), req)
+	if err != nil {
+		if err == errors.ErrNotFound {
+			return nil, ErrNotFound
+		}
+		// We don't want to expose internal errors to the user, so just return
+		// an unknown error after logging it.
+		s.log.ERR(
+			"failed to retrieve partition with name %s: %s",
+			name, err,
+		)
+		return nil, ErrUnknown
+	}
+	return &pb.Partition{
+		Uuid: rec.Uuid,
+		Name: rec.Name,
+	}, nil
 }

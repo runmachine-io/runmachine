@@ -57,7 +57,7 @@ func (s *Store) partitionGetByUuid(
 // PartitionGet returns a Partition protobuffer message that has the UUID or
 // name of the supplied search string
 func (s *Store) PartitionGet(
-	search string,
+	filter *pb.PartitionFilter,
 ) (*pb.Partition, error) {
 	ctx, cancel := s.requestCtx()
 	defer cancel()
@@ -68,8 +68,8 @@ func (s *Store) PartitionGet(
 
 	// First try looking up the partition by UUID. If not, match, then we try
 	// the by-name index...
-	if util.IsUuidLike(search) {
-		p, err := s.partitionGetByUuid(search)
+	if filter.UuidFilter != nil {
+		p, err := s.partitionGetByUuid(filter.UuidFilter.Uuid)
 		if p != nil {
 			return p, nil
 		}
@@ -78,7 +78,7 @@ func (s *Store) PartitionGet(
 		}
 	}
 
-	byNameKey := _PARTITIONS_BY_NAME_KEY + search
+	byNameKey := _PARTITIONS_BY_NAME_KEY + filter.NameFilter.Name
 	resp, err := s.kv.Get(ctx, byNameKey)
 	if err != nil {
 		s.log.ERR("error getting key %s: %v", byNameKey, err)
@@ -130,14 +130,14 @@ func (s *Store) PartitionList(
 		// If the filter specifies a UUID search term, then just add it to our
 		// list of partitions to grab by UUID. If not, look up any partitions
 		// having the supplied name, with optional prefix.
-		if util.IsUuidLike(filter.Search) {
-			uuids[filter.Search] = true
+		if filter.UuidFilter != nil {
+			uuids[filter.UuidFilter.Uuid] = true
 			continue
 		}
 
 		uuidsByName, err := s.partitionUuidsGetByName(
-			filter.Search,
-			filter.UsePrefix,
+			filter.NameFilter.Name,
+			filter.NameFilter.UsePrefix,
 		)
 		if err != nil {
 			if err == errors.ErrNotFound {

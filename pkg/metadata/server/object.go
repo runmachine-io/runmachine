@@ -157,7 +157,17 @@ func (s *Server) validateObjectSetRequest(
 	}
 
 	// Validate the referred to type, partition and project actually exist
-	part, err := s.store.PartitionGet(obj.Partition)
+	part, err := s.store.PartitionGet(
+		// Look up by UUID *or* name...
+		&pb.PartitionFilter{
+			UuidFilter: &pb.UuidFilter{
+				Uuid: obj.Partition,
+			},
+			NameFilter: &pb.NameFilter{
+				Name: obj.Partition,
+			},
+		},
+	)
 	if err != nil {
 		if err == errors.ErrNotFound {
 			return nil, errPartitionNotFound(obj.Partition)

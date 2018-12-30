@@ -13,10 +13,10 @@ func (s *Server) PartitionGet(
 	ctx context.Context,
 	req *pb.PartitionGetRequest,
 ) (*pb.Partition, error) {
-	if req.Filter == nil || req.Filter.Search == "" {
+	if req.Filter == nil || req.Filter.UuidFilter == nil || req.Filter.NameFilter == nil {
 		return nil, ErrSearchRequired
 	}
-	obj, err := s.store.PartitionGet(req.Filter.Search)
+	obj, err := s.store.PartitionGet(req.Filter)
 	if err != nil {
 		if err == errors.ErrNotFound {
 			return nil, ErrNotFound
@@ -24,9 +24,8 @@ func (s *Server) PartitionGet(
 		// We don't want to expose internal errors to the user, so just return
 		// an unknown error after logging it.
 		s.log.ERR(
-			"failed to retrieve partition with UUID or name of %s: %s",
-			req.Filter.Search,
-			err,
+			"failed to retrieve partition with filter %s: %s",
+			req.Filter, err,
 		)
 		return nil, ErrUnknown
 	}

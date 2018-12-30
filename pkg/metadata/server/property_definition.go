@@ -167,7 +167,17 @@ func (s *Server) validatePropertyDefinitionSetRequest(
 
 	// Validate the referred to type and partition actually exist
 	// TODO(jaypipes): AUTHZ check user can specify partition
-	part, err := s.store.PartitionGet(def.Partition)
+	part, err := s.store.PartitionGet(
+		// Look up by UUID *or* name...
+		&pb.PartitionFilter{
+			UuidFilter: &pb.UuidFilter{
+				Uuid: def.Partition,
+			},
+			NameFilter: &pb.NameFilter{
+				Name: def.Partition,
+			},
+		},
+	)
 	if err != nil {
 		if err == errors.ErrNotFound {
 			return nil, errPartitionNotFound(def.Partition)

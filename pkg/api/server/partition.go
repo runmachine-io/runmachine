@@ -5,8 +5,8 @@ import (
 	"io"
 
 	pb "github.com/runmachine-io/runmachine/pkg/api/proto"
-	"github.com/runmachine-io/runmachine/pkg/errors"
 	metapb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
+	"github.com/runmachine-io/runmachine/pkg/util"
 )
 
 // PartitionGet looks up a partition by UUID or name and returns a Partition
@@ -18,34 +18,12 @@ func (s *Server) PartitionGet(
 	if req.Filter == nil || req.Filter.Search == "" {
 		return nil, ErrSearchRequired
 	}
-	metareq := &metapb.PartitionGetRequest{
-		Session: metaSession(req.Session),
-		Filter: &metapb.PartitionFilter{
-			Search: req.Filter.Search,
-		},
+	search := req.Filter.Search
+	if util.IsUuidLike(search) {
+		return s.metaPartitionGetByUuid(req.Session, search)
+	} else {
+		return s.metaPartitionGetByName(req.Session, search)
 	}
-	mc, err := s.metaClient()
-	if err != nil {
-		return nil, err
-	}
-	metaobj, err := mc.PartitionGet(context.Background(), metareq)
-	if err != nil {
-		if err == errors.ErrNotFound {
-			return nil, ErrNotFound
-		}
-		// We don't want to expose internal errors to the user, so just return
-		// an unknown error after logging it.
-		s.log.ERR(
-			"failed to retrieve partition with UUID or name of %s: %s",
-			req.Filter.Search,
-			err,
-		)
-		return nil, ErrUnknown
-	}
-	return &pb.Partition{
-		Uuid: metaobj.Uuid,
-		Name: metaobj.Name,
-	}, nil
 }
 
 // PartitionList streams zero or more Partition objects back to the client that

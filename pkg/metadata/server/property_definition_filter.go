@@ -12,7 +12,17 @@ import (
 func (s *Server) defaultPropertyDefinitionFilter(
 	session *pb.Session,
 ) (*conditions.PropertyDefinitionCondition, error) {
-	p, err := s.store.PartitionGet(session.Partition)
+	p, err := s.store.PartitionGet(
+		// Look up by UUID *or* name...
+		&pb.PartitionFilter{
+			UuidFilter: &pb.UuidFilter{
+				Uuid: session.Partition,
+			},
+			NameFilter: &pb.NameFilter{
+				Name: session.Partition,
+			},
+		},
+	)
 	if err != nil {
 		if err == errors.ErrNotFound {
 			// Just return nil since clearly we can have no
@@ -68,7 +78,17 @@ func (s *Server) expandPropertyDefinitionFilter(
 	} else {
 		// By default, filter by the session's partition if the user didn't
 		// specify any filtering.
-		part, err := s.store.PartitionGet(session.Partition)
+		part, err := s.store.PartitionGet(
+			// Look up by UUID *or* name...
+			&pb.PartitionFilter{
+				UuidFilter: &pb.UuidFilter{
+					Uuid: session.Partition,
+				},
+				NameFilter: &pb.NameFilter{
+					Name: session.Partition,
+				},
+			},
+		)
 		if err != nil {
 			if err == errors.ErrNotFound {
 				// Just return nil since clearly we can have no

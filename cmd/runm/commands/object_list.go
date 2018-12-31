@@ -7,7 +7,7 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/olekukonko/tablewriter"
-	pb "github.com/runmachine-io/runmachine/proto"
+	pb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
 	"github.com/spf13/cobra"
 )
 

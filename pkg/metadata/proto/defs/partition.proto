@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package runm;
+
+import "filter.proto";
+
+// The structure that is stored in the metadata service for describing a
+// partition
+message Partition {
+    string uuid = 1;
+    string name = 2;
+}
+
+// Used in matching partition records
+message PartitionFilter {
+    UuidFilter uuid_filter = 1;
+    NameFilter name_filter = 2;
+}

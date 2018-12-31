@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	pb "github.com/runmachine-io/runmachine/proto"
+	pb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
 	"github.com/spf13/cobra"
 )
 
@@ -94,10 +94,10 @@ func buildObjectFilters() []*pb.ObjectFilter {
 			}
 			switch field {
 			case "partition":
-				filter.Partition = &pb.PartitionFilter{
-					Search:    value,
-					UsePrefix: usePrefix,
-				}
+				//filter.Partition = &pb.PartitionFilter{
+				//	Search:    value,
+				//	UsePrefix: usePrefix,
+				//}
 			case "type":
 				filter.ObjectType = &pb.ObjectTypeFilter{
 					Search:    value,

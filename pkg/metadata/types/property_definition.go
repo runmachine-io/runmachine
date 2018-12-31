@@ -5,7 +5,7 @@ import (
 	"os"
 
 	apitypes "github.com/runmachine-io/runmachine/pkg/api/types"
-	pb "github.com/runmachine-io/runmachine/proto"
+	pb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
 )
 
 type PropertyDefinitionMatcher interface {

@@ -10,9 +10,9 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
-	"github.com/runmachine-io/runmachine/pkg/metadata"
-	"github.com/runmachine-io/runmachine/pkg/metadata/config"
-	pb "github.com/runmachine-io/runmachine/proto"
+	pb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
+	"github.com/runmachine-io/runmachine/pkg/metadata/server"
+	"github.com/runmachine-io/runmachine/pkg/metadata/server/config"
 
 	"github.com/runmachine-io/runmachine/pkg/logging"
 )
@@ -24,7 +24,7 @@ func main() {
 
 	cfg := config.ConfigFromOpts()
 
-	md, err := metadata.New(cfg, log)
+	md, err := server.New(cfg, log)
 	if err != nil {
 		log.ERR("failed to create runm-metadata server: %v", err)
 		os.Exit(1)

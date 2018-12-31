@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package runmapi;
+
+import "partition.proto";
+import "search.proto";
+import "session.proto";
+
+// The runm-api gRPC service is the user-facing interface into runmachine
+service RunmAPI {
+    // Returns information about a specific partition
+    rpc partition_get(PartitionGetRequest) returns (Partition) {}
+
+    // Returns information about multiple partitions
+    rpc partition_list(PartitionListRequest) returns (
+        stream Partition) {}
+}
+
+message PartitionGetRequest {
+    Session session = 1;
+    PartitionFilter filter = 2;
+}
+
+message PartitionListRequest {
+    Session session = 1;
+    SearchOptions options = 2;
+    repeated PartitionFilter any = 3;
+}

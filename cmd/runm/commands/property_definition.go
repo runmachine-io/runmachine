@@ -6,9 +6,10 @@ import (
 	"strconv"
 	"strings"
 
-	apitypes "github.com/runmachine-io/runmachine/pkg/api/types"
-	pb "github.com/runmachine-io/runmachine/proto"
 	"github.com/spf13/cobra"
+
+	apitypes "github.com/runmachine-io/runmachine/pkg/api/types"
+	pb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
 )
 
 const (
@@ -113,10 +114,10 @@ func buildPropertyDefinitionFilters() []*pb.PropertyDefinitionFilter {
 			}
 			switch field {
 			case "partition":
-				filter.Partition = &pb.PartitionFilter{
-					Search:    value,
-					UsePrefix: usePrefix,
-				}
+				//filter.Partition = &pb.PartitionFilter{
+				//	Search:    value,
+				//	UsePrefix: usePrefix,
+				//}
 			case "type":
 				filter.ObjectType = &pb.ObjectTypeFilter{
 					Search:    value,

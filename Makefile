@@ -1,8 +1,12 @@
 PROTO := proto
 VENDOR := vendor
 VERSION := $(shell git describe --tags --always --dirty)
-PROTO_DIR := $(shell pwd)/$(PROTO)
-PROTO_DEFS_DIR := $(shell pwd)/proto/defs
+API_PROTO_DIR := $(shell pwd)/pkg/api/proto
+API_PROTO_DEFS_DIR := $(shell pwd)/pkg/api/proto/defs
+META_PROTO_DIR := $(shell pwd)/pkg/metadata/proto
+META_PROTO_DEFS_DIR := $(shell pwd)/pkg/metadata/proto/defs
+RESOURCE_PROTO_DIR := $(shell pwd)/pkg/resource/proto
+RESOURCE_PROTO_DEFS_DIR := $(shell pwd)/pkg/resource/proto/defs
 GO_BIN_DIR := $(GOPATH)/bin
 GO_PROTOC_BIN := $(GO_BIN_DIR)/protoc-gen-go
 PKGS := $(shell go list ./... | grep -v /$(VENDOR)/ | grep -v /$(PROTO)/)
@@ -19,10 +23,18 @@ $(GO_PROTOC_BIN):
 .PHONY: generated
 # Generates protobuffer code
 generated: $(GO_PROTOC_BIN)
-	@echo -n "Generating protobuffer code from proto definitions ... "
-	@protoc -I $(PROTO_DEFS_DIR) \
-	       $(PROTO_DEFS_DIR)/*.proto \
-	       --go_out=plugins=grpc:$(PROTO_DIR) && echo "ok."
+	@echo -n "Generating protobuffer code from metadata proto definitions ... "
+	@protoc -I $(META_PROTO_DEFS_DIR) \
+	       $(META_PROTO_DEFS_DIR)/*.proto \
+	       --go_out=plugins=grpc:$(META_PROTO_DIR) && echo "ok."
+	@echo -n "Generating protobuffer code from resource proto definitions ... "
+	@protoc -I $(RESOURCE_PROTO_DEFS_DIR) \
+	       $(RESOURCE_PROTO_DEFS_DIR)/*.proto \
+	       --go_out=plugins=grpc:$(RESOURCE_PROTO_DIR) && echo "ok."
+	@echo -n "Generating protobuffer code from API proto definitions ... "
+	@protoc -I $(API_PROTO_DEFS_DIR) \
+	       $(API_PROTO_DEFS_DIR)/*.proto \
+	       --go_out=plugins=grpc:$(API_PROTO_DIR) && echo "ok."
 
 $(GOMETALINTER):
 	go get -u github.com/alecthomas/gometalinter
@@ -58,6 +70,7 @@ build: test
 	@echo "building all binaries as Docker images ..."
 	docker build -q --label built-by=runmachine.io -t runm/base . -f cmd/Dockerfile
 	docker build -q --label built-by=runmachine.io -t runm/metadata:$(VERSION) . -f cmd/runm-metadata/Dockerfile
+	docker build -q --label built-by=runmachine.io -t runm/api:$(VERSION) . -f cmd/runm-api/Dockerfile
 	docker build -q --label built-by=runmachine.io -t runm/runm:$(VERSION) . -f cmd/runm/Dockerfile
 
 .PHONY: clean

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
-	pb "github.com/runmachine-io/runmachine/proto"
+	pb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
 )
 
 // ObjectCondition is a class used in filtering objects.  Optional partition

@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package runm;
+
+message UuidFilter {
+    string uuid = 1;
+    bool use_prefix = 2;
+}
+
+message NameFilter {
+    string name = 1;
+    bool use_prefix = 2;
+}

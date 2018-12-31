@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package runmapi;
+
+// A partition is a division of the entire global view that runmachine has.
+// Providers are in one and only one partition. Administrators may list
+// inventory and usage across multiple partitions whereas normal project users
+// generally will have results filtered to a specific partition that they are
+// working with or have access to.
+message Partition {
+    string uuid = 1;
+    string name = 2;
+}
+
+// Used in matching partition records
+message PartitionFilter {
+    // UUID or human-readable name of the partition
+    string search = 1;
+    // Indicates the search should be a prefix expression
+    bool use_prefix = 2;
+}

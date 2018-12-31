@@ -3,10 +3,10 @@ package commands
 import (
 	"fmt"
 
+	"github.com/spf13/cobra"
 	"golang.org/x/net/context"
 
-	pb "github.com/runmachine-io/runmachine/proto"
-	"github.com/spf13/cobra"
+	apipb "github.com/runmachine-io/runmachine/pkg/api/proto"
 )
 
 var partitionGetCommand = &cobra.Command{
@@ -17,16 +17,16 @@ var partitionGetCommand = &cobra.Command{
 }
 
 func partitionGet(cmd *cobra.Command, args []string) {
-	conn := connect()
+	conn := apiConnect()
 	defer conn.Close()
 
-	client := pb.NewRunmMetadataClient(conn)
+	client := apipb.NewRunmAPIClient(conn)
 
-	session := getSession()
+	session := apiGetSession()
 
-	req := &pb.PartitionGetRequest{
+	req := &apipb.PartitionGetRequest{
 		Session: session,
-		Filter: &pb.PartitionFilter{
+		Filter: &apipb.PartitionFilter{
 			Search: args[0],
 		},
 	}

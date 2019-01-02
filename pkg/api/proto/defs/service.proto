@@ -3,6 +3,7 @@ syntax = "proto3";
 package runmapi;
 
 import "partition.proto";
+import "provider.proto";
 import "search.proto";
 import "session.proto";
 
@@ -14,6 +15,9 @@ service RunmAPI {
     // Returns information about multiple partitions
     rpc partition_list(PartitionListRequest) returns (
         stream Partition) {}
+
+    // Returns information about a specific provider
+    rpc provider_get(ProviderGetRequest) returns (Provider) {}
 }
 
 message PartitionGetRequest {
@@ -25,4 +29,9 @@ message PartitionListRequest {
     Session session = 1;
     SearchOptions options = 2;
     repeated PartitionFilter any = 3;
+}
+
+message ProviderGetRequest {
+    Session session = 1;
+    ProviderFilter filter = 2;
 }

@@ -14,12 +14,11 @@ import (
 )
 
 const (
-	cfgPath                    = "/etc/runmachine/api"
+	cfgPath                    = "/etc/runmachine/resource"
 	defaultUseTLS              = false
-	defaultBindPort            = 10002
-	defaultServiceName         = "runmachine-api"
+	defaultBindPort            = 10001
+	defaultServiceName         = "runmachine-resource"
 	defaultMetadataServiceName = "runmachine-metadata"
-	defaultResourceServiceName = "runmachine-resource"
 )
 
 var (
@@ -36,51 +35,50 @@ type Config struct {
 	BindPort            int
 	ServiceName         string
 	MetadataServiceName string
-	ResourceServiceName string
 }
 
 func ConfigFromOpts() *Config {
 	optUseTLS := flag.Bool(
 		"use-tls",
 		envutil.WithDefaultBool(
-			"RUNM_API_USE_TLS", defaultUseTLS,
+			"RUNM_RESOURCE_USE_TLS", defaultUseTLS,
 		),
 		"Connection uses TLS if true, else plain TCP",
 	)
 	optCertPath := flag.String(
 		"cert-path",
 		envutil.WithDefault(
-			"RUNM_API_CERT_PATH", defaultCertPath,
+			"RUNM_RESOURCE_CERT_PATH", defaultCertPath,
 		),
 		"Path to the TLS cert file",
 	)
 	optKeyPath := flag.String(
 		"key-path",
 		envutil.WithDefault(
-			"RUNM_API_KEY_PATH", defaultKeyPath,
+			"RUNM_RESOURCE_KEY_PATH", defaultKeyPath,
 		),
 		"Path to the TLS key file",
 	)
 	optHost := flag.String(
 		"bind-address",
 		envutil.WithDefault(
-			"RUNM_API_BIND_HOST", defaultBindHost,
+			"RUNM_RESOURCE_BIND_HOST", defaultBindHost,
 		),
 		"The host address the server will listen on",
 	)
 	optPort := flag.Int(
 		"bind-port",
 		envutil.WithDefaultInt(
-			"RUNM_API_BIND_PORT", defaultBindPort,
+			"RUNM_RESOURCE_BIND_PORT", defaultBindPort,
 		),
 		"The port the server will listen on",
 	)
 	optServiceName := flag.String(
 		"service-name",
 		envutil.WithDefault(
-			"RUNM_API_SERVICE_NAME", defaultServiceName,
+			"RUNM_RESOURCE_SERVICE_NAME", defaultServiceName,
 		),
-		"Name to use when registering the API service with the service registry",
+		"Name to use when registering the resource service with the service registry",
 	)
 	optMetadataServiceName := flag.String(
 		"metadata-service-name",
@@ -88,13 +86,6 @@ func ConfigFromOpts() *Config {
 			"RUNM_METADATA_SERVICE_NAME", defaultMetadataServiceName,
 		),
 		"Name to use when querying the service registry for the metadata service",
-	)
-	optResourceServiceName := flag.String(
-		"resource-service-name",
-		envutil.WithDefault(
-			"RUNM_RESOURCE_SERVICE_NAME", defaultResourceServiceName,
-		),
-		"Name to use when querying the service registry for the resource service",
 	)
 
 	flag.Parse()
@@ -107,7 +98,6 @@ func ConfigFromOpts() *Config {
 		BindPort:            *optPort,
 		ServiceName:         *optServiceName,
 		MetadataServiceName: *optMetadataServiceName,
-		ResourceServiceName: *optResourceServiceName,
 	}
 }
 

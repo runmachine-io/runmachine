@@ -143,3 +143,41 @@ func (s *Server) metaPartitionGetByName(
 		Name: rec.Name,
 	}, nil
 }
+
+// objectGetUuid returns a UUID matching the supplied object type and name. If
+// no such object could be found, returns ("", ErrNotFound)
+func (s *Server) uuidFromName(
+	sess *pb.Session,
+	objType string,
+	name string,
+) (string, error) {
+	req := &metapb.ObjectGetRequest{
+		Session: metaSession(sess),
+		Filter: &metapb.ObjectFilter{
+			ObjectType: &metapb.ObjectTypeFilter{
+				Search:    objType,
+				UsePrefix: false,
+			},
+			Name:      name,
+			UsePrefix: false,
+		},
+	}
+	mc, err := s.metaClient()
+	if err != nil {
+		return "", err
+	}
+	rec, err := mc.ObjectGet(context.Background(), req)
+	if err != nil {
+		if err == errors.ErrNotFound {
+			return "", ErrNotFound
+		}
+		// We don't want to expose internal errors to the user, so just return
+		// an unknown error after logging it.
+		s.log.ERR(
+			"failed to retrieve object of type %s with name %s: %s",
+			objType, name, err,
+		)
+		return "", ErrUnknown
+	}
+	return rec.Uuid, nil
+}

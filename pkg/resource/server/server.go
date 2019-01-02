@@ -5,10 +5,9 @@ import (
 
 	"github.com/jaypipes/gsr"
 
-	"github.com/runmachine-io/runmachine/pkg/api/server/config"
 	"github.com/runmachine-io/runmachine/pkg/logging"
 	metapb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
-	respb "github.com/runmachine-io/runmachine/pkg/resource/proto"
+	"github.com/runmachine-io/runmachine/pkg/resource/server/config"
 )
 
 var (
@@ -20,7 +19,6 @@ type Server struct {
 	cfg        *config.Config
 	registry   *gsr.Registry
 	metaclient metapb.RunmMetadataClient
-	resclient  respb.RunmResourceClient
 }
 
 func (s *Server) Close() {

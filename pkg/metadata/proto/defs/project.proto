@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package runm;
+package runmmeta;
 
 // A grouping of users of the system. A user may have permissions to read or
 // take action within one or more Projects. Projects may be parents of other

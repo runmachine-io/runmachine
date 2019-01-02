@@ -26,7 +26,7 @@ const (
 const (
 	defaultConnectHost    = "localhost"
 	defaultConnectPort    = 10000
-	defaultAPIConnectPort = 10001
+	defaultAPIConnectPort = 10002
 )
 
 var (

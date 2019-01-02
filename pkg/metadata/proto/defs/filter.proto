@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package runm;
+package runmmeta;
 
 message UuidFilter {
     string uuid = 1;

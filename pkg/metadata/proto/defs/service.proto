@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package runm;
+package runmmeta;
 
 import "error.proto";
 import "property.proto";

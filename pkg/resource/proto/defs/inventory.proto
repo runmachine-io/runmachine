@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package runm;
+package runmresource;
 
 import "provider.proto";
 import "resource_type.proto";

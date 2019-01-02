@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package runm;
+package runmresource;
 
 // A session is a context for a series of requests made to a service endpoint
 // or executor

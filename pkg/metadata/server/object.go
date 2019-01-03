@@ -372,6 +372,113 @@ func (s *Server) ObjectSet(
 	}, nil
 }
 
+// validateObjectCreateRequest ensures that the data the user sent is valid and
+// all referenced projects, partitions, and object types are correct.
+func (s *Server) validateObjectCreateRequest(
+	req *pb.ObjectCreateRequest,
+) (*types.ObjectWithReferences, error) {
+	obj := req.Object
+
+	// Simple input data validations
+	if obj.ObjectType == "" {
+		return nil, ErrObjectTypeRequired
+	}
+	if obj.Partition == "" {
+		return nil, ErrPartitionRequired
+	}
+
+	// Validate the referred to type, partition and project actually exist
+	part, err := s.store.PartitionGet(
+		// Look up by UUID *or* name...
+		&pb.PartitionFilter{
+			UuidFilter: &pb.UuidFilter{
+				Uuid: obj.Partition,
+			},
+			NameFilter: &pb.NameFilter{
+				Name: obj.Partition,
+			},
+		},
+	)
+	if err != nil {
+		if err == errors.ErrNotFound {
+			return nil, errPartitionNotFound(obj.Partition)
+		}
+		// We don't want to leak internal implementation errors...
+		s.log.ERR("failed when validating partition in object set: %s", err)
+		return nil, errors.ErrUnknown
+	}
+
+	objType, err := s.store.ObjectTypeGet(obj.ObjectType)
+	if err != nil {
+		if err == errors.ErrNotFound {
+			return nil, errObjectTypeNotFound(obj.ObjectType)
+		}
+		// We don't want to leak internal implementation errors...
+		s.log.ERR("failed when validating object type in object set: %s", err)
+		return nil, errors.ErrUnknown
+	}
+
+	if obj.Properties != nil {
+		// Validate that the properties set against this object meet any schema
+		// associated with that property key and object type
+		for _, prop := range obj.Properties {
+			_, err := s.validateObjectProperty(
+				part, objType, prop.Key, prop.Value,
+			)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return &types.ObjectWithReferences{
+		Partition:  part,
+		ObjectType: objType,
+		Object: &pb.Object{
+			Partition:  part.Uuid,
+			ObjectType: objType.Code,
+			Project:    obj.Project,
+			Name:       obj.Name,
+			Uuid:       obj.Uuid,
+			Tags:       obj.Tags,
+			Properties: obj.Properties,
+		},
+	}, nil
+}
+
+func (s *Server) ObjectCreate(
+	ctx context.Context,
+	req *pb.ObjectCreateRequest,
+) (*pb.ObjectCreateResponse, error) {
+	// TODO(jaypipes): AUTHZ check if user can write objects
+
+	input, err := s.validateObjectCreateRequest(req)
+	if err != nil {
+		return nil, err
+	}
+	s.log.L3(
+		"creating new object of type %s in partition %s with name %s...",
+		input.ObjectType.Code,
+		input.Partition.Uuid,
+		input.Object.Name,
+	)
+	changed, err := s.store.ObjectCreate(input)
+	if err != nil {
+		return nil, err
+	}
+	s.log.L1(
+		"created new object with UUID %s of type %s in partition %s with name %s",
+		changed.Object.Uuid,
+		input.ObjectType.Code,
+		input.Partition.Uuid,
+		input.Object.Name,
+	)
+
+	return &pb.ObjectCreateResponse{
+		Object: changed.Object,
+	}, nil
+}
+
 func (s *Server) ObjectPropertiesList(
 	req *pb.ObjectPropertiesListRequest,
 	stream pb.RunmMetadata_ObjectPropertiesListServer,

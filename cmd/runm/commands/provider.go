@@ -14,6 +14,7 @@ var providerCommand = &cobra.Command{
 
 func init() {
 	providerCommand.AddCommand(providerGetCommand)
+	providerCommand.AddCommand(providerCreateCommand)
 }
 
 func printProvider(obj *pb.Provider) {

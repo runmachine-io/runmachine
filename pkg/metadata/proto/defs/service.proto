@@ -69,6 +69,10 @@ service RunmMetadata {
     rpc object_set(ObjectSetRequest) returns (
         ObjectSetResponse) {}
 
+    // Create a new object
+    rpc object_create(ObjectCreateRequest) returns (
+        ObjectCreateResponse) {}
+
     // Returns information about multiple objects
     rpc object_list(ObjectListRequest) returns (
         stream Object) {}
@@ -138,6 +142,16 @@ message ObjectSetRequest {
 
 message ObjectSetResponse {
     // The changed/created object
+    Object object = 1;
+}
+
+message ObjectCreateRequest {
+    Session session = 1;
+    Object object = 2;
+}
+
+message ObjectCreateResponse {
+    // The newly-created object
     Object object = 1;
 }
 

@@ -157,7 +157,7 @@ func (s *Server) partitionGetByName(
 	}, nil
 }
 
-// objectGetUuid returns a UUID matching the supplied object type and name. If
+// uuidFromName returns a UUID matching the supplied object type and name. If
 // no such object could be found, returns ("", ErrNotFound)
 func (s *Server) uuidFromName(
 	sess *pb.Session,
@@ -193,4 +193,25 @@ func (s *Server) uuidFromName(
 		return "", ErrUnknown
 	}
 	return rec.Uuid, nil
+}
+
+// objectCreate takes a new object definition and returns a metapb.Object
+// message representing the newly-created object in the metadata service.
+func (s *Server) objectCreate(
+	sess *pb.Session,
+	obj *metapb.Object,
+) (*metapb.Object, error) {
+	req := &metapb.ObjectCreateRequest{
+		Session: metaSession(sess),
+		Object:  obj,
+	}
+	mc, err := s.metaClient()
+	if err != nil {
+		return nil, err
+	}
+	resp, err := mc.ObjectCreate(context.Background(), req)
+	if err != nil {
+		return nil, err
+	}
+	return resp.Object, nil
 }

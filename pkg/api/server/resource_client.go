@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	pb "github.com/runmachine-io/runmachine/pkg/api/proto"
+	"github.com/runmachine-io/runmachine/pkg/api/types"
 	"github.com/runmachine-io/runmachine/pkg/errors"
 	respb "github.com/runmachine-io/runmachine/pkg/resource/proto"
 	"google.golang.org/grpc"
@@ -101,4 +102,12 @@ func (s *Server) providerGetByUuid(
 		Uuid:         rec.Uuid,
 		Generation:   rec.Generation,
 	}, nil
+}
+
+// providerCreate creates the supplied provider in the resource service
+func (s *Server) providerCreate(
+	sess *pb.Session,
+	prov *types.Provider,
+) (*pb.Provider, error) {
+	return nil, nil
 }

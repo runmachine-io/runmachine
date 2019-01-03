@@ -7,6 +7,11 @@ import "provider.proto";
 import "search.proto";
 import "session.proto";
 
+enum PayloadFormat {
+    YAML = 0;
+    PROTOBUFFER = 1;
+}
+
 // The runm-api gRPC service is the user-facing interface into runmachine
 service RunmAPI {
     // Returns information about a specific partition
@@ -18,6 +23,10 @@ service RunmAPI {
 
     // Returns information about a specific provider
     rpc provider_get(ProviderGetRequest) returns (Provider) {}
+
+    // Create a new provider
+    rpc provider_create(ProviderCreateRequest) returns (
+        ProviderCreateResponse) {}
 }
 
 message PartitionGetRequest {
@@ -34,4 +43,17 @@ message PartitionListRequest {
 message ProviderGetRequest {
     Session session = 1;
     ProviderFilter filter = 2;
+}
+
+message ProviderCreateRequest {
+    Session session = 1;
+    PayloadFormat format = 2;
+    // Raw bytes representing the new representation of the object. The server
+    // is responsible for unmarshaling this raw payload.
+    bytes payload = 3;
+}
+
+message ProviderCreateResponse {
+    // The newly-created object
+    Provider provider = 1;
 }

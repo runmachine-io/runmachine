@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+
+# Starts a container (in daemon mode) running mysql
+#
+# Params:
+#
+#   $1: (required) name for the container
+#   $2: (optional) path to directory to use for mysql state
+#       Default: A tmpdir is created (/tmp/mysql-XXXXXX)
+#   $3: (optional) bind address that mysql will use within the container
+#       Default: 0.0.0.0
+#
+# Usage:
+#
+#   # Start a container called "mysql-example" running mysql using
+#   # /opt/mysql-data as the directory to save mysql's state
+#   mysql_start_container "mysql-example" /opt/mysql-data
+mysql_start_container() {
+    local __container_name="$1"
+    if [ $# -lt 2 ]; then
+        local __data_dir=$(mktemp -d -t mysql-XXXXXX)
+    else
+        local __data_dir="$2"
+        if [ ! -d $__data_dir ]; then
+            echo "ERROR: cannot start mysql container. Supplied data_dir $__data_dir does not exist."
+            return 1
+        fi
+    fi
+    local __node_addr="${3:-"0.0.0.0"}"
+
+    if container_is_running $__container_name; then
+        inline_if_verbose "($__container_name already running) "
+        return 0
+    fi
+
+    docker run -d \
+        --rm \
+        -p 33060:3306 \
+        --volume=${__data_dir}:/var/lib/mysql \
+        --name $__container_name \
+        -e MYSQL_ALLOW_EMPTY_PASSWORD=1 \
+        -e MYSQL_ROOT_HOST="172.*.*.*" \
+        mysql/mysql-server:latest \
+        --bind-address ${__node_addr} >/dev/null 2>&1
+}
+

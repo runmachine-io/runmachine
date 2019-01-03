@@ -6,7 +6,6 @@ import (
 
 	pb "github.com/runmachine-io/runmachine/pkg/api/proto"
 	metapb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
-	"github.com/runmachine-io/runmachine/pkg/util"
 )
 
 // PartitionGet looks up a partition by UUID or name and returns a Partition
@@ -15,15 +14,11 @@ func (s *Server) PartitionGet(
 	ctx context.Context,
 	req *pb.PartitionGetRequest,
 ) (*pb.Partition, error) {
+	s.log.L1("request: %s", req)
 	if req.Filter == nil || req.Filter.Search == "" {
 		return nil, ErrSearchRequired
 	}
-	search := req.Filter.Search
-	if util.IsUuidLike(search) {
-		return s.metaPartitionGetByUuid(req.Session, search)
-	} else {
-		return s.metaPartitionGetByName(req.Session, search)
-	}
+	return s.partitionGet(req.Session, req.Filter.Search)
 }
 
 // PartitionList streams zero or more Partition objects back to the client that

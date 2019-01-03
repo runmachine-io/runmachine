@@ -7,6 +7,7 @@ import (
 	pb "github.com/runmachine-io/runmachine/pkg/api/proto"
 	"github.com/runmachine-io/runmachine/pkg/errors"
 	metapb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
+	"github.com/runmachine-io/runmachine/pkg/util"
 	"google.golang.org/grpc"
 )
 
@@ -68,9 +69,21 @@ func (s *Server) metaClient() (metapb.RunmMetadataClient, error) {
 	return s.metaclient, nil
 }
 
-// metaPartitionByUuid returns a partition record matching the supplied UUID
+// partitionGet returns a partition record matching the supplied UUID or name
+// If no such partition could be found, returns (nil, ErrNotFound)
+func (s *Server) partitionGet(
+	sess *pb.Session,
+	search string,
+) (*pb.Partition, error) {
+	if util.IsUuidLike(search) {
+		return s.partitionGetByUuid(sess, search)
+	}
+	return s.partitionGetByName(sess, search)
+}
+
+// partitionGetByUuid returns a partition record matching the supplied UUID
 // key. If no such partition could be found, returns (nil, ErrNotFound)
-func (s *Server) metaPartitionGetByUuid(
+func (s *Server) partitionGetByUuid(
 	sess *pb.Session,
 	uuid string,
 ) (*pb.Partition, error) {
@@ -106,9 +119,9 @@ func (s *Server) metaPartitionGetByUuid(
 	}, nil
 }
 
-// metaPartitionByName returns a partition record matching the supplied name.
+// partitionGetByName returns a partition record matching the supplied name.
 // If no such partition could be found, returns (nil, ErrNotFound)
-func (s *Server) metaPartitionGetByName(
+func (s *Server) partitionGetByName(
 	sess *pb.Session,
 	name string,
 ) (*pb.Partition, error) {

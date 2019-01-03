@@ -13,8 +13,12 @@ func (s *Server) PartitionGet(
 	ctx context.Context,
 	req *pb.PartitionGetRequest,
 ) (*pb.Partition, error) {
-	if req.Filter == nil || req.Filter.UuidFilter == nil || req.Filter.NameFilter == nil {
+	if req.Filter == nil {
 		return nil, ErrSearchRequired
+	} else {
+		if req.Filter.UuidFilter == nil && req.Filter.NameFilter == nil {
+			return nil, ErrSearchRequired
+		}
 	}
 	obj, err := s.store.PartitionGet(req.Filter)
 	if err != nil {

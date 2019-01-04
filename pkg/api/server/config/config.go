@@ -16,9 +16,10 @@ import (
 const (
 	cfgPath                    = "/etc/runmachine/api"
 	defaultUseTLS              = false
-	defaultBindPort            = 10001
+	defaultBindPort            = 10002
 	defaultServiceName         = "runmachine-api"
 	defaultMetadataServiceName = "runmachine-metadata"
+	defaultResourceServiceName = "runmachine-resource"
 )
 
 var (
@@ -35,6 +36,7 @@ type Config struct {
 	BindPort            int
 	ServiceName         string
 	MetadataServiceName string
+	ResourceServiceName string
 }
 
 func ConfigFromOpts() *Config {
@@ -87,6 +89,13 @@ func ConfigFromOpts() *Config {
 		),
 		"Name to use when querying the service registry for the metadata service",
 	)
+	optResourceServiceName := flag.String(
+		"resource-service-name",
+		envutil.WithDefault(
+			"RUNM_RESOURCE_SERVICE_NAME", defaultResourceServiceName,
+		),
+		"Name to use when querying the service registry for the resource service",
+	)
 
 	flag.Parse()
 
@@ -98,6 +107,7 @@ func ConfigFromOpts() *Config {
 		BindPort:            *optPort,
 		ServiceName:         *optServiceName,
 		MetadataServiceName: *optMetadataServiceName,
+		ResourceServiceName: *optResourceServiceName,
 	}
 }
 

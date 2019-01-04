@@ -26,7 +26,7 @@ const (
 const (
 	defaultConnectHost    = "localhost"
 	defaultConnectPort    = 10000
-	defaultAPIConnectPort = 10001
+	defaultAPIConnectPort = 10002
 )
 
 var (
@@ -135,6 +135,7 @@ func init() {
 	RootCommand.AddCommand(objectCommand)
 	RootCommand.AddCommand(propertyDefinitionCommand)
 	RootCommand.AddCommand(partitionCommand)
+	RootCommand.AddCommand(providerCommand)
 	RootCommand.SilenceUsage = true
 
 	clientLog = log.New(ioutil.Discard, "", 0)

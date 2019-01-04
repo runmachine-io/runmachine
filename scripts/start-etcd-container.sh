@@ -17,7 +17,7 @@ fi
 
 CONTAINER_NAME=${1:-${CONTAINER_NAME:-"etcd"}}
 
-echo -n "Starting etcd container named $CONTAINER_NAME... "
+echo -n "Starting etcd container named $CONTAINER_NAME ... "
 if etcd_start_container "$CONTAINER_NAME"; then
     echo "ok."
 else

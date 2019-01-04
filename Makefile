@@ -66,12 +66,27 @@ cover:
 		tail -n +2 coverage.out >> coverage-all.out;)
 	go tool cover -html=coverage-all.out -o=coverage-all.html
 
-build: test
-	@echo "building all binaries as Docker images ..."
+build-base: test
+	@echo "building base Docker image ..."
 	docker build -q --label built-by=runmachine.io -t runm/base . -f cmd/Dockerfile
+
+build-metadata: build-base
+	@echo "building runm-metadata Docker image ..."
 	docker build -q --label built-by=runmachine.io -t runm/metadata:$(VERSION) . -f cmd/runm-metadata/Dockerfile
+
+build-resource: build-base
+	@echo "building runm-resource Docker image ..."
+	docker build -q --label built-by=runmachine.io -t runm/resource:$(VERSION) . -f cmd/runm-resource/Dockerfile
+
+build-api: build-base
+	@echo "building runm-api Docker image ..."
 	docker build -q --label built-by=runmachine.io -t runm/api:$(VERSION) . -f cmd/runm-api/Dockerfile
+
+build-cli: build-base
+	@echo "building runm CLI Docker image ..."
 	docker build -q --label built-by=runmachine.io -t runm/runm:$(VERSION) . -f cmd/runm/Dockerfile
+
+build: build-base build-metadata build-resource build-api build-cli
 
 .PHONY: clean
 clean:

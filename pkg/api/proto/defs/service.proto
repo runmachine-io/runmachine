@@ -3,6 +3,7 @@ syntax = "proto3";
 package runmapi;
 
 import "partition.proto";
+import "provider.proto";
 import "search.proto";
 import "session.proto";
 
@@ -14,6 +15,30 @@ service RunmAPI {
     // Returns information about multiple partitions
     rpc partition_list(PartitionListRequest) returns (
         stream Partition) {}
+
+    // Create a new partition
+    rpc partition_create(CreateRequest) returns (
+        PartitionCreateResponse) {}
+
+    // Returns information about a specific provider
+    rpc provider_get(ProviderGetRequest) returns (Provider) {}
+
+    // Create a new provider
+    rpc provider_create(CreateRequest) returns (
+        ProviderCreateResponse) {}
+}
+
+enum PayloadFormat {
+    YAML = 0;
+    PROTOBUFFER = 1;
+}
+
+message CreateRequest {
+    Session session = 1;
+    PayloadFormat format = 2;
+    // Raw bytes representing the new representation of the object. The server
+    // is responsible for unmarshaling this raw payload.
+    bytes payload = 3;
 }
 
 message PartitionGetRequest {
@@ -25,4 +50,19 @@ message PartitionListRequest {
     Session session = 1;
     SearchOptions options = 2;
     repeated PartitionFilter any = 3;
+}
+
+message PartitionCreateResponse {
+    // The newly-created object
+    Partition partition = 1;
+}
+
+message ProviderGetRequest {
+    Session session = 1;
+    ProviderFilter filter = 2;
+}
+
+message ProviderCreateResponse {
+    // The newly-created object
+    Provider provider = 1;
 }

@@ -7,6 +7,7 @@ import (
 	pb "github.com/runmachine-io/runmachine/pkg/api/proto"
 	"github.com/runmachine-io/runmachine/pkg/errors"
 	metapb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
+	"github.com/runmachine-io/runmachine/pkg/util"
 	"google.golang.org/grpc"
 )
 
@@ -68,9 +69,21 @@ func (s *Server) metaClient() (metapb.RunmMetadataClient, error) {
 	return s.metaclient, nil
 }
 
-// metaPartitionByUuid returns a partition record matching the supplied UUID
+// partitionGet returns a partition record matching the supplied UUID or name
+// If no such partition could be found, returns (nil, ErrNotFound)
+func (s *Server) partitionGet(
+	sess *pb.Session,
+	search string,
+) (*pb.Partition, error) {
+	if util.IsUuidLike(search) {
+		return s.partitionGetByUuid(sess, search)
+	}
+	return s.partitionGetByName(sess, search)
+}
+
+// partitionGetByUuid returns a partition record matching the supplied UUID
 // key. If no such partition could be found, returns (nil, ErrNotFound)
-func (s *Server) metaPartitionGetByUuid(
+func (s *Server) partitionGetByUuid(
 	sess *pb.Session,
 	uuid string,
 ) (*pb.Partition, error) {
@@ -106,9 +119,9 @@ func (s *Server) metaPartitionGetByUuid(
 	}, nil
 }
 
-// metaPartitionByName returns a partition record matching the supplied name.
+// partitionGetByName returns a partition record matching the supplied name.
 // If no such partition could be found, returns (nil, ErrNotFound)
-func (s *Server) metaPartitionGetByName(
+func (s *Server) partitionGetByName(
 	sess *pb.Session,
 	name string,
 ) (*pb.Partition, error) {
@@ -142,4 +155,85 @@ func (s *Server) metaPartitionGetByName(
 		Uuid: rec.Uuid,
 		Name: rec.Name,
 	}, nil
+}
+
+// partitionCreate takes a new partition definition and returns a
+// metapb.Partition message representing the newly-created partition in the
+// metadata service.
+func (s *Server) partitionCreate(
+	sess *pb.Session,
+	part *metapb.Partition,
+) (*metapb.Partition, error) {
+	req := &metapb.PartitionCreateRequest{
+		Session:   metaSession(sess),
+		Partition: part,
+	}
+	mc, err := s.metaClient()
+	if err != nil {
+		return nil, err
+	}
+	resp, err := mc.PartitionCreate(context.Background(), req)
+	if err != nil {
+		return nil, err
+	}
+	return resp.Partition, nil
+}
+
+// uuidFromName returns a UUID matching the supplied object type and name. If
+// no such object could be found, returns ("", ErrNotFound)
+func (s *Server) uuidFromName(
+	sess *pb.Session,
+	objType string,
+	name string,
+) (string, error) {
+	req := &metapb.ObjectGetRequest{
+		Session: metaSession(sess),
+		Filter: &metapb.ObjectFilter{
+			ObjectType: &metapb.ObjectTypeFilter{
+				Search:    objType,
+				UsePrefix: false,
+			},
+			Name:      name,
+			UsePrefix: false,
+		},
+	}
+	mc, err := s.metaClient()
+	if err != nil {
+		return "", err
+	}
+	rec, err := mc.ObjectGet(context.Background(), req)
+	if err != nil {
+		if err == errors.ErrNotFound {
+			return "", ErrNotFound
+		}
+		// We don't want to expose internal errors to the user, so just return
+		// an unknown error after logging it.
+		s.log.ERR(
+			"failed to retrieve object of type %s with name %s: %s",
+			objType, name, err,
+		)
+		return "", ErrUnknown
+	}
+	return rec.Uuid, nil
+}
+
+// objectCreate takes a new object definition and returns a metapb.Object
+// message representing the newly-created object in the metadata service.
+func (s *Server) objectCreate(
+	sess *pb.Session,
+	obj *metapb.Object,
+) (*metapb.Object, error) {
+	req := &metapb.ObjectCreateRequest{
+		Session: metaSession(sess),
+		Object:  obj,
+	}
+	mc, err := s.metaClient()
+	if err != nil {
+		return nil, err
+	}
+	resp, err := mc.ObjectCreate(context.Background(), req)
+	if err != nil {
+		return nil, err
+	}
+	return resp.Object, nil
 }

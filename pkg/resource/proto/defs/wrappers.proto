@@ -40,7 +40,7 @@
 
 syntax = "proto3";
 
-package runm;
+package runmresource;
 
 // Wrapper message for `double`.
 //

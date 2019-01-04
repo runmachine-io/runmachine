@@ -1,8 +1,6 @@
 package commands
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
 	"golang.org/x/net/context"
 
@@ -32,6 +30,5 @@ func partitionGet(cmd *cobra.Command, args []string) {
 	}
 	obj, err := client.PartitionGet(context.Background(), req)
 	exitIfError(err)
-	fmt.Printf("UUID: %s\n", obj.Uuid)
-	fmt.Printf("Name: %s\n", obj.Name)
+	printPartition(obj)
 }

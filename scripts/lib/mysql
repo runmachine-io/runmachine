@@ -39,8 +39,29 @@ mysql_start_container() {
         --volume=${__data_dir}:/var/lib/mysql \
         --name $__container_name \
         -e MYSQL_ALLOW_EMPTY_PASSWORD=1 \
-        -e MYSQL_ROOT_HOST="172.*.*.*" \
+        -e MYSQL_ROOT_HOST="%" \
         mysql/mysql-server:latest \
         --bind-address ${__node_addr} >/dev/null 2>&1
+
+    # We need to wait until we see "/usr/sbin/mysqld: ready for connections" in
+    # the docker logs *and* the server was started on port 3306. There are two
+    # times that "mysqld: ready for connections" will appear. The first is when
+    # the server is initially started on port 0 during bootstrapping and the
+    # second is the "normal" mysqld startup process. If we don't do this, we'll
+    # just get connection errors when trying to connect to the server :(
+
+    local __sleep_time=0
+    until [ $__sleep_time -eq 60 ]; do
+        sleep 3
+        __sleep_time=$(( __sleep_time + 3 ))
+        if `docker logs --tail 20 "$__container_name" 2>&1 | \
+            grep "mysqld: ready for connections" | \
+            grep -q "port: 3306"`; then
+            break
+        else
+            inline_if_verbose "."
+        fi
+    done
+
 }
 

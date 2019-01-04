@@ -17,9 +17,9 @@ fi
 
 CONTAINER_NAME=${1:-${CONTAINER_NAME:-"mysql"}}
 
-echo -n "Starting mysql container named $CONTAINER_NAME... "
+echo -n "Starting mysql container named $CONTAINER_NAME ..."
 if mysql_start_container "$CONTAINER_NAME"; then
-    echo "ok."
+    echo " ok."
 else
     echo "FAIL"
 fi

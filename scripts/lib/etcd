@@ -35,8 +35,8 @@ etcd_start_container() {
 
     docker run -d \
         --rm \
-        -p 2379:2379 \
-        -p 2380:2380 \
+        -p 23790:2379 \
+        -p 23800:2380 \
         --volume=${__data_dir}:/etcd-data \
         --name $__container_name \
         quay.io/coreos/etcd:latest \

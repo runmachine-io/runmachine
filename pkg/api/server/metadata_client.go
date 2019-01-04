@@ -157,6 +157,28 @@ func (s *Server) partitionGetByName(
 	}, nil
 }
 
+// partitionCreate takes a new partition definition and returns a
+// metapb.Partition message representing the newly-created partition in the
+// metadata service.
+func (s *Server) partitionCreate(
+	sess *pb.Session,
+	part *metapb.Partition,
+) (*metapb.Partition, error) {
+	req := &metapb.PartitionCreateRequest{
+		Session:   metaSession(sess),
+		Partition: part,
+	}
+	mc, err := s.metaClient()
+	if err != nil {
+		return nil, err
+	}
+	resp, err := mc.PartitionCreate(context.Background(), req)
+	if err != nil {
+		return nil, err
+	}
+	return resp.Partition, nil
+}
+
 // uuidFromName returns a UUID matching the supplied object type and name. If
 // no such object could be found, returns ("", ErrNotFound)
 func (s *Server) uuidFromName(

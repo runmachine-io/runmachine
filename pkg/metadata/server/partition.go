@@ -53,3 +53,46 @@ func (s *Server) PartitionList(
 	}
 	return nil
 }
+
+// validatePartitionCreateRequest ensures that the data the user sent is valid and
+// all referenced projects, partitions, and object types are correct.
+func (s *Server) validatePartitionCreateRequest(
+	req *pb.PartitionCreateRequest,
+) (*pb.Partition, error) {
+	part := req.Partition
+
+	// Simple input data validations
+	if part.Name == "" {
+		return nil, ErrPartitionNameRequired
+	}
+
+	return part, nil
+}
+
+func (s *Server) PartitionCreate(
+	ctx context.Context,
+	req *pb.PartitionCreateRequest,
+) (*pb.PartitionCreateResponse, error) {
+	// TODO(jaypipes): AUTHZ check if user can write objects
+
+	p, err := s.validatePartitionCreateRequest(req)
+	if err != nil {
+		return nil, err
+	}
+	changed, err := s.store.PartitionCreate(p)
+	if err != nil {
+		if err == errors.ErrDuplicate {
+			return nil, ErrDuplicate
+		}
+		return nil, err
+	}
+	s.log.L1(
+		"created new partition with UUID %s and name %s",
+		changed.Uuid,
+		changed.Name,
+	)
+
+	return &pb.PartitionCreateResponse{
+		Partition: changed,
+	}, nil
+}

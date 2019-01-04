@@ -9,14 +9,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var providerCreateCommand = &cobra.Command{
+var partitionCreateCommand = &cobra.Command{
 	Use:   "create",
-	Short: "Create a provider",
-	Run:   providerCreate,
+	Short: "Create a partition",
+	Run:   partitionCreate,
 }
 
-func setupProviderCreateFlags() {
-	providerCreateCommand.Flags().StringVarP(
+func setupPartitionCreateFlags() {
+	partitionCreateCommand.Flags().StringVarP(
 		&cliObjectDocPath,
 		"file", "f",
 		"",
@@ -25,10 +25,10 @@ func setupProviderCreateFlags() {
 }
 
 func init() {
-	setupProviderCreateFlags()
+	setupPartitionCreateFlags()
 }
 
-func providerCreate(cmd *cobra.Command, args []string) {
+func partitionCreate(cmd *cobra.Command, args []string) {
 	conn := apiConnect()
 	defer conn.Close()
 
@@ -39,13 +39,13 @@ func providerCreate(cmd *cobra.Command, args []string) {
 		Payload: readInputDocumentOrExit(),
 	}
 
-	resp, err := client.ProviderCreate(context.Background(), req)
+	resp, err := client.PartitionCreate(context.Background(), req)
 	exitIfError(err)
-	obj := resp.Provider
+	obj := resp.Partition
 	if !quiet {
 		fmt.Printf("ok\n")
 		if verbose {
-			printProvider(obj)
+			printPartition(obj)
 		}
 	}
 }

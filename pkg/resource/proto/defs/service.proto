@@ -11,9 +11,23 @@ import "session.proto";
 service RunmResource {
     // Returns information about a specific provider
     rpc provider_get(ProviderGetRequest) returns (Provider) {}
+
+    // Create a new provider
+    rpc provider_create(ProviderCreateRequest) returns (
+        ProviderCreateResponse) {}
 }
 
 message ProviderGetRequest {
     Session session = 1;
     string uuid = 2;
+}
+
+message ProviderCreateRequest {
+    Session session = 1;
+    Provider provider = 2;
+}
+
+message ProviderCreateResponse {
+    // The newly-created object
+    Provider provider = 1;
 }

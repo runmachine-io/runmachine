@@ -243,3 +243,52 @@ func (s *Store) partitionsGetAll() ([]*pb.Partition, error) {
 	}
 	return res, nil
 }
+
+// PartitionCreate stores a new partition record in backend storage. It returns
+// ErrDuplicate if a partition with the same UUID or name already exists.
+// Returns the Partition that was written to storage, which may have had a UUID
+// created for it.
+func (s *Store) PartitionCreate(
+	part *pb.Partition,
+) (*pb.Partition, error) {
+	ctx, cancel := s.requestCtx()
+	defer cancel()
+
+	if part.Uuid == "" {
+		part.Uuid = util.NewNormalizedUuid()
+	} else {
+		part.Uuid = util.NormalizeUuid(part.Uuid)
+	}
+
+	partByNameKey := _PARTITIONS_BY_NAME_KEY + part.Name
+	partByUuidKey := _PARTITIONS_BY_UUID_KEY + part.Uuid
+
+	partValue, err := proto.Marshal(part)
+	if err != nil {
+		s.log.ERR("failed to serialize partition: %v", err)
+		return nil, err
+	}
+
+	// creates the partition keys using a transaction that ensures if another
+	// thread modified anything underneath us, we return an error
+	then := []etcd.Op{
+		// Add the entry for the index by partition name
+		etcd.OpPut(partByNameKey, part.Uuid),
+		// Add the entry for the index by partition UUID
+		etcd.OpPut(partByUuidKey, string(partValue)),
+	}
+	compare := []etcd.Cmp{
+		// Ensure the partition value and index by name don't yet exist
+		etcd.Compare(etcd.Version(partByNameKey), "=", 0),
+		etcd.Compare(etcd.Version(partByUuidKey), "=", 0),
+	}
+	resp, err := s.kv.Txn(ctx).If(compare...).Then(then...).Commit()
+
+	if err != nil {
+		s.log.ERR("failed to create txn in etcd: %v", err)
+		return nil, err
+	} else if resp.Succeeded == false {
+		return nil, errors.ErrDuplicate
+	}
+	return part, nil
+}

@@ -10,6 +10,10 @@ var (
 		codes.Unknown,
 		"an unknown error occurred.",
 	)
+	ErrDuplicate = status.Errorf(
+		codes.AlreadyExists,
+		"duplicate record.",
+	)
 	ErrNotFound = status.Errorf(
 		codes.NotFound,
 		"object could not be found.",

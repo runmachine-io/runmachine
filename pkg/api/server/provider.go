@@ -36,14 +36,12 @@ func (s *Server) ProviderGet(
 // request payload can be unmarshal'd properly into YAML, contains all relevant
 // fields and meets things like property meta validation checks.
 func (s *Server) validateProviderCreateRequest(
-	req *pb.ProviderCreateRequest,
+	req *pb.CreateRequest,
 ) (*types.Provider, error) {
 	var p types.Provider
 	if err := yaml.Unmarshal(req.Payload, &p); err != nil {
 		return nil, err
 	}
-
-	// Simple input data validations
 	if err := p.Validate(); err != nil {
 		return nil, err
 	}
@@ -52,7 +50,7 @@ func (s *Server) validateProviderCreateRequest(
 
 func (s *Server) ProviderCreate(
 	ctx context.Context,
-	req *pb.ProviderCreateRequest,
+	req *pb.CreateRequest,
 ) (*pb.ProviderCreateResponse, error) {
 	// TODO(jaypipes): AUTHZ check if user can write objects
 

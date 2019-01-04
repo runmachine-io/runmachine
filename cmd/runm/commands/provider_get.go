@@ -35,7 +35,7 @@ var providerGetCommand = &cobra.Command{
 }
 
 func providerGet(cmd *cobra.Command, args []string) {
-	conn := connect()
+	conn := apiConnect()
 	defer conn.Close()
 
 	client := pb.NewRunmAPIClient(conn)

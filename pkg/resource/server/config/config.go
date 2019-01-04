@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"time"
 
 	flag "github.com/ogier/pflag"
 
@@ -14,11 +15,13 @@ import (
 )
 
 const (
-	cfgPath                    = "/etc/runmachine/resource"
-	defaultUseTLS              = false
-	defaultBindPort            = 10001
-	defaultServiceName         = "runmachine-resource"
-	defaultMetadataServiceName = "runmachine-metadata"
+	cfgPath                             = "/etc/runmachine/resource"
+	defaultUseTLS                       = false
+	defaultBindPort                     = 10001
+	defaultServiceName                  = "runmachine-resource"
+	defaultMetadataServiceName          = "runmachine-metadata"
+	defaultStorageConnectTimeoutSeconds = 300
+	defaultStorageDSN                   = "user:password@tcp(localhost:3306)/dbname"
 )
 
 var (
@@ -28,13 +31,16 @@ var (
 )
 
 type Config struct {
-	UseTLS              bool
-	CertPath            string
-	KeyPath             string
-	BindHost            string
-	BindPort            int
-	ServiceName         string
-	MetadataServiceName string
+	UseTLS                       bool
+	CertPath                     string
+	KeyPath                      string
+	BindHost                     string
+	BindPort                     int
+	ServiceName                  string
+	MetadataServiceName          string
+	StorageConnectTimeoutSeconds time.Duration
+	// TODO(jaypipes): move this to gsr
+	StorageDSN string
 }
 
 func ConfigFromOpts() *Config {
@@ -87,6 +93,21 @@ func ConfigFromOpts() *Config {
 		),
 		"Name to use when querying the service registry for the metadata service",
 	)
+	optStorageConnectTimeout := flag.Int(
+		"storage-connect-timeout-seconds",
+		envutil.WithDefaultInt(
+			"RUNM_RESOURCE_STORAGE_CONNECT_TIMEOUT_SECONDS",
+			defaultStorageConnectTimeoutSeconds,
+		),
+		"Total number of seconds to attempt connection to storage",
+	)
+	optStorageDSN := flag.String(
+		"storage-dsn",
+		envutil.WithDefault(
+			"RUNM_RESOURCE_STORAGE_DSN", defaultStorageDSN,
+		),
+		"DSN for connecting to backend database storage",
+	)
 
 	flag.Parse()
 
@@ -98,6 +119,10 @@ func ConfigFromOpts() *Config {
 		BindPort:            *optPort,
 		ServiceName:         *optServiceName,
 		MetadataServiceName: *optMetadataServiceName,
+		StorageConnectTimeoutSeconds: time.Duration(
+			*optStorageConnectTimeout,
+		) * time.Second,
+		StorageDSN: *optStorageDSN,
 	}
 }
 

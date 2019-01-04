@@ -35,6 +35,10 @@ service RunmMetadata {
     rpc partition_list(PartitionListRequest) returns (
         stream Partition) {}
 
+    // Create a new partition
+    rpc partition_create(PartitionCreateRequest) returns (
+        PartitionCreateResponse) {}
+
     // Returns information about a specific object type
     rpc object_type_get(ObjectTypeGetRequest) returns (ObjectType) {}
 
@@ -112,6 +116,16 @@ message PartitionListRequest {
     Session session = 1;
     SearchOptions options = 2;
     repeated PartitionFilter any = 3;
+}
+
+message PartitionCreateRequest {
+    Session session = 1;
+    Partition partition = 2;
+}
+
+message PartitionCreateResponse {
+    // The newly-created partition
+    Partition partition = 1;
 }
 
 message ObjectTypeGetRequest {

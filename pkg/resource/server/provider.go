@@ -24,3 +24,17 @@ func (s *Server) ProviderGet(
 		Uuid: "fake",
 	}, nil
 }
+
+// ProviderCreate creates a new provider record in backend storage
+func (s *Server) ProviderCreate(
+	ctx context.Context,
+	req *pb.ProviderCreateRequest,
+) (*pb.ProviderCreateResponse, error) {
+	rec, err := s.store.ProviderCreate(req.Provider)
+	if err != nil {
+		return nil, err
+	}
+	return &pb.ProviderCreateResponse{
+		Provider: rec.Provider,
+	}, nil
+}

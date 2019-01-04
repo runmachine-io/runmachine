@@ -8,6 +8,7 @@ import (
 	"github.com/runmachine-io/runmachine/pkg/logging"
 	metapb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
 	"github.com/runmachine-io/runmachine/pkg/resource/server/config"
+	"github.com/runmachine-io/runmachine/pkg/resource/server/storage"
 )
 
 var (
@@ -18,6 +19,7 @@ type Server struct {
 	log        *logging.Logs
 	cfg        *config.Config
 	registry   *gsr.Registry
+	store      *storage.Store
 	metaclient metapb.RunmMetadataClient
 }
 
@@ -49,6 +51,12 @@ func New(
 	}
 	log.L2("connected to gsr service registry.")
 
+	store, err := storage.New(log, cfg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize resource storage: %v", err)
+	}
+	log.L2("initialized resource storage.")
+
 	// Register this runm-api service endpoint with the service registry
 	addr := fmt.Sprintf("%s:%d", cfg.BindHost, cfg.BindPort)
 	ep := gsr.Endpoint{
@@ -69,5 +77,6 @@ func New(
 		log:      log,
 		cfg:      cfg,
 		registry: registry,
+		store:    store,
 	}, nil
 }

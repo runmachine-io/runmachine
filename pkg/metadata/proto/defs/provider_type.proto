@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package runmmeta;
+
+import "filter.proto";
+
+// A type of provider -- e.g. a compute node, a NIC or a shared storage pool
+message ProviderType {
+    string code = 1;
+    string description = 2;
+}
+
+// Used in matching provider type records
+message ProviderTypeFilter {
+    CodeFilter code_filter = 1;
+}

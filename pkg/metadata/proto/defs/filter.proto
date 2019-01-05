@@ -11,3 +11,8 @@ message NameFilter {
     string name = 1;
     bool use_prefix = 2;
 }
+
+message CodeFilter {
+    string code = 1;
+    bool use_prefix = 2;
+}

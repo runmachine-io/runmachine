@@ -34,6 +34,10 @@ var (
 		codes.FailedPrecondition,
 		"failed to expand object filters.",
 	)
+	ErrCodeFilterRequired = status.Errorf(
+		codes.FailedPrecondition,
+		"code filter is required",
+	)
 	ErrObjectFilterRequired = status.Errorf(
 		codes.FailedPrecondition,
 		"object filter is required when fetching object.",

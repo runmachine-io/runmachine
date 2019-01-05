@@ -75,15 +75,6 @@ at a sample key namespace layout.
 
 ```
 $ROOT
-  object-types/
-    runm.image -> serialized ObjectType Protobuffer message
-    runm.machine -> serialized ObjectType Protobuffer message
-    runm.provider -> serialized ObjectType Protobuffer message
-    runm.provider_group -> serialized ObjectType Protobuffer message
-  objects/by-uuid/
-    54b8d8d7e24c43799bbf70c16e921e52 -> serialized Object message
-    60b53edd16764f6abc081ddb0a73e69c -> serialized Object message
-    3bf3e700f11b4a7cb99244c554b3a856 -> serialized Object message
   partitions/
     by-name/
       us-east.example.com -> d3873f99a21f45f5bce156c1f8b84b03
@@ -97,14 +88,27 @@ $ROOT
     9ef32862afd54a32b4a6c5f11c590061 -> serialized PropertyDefinition message
     f287341160ee4feba4012eb7f8125b82 -> serialized PropertyDefinition message
     f2aaa1bffbba4d5e860404176564347e -> serialized PropertyDefinition message
+  types/
+    object/
+      runm.image -> serialized ObjectType message
+      runm.machine -> serialized ObjectType message
+      runm.provider -> serialized ObjectType message
+      runm.provider_group -> serialized ObjectType message
+    runm.provider/
+      runm.compute_node -> serialized ProviderType message
+  objects/by-uuid/
+    54b8d8d7e24c43799bbf70c16e921e52 -> serialized Object message
+    60b53edd16764f6abc081ddb0a73e69c -> serialized Object message
+    3bf3e700f11b4a7cb99244c554b3a856 -> serialized Object message
 ```
 
 Above, you can see that `$ROOT` has four key namespaces, one called
-`object-types/`, one called `objects/by-uuid/` one called `partitions` and
+`types/`, one called `objects/by-uuid/` one called `partitions` and
 another called `property-definitions/by-uuid/`.
 
-The `$ROOT/object-types/` key namespace has a set of [valued keys](#Valued keys)
-describing the object types known to the system.
+The `$ROOT/types/` key namespace has a set of key namespaces, each of which has
+a set of [valued keys](#Valued keys) describing the different types in the
+runmachine system.
 
 The `$ROOT/objects/by-uuid/` key namespace has a set of valued keys describing
 the objects known to the system.

@@ -4,6 +4,7 @@ package runmapi;
 
 import "partition.proto";
 import "provider.proto";
+import "provider_type.proto";
 import "search.proto";
 import "session.proto";
 
@@ -12,13 +13,17 @@ service RunmAPI {
     // Returns information about a specific partition
     rpc partition_get(PartitionGetRequest) returns (Partition) {}
 
-    // Returns information about multiple partitions
+    // Returns information about partitions
     rpc partition_list(PartitionListRequest) returns (
         stream Partition) {}
 
     // Create a new partition
     rpc partition_create(CreateRequest) returns (
         PartitionCreateResponse) {}
+
+    // Returns information about provider types
+    rpc provider_type_list(ProviderTypeListRequest) returns (
+        stream ProviderType) {}
 
     // Returns information about a specific provider
     rpc provider_get(ProviderGetRequest) returns (Provider) {}
@@ -55,6 +60,12 @@ message PartitionListRequest {
 message PartitionCreateResponse {
     // The newly-created object
     Partition partition = 1;
+}
+
+message ProviderTypeListRequest {
+    Session session = 1;
+    SearchOptions options = 2;
+    repeated ProviderTypeFilter any = 3;
 }
 
 message ProviderGetRequest {

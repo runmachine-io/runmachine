@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package runmapi;
+
+// A provider type describes a category of resource provider in a runmachine
+// system
+message ProviderType {
+    string code = 1;
+    string description = 2;
+}
+
+// Used in matching provider type records
+message ProviderTypeFilter {
+    // Identifier of the provider type
+    string search = 1;
+    // Indicates the search should be a prefix expression
+    bool use_prefix = 2;
+}

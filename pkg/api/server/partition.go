@@ -19,7 +19,6 @@ func (s *Server) PartitionGet(
 	ctx context.Context,
 	req *pb.PartitionGetRequest,
 ) (*pb.Partition, error) {
-	s.log.L1("request: %s", req)
 	if req.Filter == nil || req.Filter.Search == "" {
 		return nil, ErrSearchRequired
 	}

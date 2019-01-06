@@ -9,6 +9,8 @@ import (
 	metapb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
 	"github.com/runmachine-io/runmachine/pkg/util"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // metaSession transforms an API protobuffer Session message into a metadata
@@ -102,8 +104,10 @@ func (s *Server) partitionGetByUuid(
 	}
 	rec, err := mc.PartitionGet(context.Background(), req)
 	if err != nil {
-		if err == errors.ErrNotFound {
-			return nil, ErrNotFound
+		if s, ok := status.FromError(err); ok {
+			if s.Code() == codes.NotFound {
+				return nil, errors.ErrNotFound
+			}
 		}
 		// We don't want to expose internal errors to the user, so just return
 		// an unknown error after logging it.
@@ -140,8 +144,10 @@ func (s *Server) partitionGetByName(
 	}
 	rec, err := mc.PartitionGet(context.Background(), req)
 	if err != nil {
-		if err == errors.ErrNotFound {
-			return nil, ErrNotFound
+		if s, ok := status.FromError(err); ok {
+			if s.Code() == codes.NotFound {
+				return nil, errors.ErrNotFound
+			}
 		}
 		// We don't want to expose internal errors to the user, so just return
 		// an unknown error after logging it.
@@ -203,8 +209,10 @@ func (s *Server) uuidFromName(
 	}
 	rec, err := mc.ObjectGet(context.Background(), req)
 	if err != nil {
-		if err == errors.ErrNotFound {
-			return "", ErrNotFound
+		if s, ok := status.FromError(err); ok {
+			if s.Code() == codes.NotFound {
+				return "", ErrNotFound
+			}
 		}
 		// We don't want to expose internal errors to the user, so just return
 		// an unknown error after logging it.
@@ -215,6 +223,46 @@ func (s *Server) uuidFromName(
 		return "", ErrUnknown
 	}
 	return rec.Uuid, nil
+}
+
+// providerTypeGetByCode returns a provider type record matching the supplied
+// code. If no such provider type could be found, returns (nil, ErrNotFound)
+func (s *Server) providerTypeGetByCode(
+	sess *pb.Session,
+	code string,
+) (*pb.ProviderType, error) {
+	req := &metapb.ProviderTypeGetRequest{
+		Session: metaSession(sess),
+		Filter: &metapb.ProviderTypeFilter{
+			CodeFilter: &metapb.CodeFilter{
+				Code:      code,
+				UsePrefix: false,
+			},
+		},
+	}
+	mc, err := s.metaClient()
+	if err != nil {
+		return nil, err
+	}
+	rec, err := mc.ProviderTypeGet(context.Background(), req)
+	if err != nil {
+		if s, ok := status.FromError(err); ok {
+			if s.Code() == codes.NotFound {
+				return nil, errors.ErrNotFound
+			}
+		}
+		// We don't want to expose internal errors to the user, so just return
+		// an unknown error after logging it.
+		s.log.ERR(
+			"failed to retrieve provider type with code '%s': %s",
+			code, err,
+		)
+		return nil, ErrUnknown
+	}
+	return &pb.ProviderType{
+		Code:        rec.Code,
+		Description: rec.Description,
+	}, nil
 }
 
 // objectCreate takes a new object definition and returns a metapb.Object

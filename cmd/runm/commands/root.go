@@ -131,11 +131,11 @@ func init() {
 
 	RootCommand.AddCommand(helpEnvCommand)
 	RootCommand.AddCommand(bootstrapCommand)
-	RootCommand.AddCommand(objectTypeCommand)
 	RootCommand.AddCommand(objectCommand)
 	RootCommand.AddCommand(propertyDefinitionCommand)
 	RootCommand.AddCommand(partitionCommand)
 	RootCommand.AddCommand(providerCommand)
+	RootCommand.AddCommand(providerTypeCommand)
 	RootCommand.SilenceUsage = true
 
 	clientLog = log.New(ioutil.Discard, "", 0)

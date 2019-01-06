@@ -11,10 +11,10 @@ import (
 )
 
 const (
-	// $ROOT/object-types/ is a key namespace containing valued keys where the
+	// $ROOT/types/object/ is a key namespace containing valued keys where the
 	// key is the object type's code and the value is the serialized ObjectType
 	// protobuffer message
-	_OBJECT_TYPES_KEY = "object-types/"
+	_OBJECT_TYPES_KEY = "types/object/"
 )
 
 var (
@@ -49,7 +49,7 @@ func (s *Store) ensureObjectTypes() error {
 	ctx, cancel := s.requestCtx()
 	defer cancel()
 
-	s.log.L3("ensuring well-known object types...")
+	s.log.L3("ensuring object types...")
 
 	resp, err := s.kv.Get(
 		ctx,
@@ -71,7 +71,7 @@ func (s *Store) ensureObjectTypes() error {
 		if _, ok := all[ot.Code]; !ok {
 			s.log.L3("object type %s not in storage. adding...", ot.Code)
 			if err = s.objectTypeCreate(ot); err != nil {
-				if err == errors.ErrGenerationConflict {
+				if err == errors.ErrDuplicate {
 					// some other thread created the object type... just ignore
 					continue
 				}

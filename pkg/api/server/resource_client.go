@@ -9,6 +9,8 @@ import (
 	"github.com/runmachine-io/runmachine/pkg/errors"
 	respb "github.com/runmachine-io/runmachine/pkg/resource/proto"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // metaSession transforms an API protobuffer Session message into a metadata
@@ -85,8 +87,10 @@ func (s *Server) providerGetByUuid(
 	}
 	rec, err := rc.ProviderGet(context.Background(), req)
 	if err != nil {
-		if err == errors.ErrNotFound {
-			return nil, ErrNotFound
+		if s, ok := status.FromError(err); ok {
+			if s.Code() == codes.NotFound {
+				return nil, errors.ErrNotFound
+			}
 		}
 		// We don't want to expose internal errors to the user, so just return
 		// an unknown error after logging it.

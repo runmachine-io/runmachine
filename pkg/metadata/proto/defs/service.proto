@@ -7,6 +7,7 @@ import "property.proto";
 import "object.proto";
 import "object_type.proto";
 import "partition.proto";
+import "provider_type.proto";
 import "search.proto";
 import "session.proto";
 import "wrappers.proto";
@@ -88,6 +89,13 @@ service RunmMetadata {
     // Returns property items for an object
     rpc object_properties_list(ObjectPropertiesListRequest) returns (
         stream Property) {}
+
+    // Returns information about a specific provider type
+    rpc provider_type_get(ProviderTypeGetRequest) returns (ProviderType) {}
+
+    // Returns information about multiple provider types
+    rpc provider_type_list(ProviderTypeListRequest) returns (
+        stream ProviderType) {}
 }
 
 message BootstrapRequest {
@@ -256,4 +264,17 @@ message ObjectPropertiesListRequest {
     Object object = 2;
     ObjectPropertiesListFilters filters = 3;
     SearchOptions options = 4;
+}
+
+message ProviderTypeGetRequest {
+    Session session = 1;
+    ProviderTypeFilter filter = 2;
+}
+
+message ProviderTypeListRequest {
+    Session session = 1;
+    SearchOptions options = 2;
+    // A set of filter expressions that are OR'd together when determining
+    // matches
+    repeated ProviderTypeFilter any = 3;
 }

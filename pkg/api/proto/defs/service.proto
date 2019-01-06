@@ -21,6 +21,9 @@ service RunmAPI {
     rpc partition_create(CreateRequest) returns (
         PartitionCreateResponse) {}
 
+    // Returns information about a specific provider type
+    rpc provider_type_get(ProviderTypeGetRequest) returns (ProviderType) {}
+
     // Returns information about provider types
     rpc provider_type_list(ProviderTypeListRequest) returns (
         stream ProviderType) {}
@@ -60,6 +63,11 @@ message PartitionListRequest {
 message PartitionCreateResponse {
     // The newly-created object
     Partition partition = 1;
+}
+
+message ProviderTypeGetRequest {
+    Session session = 1;
+    ProviderTypeFilter filter = 2;
 }
 
 message ProviderTypeListRequest {

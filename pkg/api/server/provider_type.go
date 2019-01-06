@@ -8,6 +8,18 @@ import (
 	metapb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
 )
 
+// ProviderTypeGet looks up a provider type by code and returns a ProviderType
+// protobuf message.
+func (s *Server) ProviderTypeGet(
+	ctx context.Context,
+	req *pb.ProviderTypeGetRequest,
+) (*pb.ProviderType, error) {
+	if req.Filter == nil || req.Filter.Search == "" {
+		return nil, ErrSearchRequired
+	}
+	return s.providerTypeGetByCode(req.Session, req.Filter.Search)
+}
+
 // ProviderTypeList streams zero or more ProviderType objects back to the
 // client that match a set of optional filters
 func (s *Server) ProviderTypeList(

@@ -43,9 +43,10 @@ func providerCreate(cmd *cobra.Command, args []string) {
 	exitIfError(err)
 	obj := resp.Provider
 	if !quiet {
-		fmt.Printf("ok\n")
 		if verbose {
 			printProvider(obj)
+		} else {
+			fmt.Printf("%s\n", obj.Uuid)
 		}
 	}
 }

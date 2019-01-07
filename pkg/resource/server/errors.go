@@ -78,6 +78,10 @@ var (
 		codes.FailedPrecondition,
 		"Either UUID or name to search for is required.",
 	)
+	ErrUuidRequired = status.Errorf(
+		codes.FailedPrecondition,
+		"A UUID is required.",
+	)
 	ErrCodeRequired = status.Errorf(
 		codes.FailedPrecondition,
 		"A code to search for is required.",

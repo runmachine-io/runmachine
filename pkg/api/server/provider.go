@@ -5,8 +5,11 @@ import (
 
 	pb "github.com/runmachine-io/runmachine/pkg/api/proto"
 	"github.com/runmachine-io/runmachine/pkg/api/types"
+	"github.com/runmachine-io/runmachine/pkg/errors"
 	metapb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
 	"github.com/runmachine-io/runmachine/pkg/util"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -29,7 +32,37 @@ func (s *Server) ProviderGet(
 			return nil, err
 		}
 	}
-	return s.providerGetByUuid(req.Session, search)
+	p, err := s.providerGetByUuid(req.Session, search)
+	if err != nil {
+		if err == errors.ErrNotFound {
+			return nil, ErrNotFound
+		}
+		s.log.ERR("failed getting provider with UUID %s: %s", search, err)
+		return nil, ErrUnknown
+	}
+	// Grab the object's name from the metadata service
+	name, err := s.nameFromUuid(req.Session, search)
+	if err != nil {
+		if err == errors.ErrNotFound {
+			s.log.ERR(
+				"DATA CORRUPTION! failed getting name for provider with "+
+					"UUID %s: object with UUID %s does not exist in metadata "+
+					"service but should exist",
+				search, err,
+			)
+			name = ""
+		} else {
+			s.log.ERR("failed getting provider with UUID %s: %s", search, err)
+			return nil, ErrUnknown
+		}
+	}
+	return &pb.Provider{
+		Partition:    p.Partition,
+		ProviderType: p.ProviderType,
+		Name:         name,
+		Uuid:         p.Uuid,
+		Generation:   p.Generation,
+	}, nil
 }
 
 // validateProviderCreateRequest ensures that the data the user sent in the
@@ -45,6 +78,18 @@ func (s *Server) validateProviderCreateRequest(
 	if err := p.Validate(); err != nil {
 		return nil, err
 	}
+
+	// Check that the supplied provider type exists
+	ptCode := p.ProviderType
+	_, err := s.providerTypeGetByCode(req.Session, ptCode)
+	if err != nil {
+		if err == errors.ErrNotFound {
+			return nil, errProviderTypeNotFound(ptCode)
+		}
+		s.log.ERR("failed checking provider type: %s", err)
+		return nil, ErrUnknown
+	}
+
 	return &p, nil
 }
 
@@ -85,6 +130,12 @@ func (s *Server) ProviderCreate(
 	}
 	createdObj, err := s.objectCreate(req.Session, provObj)
 	if err != nil {
+		if s, ok := status.FromError(err); ok {
+			scode := s.Code()
+			if scode == codes.FailedPrecondition || scode == codes.NotFound {
+				return nil, err
+			}
+		}
 		s.log.ERR(
 			"failed creating provider object in metadata service: %s",
 			err,
@@ -95,19 +146,24 @@ func (s *Server) ProviderCreate(
 	input.Uuid = createdObj.Uuid
 
 	// Next save the provider record in the resource service
-	var changed *pb.Provider
-	changed, err = s.providerCreate(req.Session, input)
+	resProv, err := s.providerCreate(req.Session, input)
 	if err != nil {
 		return nil, err
 	}
 	s.log.L1(
 		"created new provider with UUID %s in partition %s with name %s",
 		input.Uuid,
-		input.Partition,
+		createdObj.Partition,
 		input.Name,
 	)
 
 	return &pb.ProviderCreateResponse{
-		Provider: changed,
+		Provider: &pb.Provider{
+			Uuid:         input.Uuid,
+			Name:         input.Name,
+			Partition:    createdObj.Partition,
+			ProviderType: input.ProviderType,
+			Generation:   resProv.Generation,
+		},
 	}, nil
 }

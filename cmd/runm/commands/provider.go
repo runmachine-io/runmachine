@@ -18,12 +18,13 @@ func init() {
 }
 
 func printProvider(obj *pb.Provider) {
-	fmt.Printf("Partition:   %s\n", obj.Partition)
+	fmt.Printf("Partition:     %s\n", obj.Partition)
 	fmt.Printf("Provider Type: %s\n", obj.ProviderType)
-	fmt.Printf("UUID:        %s\n", obj.Uuid)
-	fmt.Printf("Name:        %s\n", obj.Name)
+	fmt.Printf("UUID:          %s\n", obj.Uuid)
+	fmt.Printf("Name:          %s\n", obj.Name)
+	fmt.Printf("Generation:    %d\n", obj.Generation)
 	if obj.ParentUuid != "" {
-		fmt.Printf("Parent:     %s\n", obj.ParentUuid)
+		fmt.Printf("Parent:        %s\n", obj.ParentUuid)
 	}
 	// TODO(jaypipes): Add support for properties and tags
 	//if obj.Properties != nil {

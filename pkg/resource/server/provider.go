@@ -2,13 +2,9 @@ package server
 
 import (
 	"context"
-	"fmt"
 
+	"github.com/runmachine-io/runmachine/pkg/errors"
 	pb "github.com/runmachine-io/runmachine/pkg/resource/proto"
-)
-
-var (
-	ErrUuidRequired = fmt.Errorf("uuid is required")
 )
 
 // ProviderGet looks up a provider by UUID and returns a Provider
@@ -20,9 +16,18 @@ func (s *Server) ProviderGet(
 	if req.Uuid == "" {
 		return nil, ErrUuidRequired
 	}
-	return &pb.Provider{
-		Uuid: "fake",
-	}, nil
+	rec, err := s.store.ProviderGetByUuid(req.Uuid)
+	if err != nil {
+		if err == errors.ErrNotFound {
+			return nil, ErrNotFound
+		}
+		s.log.ERR(
+			"failed to get provider with UUID %s from storage: %s",
+			req.Uuid, err,
+		)
+		return nil, ErrUnknown
+	}
+	return rec.Provider, nil
 }
 
 // ProviderCreate creates a new provider record in backend storage
@@ -32,6 +37,9 @@ func (s *Server) ProviderCreate(
 ) (*pb.ProviderCreateResponse, error) {
 	rec, err := s.store.ProviderCreate(req.Provider)
 	if err != nil {
+		if err == errors.ErrDuplicate {
+			return nil, ErrDuplicate
+		}
 		return nil, err
 	}
 	return &pb.ProviderCreateResponse{

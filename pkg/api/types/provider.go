@@ -6,7 +6,8 @@ var (
 	// the set of valid provider type strings that may appear in the provider's
 	// "provider_type" field
 	ValidProviderTypes = []string{
-		"runm.compute_node",
+		"runm.compute",
+		"runm.storage.block",
 	}
 )
 

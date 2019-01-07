@@ -22,12 +22,12 @@ func (s *Store) Close() {
 	}
 }
 
-// DB returns a handle to a SQL database. The forceNew parameter indicates that
+// getDB returns a handle to a SQL database. The forceNew parameter indicates that
 // a new DB handle will always be created even if the cached DB handle for the
 // Store is not nil. The unsafe parameter indicates that the returned DB handle
 // will have connections that accept multiple statements. If unsafe is true,
 // the Store's cached DB handle is not returned.
-func (s *Store) DB(forceNew bool, unsafe bool) (*sql.DB, error) {
+func (s *Store) getDB(forceNew bool, unsafe bool) (*sql.DB, error) {
 	if !unsafe && !forceNew && s.db != nil {
 		return s.db, nil
 	}
@@ -48,6 +48,15 @@ func (s *Store) DB(forceNew bool, unsafe bool) (*sql.DB, error) {
 		return nil, err
 	}
 	return db, nil
+}
+
+func (s *Store) DB() *sql.DB {
+	db, err := s.getDB(false, false)
+	if err != nil {
+		// TODO(jaypipes): Perform retry with backoff
+		panic("failed to get normal DB handle!")
+	}
+	return db
 }
 
 func New(log *logging.Logs, cfg *config.Config) (*Store, error) {

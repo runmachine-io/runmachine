@@ -6,12 +6,6 @@ import "capability.proto";
 import "distance.proto";
 import "wrappers.proto";
 
-// A type of provider -- e.g. a compute node, a NIC or a shared storage pool
-message ProviderType {
-    string code = 1;
-    StringValue description = 2;
-}
-
 // A collection of related providers
 message ProviderGroup {
     string uuid = 1;
@@ -30,9 +24,8 @@ message ProviderDistance {
 // and have capabilities associated with it.
 message Provider {
     string partition = 1;
-    ProviderType provider_type = 2;
+    string provider_type = 2;
     string uuid = 3;
-    string name = 4;
     Provider parent = 51;
     Provider root = 52;
     repeated ProviderGroup groups = 53;

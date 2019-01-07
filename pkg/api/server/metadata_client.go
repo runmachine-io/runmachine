@@ -225,6 +225,40 @@ func (s *Server) uuidFromName(
 	return rec.Uuid, nil
 }
 
+// nameFromUuid returns a name matching the supplied object UUID. If no such
+// object could be found, returns ("", ErrNotFound)
+func (s *Server) nameFromUuid(
+	sess *pb.Session,
+	uuid string,
+) (string, error) {
+	req := &metapb.ObjectGetRequest{
+		Session: metaSession(sess),
+		Filter: &metapb.ObjectFilter{
+			Uuid: uuid,
+		},
+	}
+	mc, err := s.metaClient()
+	if err != nil {
+		return "", err
+	}
+	rec, err := mc.ObjectGet(context.Background(), req)
+	if err != nil {
+		if s, ok := status.FromError(err); ok {
+			if s.Code() == codes.NotFound {
+				return "", ErrNotFound
+			}
+		}
+		// We don't want to expose internal errors to the user, so just return
+		// an unknown error after logging it.
+		s.log.ERR(
+			"failed to retrieve object with UUID %s: %s",
+			uuid, err,
+		)
+		return "", ErrUnknown
+	}
+	return rec.Name, nil
+}
+
 // providerTypeGetByCode returns a provider type record matching the supplied
 // code. If no such provider type could be found, returns (nil, ErrNotFound)
 func (s *Server) providerTypeGetByCode(

@@ -4,13 +4,14 @@ import (
 	"context"
 	"fmt"
 
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	pb "github.com/runmachine-io/runmachine/pkg/api/proto"
 	"github.com/runmachine-io/runmachine/pkg/api/types"
 	"github.com/runmachine-io/runmachine/pkg/errors"
 	respb "github.com/runmachine-io/runmachine/pkg/resource/proto"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 // metaSession transforms an API protobuffer Session message into a metadata
@@ -76,7 +77,7 @@ func (s *Server) resClient() (respb.RunmResourceClient, error) {
 func (s *Server) providerGetByUuid(
 	sess *pb.Session,
 	uuid string,
-) (*pb.Provider, error) {
+) (*respb.Provider, error) {
 	req := &respb.ProviderGetRequest{
 		Session: resSession(sess),
 		Uuid:    uuid,
@@ -100,18 +101,42 @@ func (s *Server) providerGetByUuid(
 		)
 		return nil, ErrUnknown
 	}
-	return &pb.Provider{
+	return &respb.Provider{
 		Partition:    rec.Partition,
-		ProviderType: rec.ProviderType.String(),
+		ProviderType: rec.ProviderType,
 		Uuid:         rec.Uuid,
 		Generation:   rec.Generation,
 	}, nil
 }
 
-// providerCreate creates the supplied provider in the resource service
+// providerCreate creates the supplied provider in the resource service. The
+// data supplied has already been validated/checked.
 func (s *Server) providerCreate(
 	sess *pb.Session,
 	prov *types.Provider,
-) (*pb.Provider, error) {
-	return nil, nil
+) (*respb.Provider, error) {
+	p := &respb.Provider{
+		Uuid:         prov.Uuid,
+		Partition:    prov.Partition,
+		ProviderType: prov.ProviderType,
+	}
+	req := &respb.ProviderCreateRequest{
+		Session:  resSession(sess),
+		Provider: p,
+	}
+	rc, err := s.resClient()
+	resp, err := rc.ProviderCreate(context.Background(), req)
+	if err != nil {
+		if s, ok := status.FromError(err); ok {
+			if s.Code() == codes.AlreadyExists {
+				return nil, errors.ErrDuplicate
+			}
+		}
+		s.log.ERR(
+			"failed saving provider with name '%s' in resource service: %s",
+			prov.Name, err,
+		)
+		return nil, errors.ErrUnknown
+	}
+	return resp.Provider, nil
 }

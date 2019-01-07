@@ -1,5 +1,5 @@
 partition: part0
-provider_type: runm.compute_node
+provider_type: runm.compute
 name: row1-rack1-compute23
 tags:
   - compute

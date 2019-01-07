@@ -20,7 +20,6 @@ CREATE TABLE partitions (
 CREATE TABLE resource_types (
   id INT NOT NULL AUTO_INCREMENT PRIMARY KEY
 , code VARCHAR(200) NOT NULL
-, description TEXT CHARACTER SET utf8 COLLATE utf8_bin NULL
 , UNIQUE INDEX uix_code (code)
 ) CHARACTER SET latin1 COLLATE latin1_bin;
 
@@ -34,7 +33,6 @@ CREATE TABLE capabilities (
 CREATE TABLE distance_types (
   id INT NOT NULL AUTO_INCREMENT PRIMARY KEY
 , code VARCHAR(200) NOT NULL
-, description TEXT CHARACTER SET utf8 COLLATE utf8_bin NULL
 , generation INT NOT NULL
 , UNIQUE INDEX uix_code (code)
 ) CHARACTER SET latin1 COLLATE latin1_bin;
@@ -51,7 +49,6 @@ CREATE TABLE distances (
 CREATE TABLE provider_types (
   id SMALLINT NOT NULL AUTO_INCREMENT PRIMARY KEY
 , code VARCHAR(200) NOT NULL
-, description TEXT CHARACTER SET utf8 COLLATE utf8_bin NULL
 , UNIQUE INDEX uix_code (code)
 ) CHARACTER SET latin1 COLLATE latin1_bin;
 
@@ -125,7 +122,6 @@ CREATE TABLE provider_distances (
 CREATE TABLE consumer_types (
   id SMALLINT NOT NULL AUTO_INCREMENT PRIMARY KEY
 , code VARCHAR(200) NOT NULL
-, description TEXT CHARACTER SET utf8 COLLATE utf8_bin NULL
 , UNIQUE INDEX uix_code (code)
 ) CHARACTER SET latin1 COLLATE latin1_bin;
 
@@ -176,7 +172,7 @@ CREATE TABLE allocation_items (
 func (s *Store) migrate() error {
 	// Grab a single-use DB handle that can support executing multiple
 	// statements in an execution context
-	db, err := s.DB(true, true)
+	db, err := s.getDB(true, true)
 	if err != nil {
 		// The DSN is bad or we got an OOM, so it's appropriate to stop
 		// execution here
@@ -194,6 +190,7 @@ func (s *Store) migrate() error {
 
 	s.log.L3("determining current DB version...")
 
+	dbVersion := int64(0)
 	if !tableExists(db, "db_version") {
 		s.log.L3("resource DB is not versioned. initializing versioned DB...")
 		if err := versionDB(db); err != nil {
@@ -205,6 +202,36 @@ func (s *Store) migrate() error {
 			)
 		}
 		s.log.L1("initialized DB version")
+	} else {
+		dbVersion = getDBVersion(db)
+	}
+
+	migrations := _MIGRATIONS["mysql"]
+	if int64(len(migrations)) > dbVersion {
+		// Execute each migration SQL script, setting the DB version for each
+		// successful migration.
+		for x, migration := range migrations {
+			// TODO(jaypipes): Wrap this in a transaction
+			res, err := db.Exec(migration)
+			if err != nil {
+				s.log.ERR("failed executing migration %d: %s", x, err)
+				return err
+			}
+			qs := "UPDATE db_version SET version = ? WHERE version = ?"
+			res, err = db.Exec(qs, x+1, x)
+			if err != nil {
+				s.log.ERR("failed updating DB version to %d: %s", x+1, err)
+				return err
+			}
+			if affected, err := res.RowsAffected(); err != nil {
+				s.log.ERR("failed updating DB version to %d: %s", x+1, err)
+				return err
+			} else if affected != 1 {
+				s.log.L2("another service migrated to DB version", x+1, err)
+				continue
+			}
+			s.log.L1("migrated resource DB version to %d", x+1)
+		}
 	}
 
 	return nil
@@ -223,6 +250,17 @@ INSERT INTO db_version (version) VALUES (0);
 		return err
 	}
 	return nil
+}
+
+// getDBVersion returns the current version of the database, or 0 if there was
+// an error attempting to determine the database version
+func getDBVersion(db *sql.DB) int64 {
+	var version int64
+	err := db.QueryRow("SELECT version FROM db_version").Scan(&version)
+	if err != nil {
+		return 0
+	}
+	return version
 }
 
 // tableExists returns true if the searched-for table exists in the DB, false

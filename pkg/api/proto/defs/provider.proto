@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package runmapi;
 
+import "property.proto";
+
 // A provider exposes inventory of resources to be claimed by consumers of
 // those resources. Each provider may belong to zero or more provider groups
 // and have capabilities associated with it.
@@ -11,8 +13,11 @@ message Provider {
     string uuid = 3;
     string name = 4;
     string parent_uuid = 5;
+    repeated Property properties = 50;
+    repeated string tags = 51;
     uint32 generation = 100;
 }
+
 
 // Used in matching provider records
 message ProviderFilter {

@@ -40,28 +40,39 @@ func (s *Server) ProviderGet(
 		s.log.ERR("failed getting provider with UUID %s: %s", search, err)
 		return nil, ErrUnknown
 	}
-	// Grab the object's name from the metadata service
-	name, err := s.nameFromUuid(req.Session, search)
+	// Grab the object from the metadata service
+	obj, err := s.objectFromUuid(req.Session, search)
 	if err != nil {
 		if err == errors.ErrNotFound {
 			s.log.ERR(
-				"DATA CORRUPTION! failed getting name for provider with "+
+				"DATA CORRUPTION! failed getting object with "+
 					"UUID %s: object with UUID %s does not exist in metadata "+
-					"service but should exist",
+					"service but providerGetByUuid returned a provider",
 				search, err,
 			)
-			name = ""
+			return nil, ErrUnknown
 		} else {
-			s.log.ERR("failed getting provider with UUID %s: %s", search, err)
+			s.log.ERR("failed getting object with UUID %s: %s", search, err)
 			return nil, ErrUnknown
 		}
 	}
+	// Copy object properties to the returned Provider result
+	pProps := make([]*pb.Property, len(obj.Properties))
+	for x, oProp := range obj.Properties {
+		pProps[x] = &pb.Property{
+			Key:   oProp.Key,
+			Value: oProp.Value,
+		}
+	}
+
 	return &pb.Provider{
 		Partition:    p.Partition,
 		ProviderType: p.ProviderType,
-		Name:         name,
+		Name:         obj.Name,
 		Uuid:         p.Uuid,
 		Generation:   p.Generation,
+		Properties:   pProps,
+		Tags:         obj.Tags,
 	}, nil
 }
 
@@ -111,7 +122,7 @@ func (s *Server) ProviderCreate(
 	)
 
 	// First save the object in the metadata service
-	provObj := &metapb.Object{
+	obj := &metapb.Object{
 		Partition:  input.Partition,
 		ObjectType: "runm.provider",
 		Uuid:       input.Uuid,
@@ -119,16 +130,16 @@ func (s *Server) ProviderCreate(
 		Tags:       input.Tags,
 	}
 	if input.Properties != nil {
-		props := make([]*metapb.Property, len(input.Properties))
+		props := make([]*metapb.Property, 0)
 		for key, val := range input.Properties {
 			props = append(props, &metapb.Property{
 				Key:   key,
 				Value: val,
 			})
 		}
-		provObj.Properties = props
+		obj.Properties = props
 	}
-	createdObj, err := s.objectCreate(req.Session, provObj)
+	createdObj, err := s.objectCreate(req.Session, obj)
 	if err != nil {
 		if s, ok := status.FromError(err); ok {
 			scode := s.Code()
@@ -157,6 +168,15 @@ func (s *Server) ProviderCreate(
 		input.Name,
 	)
 
+	// Copy object properties to the returned Provider result
+	pProps := make([]*pb.Property, len(obj.Properties))
+	for x, oProp := range obj.Properties {
+		pProps[x] = &pb.Property{
+			Key:   oProp.Key,
+			Value: oProp.Value,
+		}
+	}
+
 	return &pb.ProviderCreateResponse{
 		Provider: &pb.Provider{
 			Uuid:         input.Uuid,
@@ -164,6 +184,8 @@ func (s *Server) ProviderCreate(
 			Partition:    createdObj.Partition,
 			ProviderType: input.ProviderType,
 			Generation:   resProv.Generation,
+			Properties:   pProps,
+			Tags:         input.Tags,
 		},
 	}, nil
 }

@@ -225,6 +225,40 @@ func (s *Server) uuidFromName(
 	return rec.Uuid, nil
 }
 
+// objectFromUuid returns an Object message matching the supplied object UUID.
+// If no such object could be found, returns ("", ErrNotFound)
+func (s *Server) objectFromUuid(
+	sess *pb.Session,
+	uuid string,
+) (*metapb.Object, error) {
+	req := &metapb.ObjectGetRequest{
+		Session: metaSession(sess),
+		Filter: &metapb.ObjectFilter{
+			Uuid: uuid,
+		},
+	}
+	mc, err := s.metaClient()
+	if err != nil {
+		return nil, err
+	}
+	rec, err := mc.ObjectGet(context.Background(), req)
+	if err != nil {
+		if s, ok := status.FromError(err); ok {
+			if s.Code() == codes.NotFound {
+				return nil, errors.ErrNotFound
+			}
+		}
+		// We don't want to expose internal errors to the user, so just return
+		// an unknown error after logging it.
+		s.log.ERR(
+			"failed to retrieve object with UUID %s: %s",
+			uuid, err,
+		)
+		return nil, ErrUnknown
+	}
+	return rec, nil
+}
+
 // nameFromUuid returns a name matching the supplied object UUID. If no such
 // object could be found, returns ("", ErrNotFound)
 func (s *Server) nameFromUuid(
@@ -245,7 +279,7 @@ func (s *Server) nameFromUuid(
 	if err != nil {
 		if s, ok := status.FromError(err); ok {
 			if s.Code() == codes.NotFound {
-				return "", ErrNotFound
+				return "", errors.ErrNotFound
 			}
 		}
 		// We don't want to expose internal errors to the user, so just return

@@ -1,5 +1,9 @@
 partition: part0
 provider_type: runm.compute
 name: row1-rack1-compute23
+properties:
+  location.row: 1
+  location.rack: 1
+  location.rack_position: 23
 tags:
   - compute

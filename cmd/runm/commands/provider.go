@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"strings"
 
 	pb "github.com/runmachine-io/runmachine/pkg/api/proto"
 	"github.com/spf13/cobra"
@@ -26,15 +27,14 @@ func printProvider(obj *pb.Provider) {
 	if obj.ParentUuid != "" {
 		fmt.Printf("Parent:        %s\n", obj.ParentUuid)
 	}
-	// TODO(jaypipes): Add support for properties and tags
-	//if obj.Properties != nil {
-	//	fmt.Printf("Properties:\n")
-	//	for _, prop := range obj.Properties {
-	//		fmt.Printf("   %s=%s\n", prop.Key, prop.Value)
-	//	}
-	//}
-	//if obj.Tags != nil {
-	//	tags := strings.Join(obj.Tags, ",")
-	//	fmt.Printf("Tags:        %s\n", tags)
-	//}
+	if obj.Properties != nil {
+		fmt.Printf("Properties:\n")
+		for _, prop := range obj.Properties {
+			fmt.Printf("   %s=%s\n", prop.Key, prop.Value)
+		}
+	}
+	if obj.Tags != nil {
+		tags := strings.Join(obj.Tags, ",")
+		fmt.Printf("Tags:        %s\n", tags)
+	}
 }

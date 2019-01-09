@@ -76,6 +76,47 @@ func (s *Server) ProviderGet(
 	}, nil
 }
 
+// ProviderList streams zero or more Provider objects back to the client that
+// match a set of optional filters
+func (s *Server) ProviderList(
+	req *pb.ProviderListRequest,
+	stream pb.RunmAPI_ProviderListServer,
+) error {
+	// TODO(jaypipes): Transform the supplied generic filters into the more
+	// specific UuidFilter or NameFilter objects accepted by the metadata
+	// service
+	mfils := make([]*metapb.ObjectFilter, 0)
+	mfils = append(mfils, &metapb.ObjectFilter{
+		ObjectType: &metapb.ObjectTypeFilter{
+			Search: "runm.provider",
+		},
+	})
+	// Grab the basic object information from the metadata service first
+	objs, err := s.objectsGetMatching(req.Session, mfils)
+	if err != nil {
+		return err
+	}
+
+	if len(objs) == 0 {
+		return nil
+	}
+
+	// TODO(jaypipes): Create a set of respb.ProviderFilter objects and grab
+	// provider-specific information from the runm-resource service
+
+	for _, obj := range objs {
+		p := &pb.Provider{
+			Partition: obj.Partition,
+			Name:      obj.Name,
+			Uuid:      obj.Uuid,
+		}
+		if err = stream.Send(p); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // validateProviderCreateRequest ensures that the data the user sent in the
 // request payload can be unmarshal'd properly into YAML, contains all relevant
 // fields and meets things like property meta validation checks.

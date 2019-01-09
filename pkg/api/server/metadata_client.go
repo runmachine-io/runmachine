@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"io"
 
 	pb "github.com/runmachine-io/runmachine/pkg/api/proto"
 	"github.com/runmachine-io/runmachine/pkg/errors"
@@ -352,4 +353,44 @@ func (s *Server) objectCreate(
 		return nil, err
 	}
 	return resp.Object, nil
+}
+
+// objectsGetMatching takes a slice of pointers to object filters and returns
+// matching metapb.Object messages
+func (s *Server) objectsGetMatching(
+	sess *pb.Session,
+	any []*metapb.ObjectFilter,
+) ([]*metapb.Object, error) {
+	mc, err := s.metaClient()
+	if err != nil {
+		return nil, err
+	}
+	req := &metapb.ObjectListRequest{
+		Session: metaSession(sess),
+		Any:     any,
+	}
+	stream, err := mc.ObjectList(context.Background(), req)
+	if err != nil {
+		return nil, err
+	}
+
+	objs := make([]*metapb.Object, 0)
+	for {
+		msg, err := stream.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		objs = append(
+			objs, &metapb.Object{
+				Partition:  msg.Partition,
+				Uuid:       msg.Uuid,
+				Name:       msg.Name,
+				ObjectType: msg.ObjectType,
+			},
+		)
+	}
+	return objs, nil
 }

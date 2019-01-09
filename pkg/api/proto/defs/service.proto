@@ -31,6 +31,9 @@ service RunmAPI {
     // Returns information about a specific provider
     rpc provider_get(ProviderGetRequest) returns (Provider) {}
 
+    // Returns information about providers
+    rpc provider_list(ProviderListRequest) returns (stream Provider) {}
+
     // Create a new provider
     rpc provider_create(CreateRequest) returns (
         ProviderCreateResponse) {}
@@ -79,6 +82,12 @@ message ProviderTypeListRequest {
 message ProviderGetRequest {
     Session session = 1;
     ProviderFilter filter = 2;
+}
+
+message ProviderListRequest {
+    Session session = 1;
+    SearchOptions options = 2;
+    repeated ProviderFilter any = 3;
 }
 
 message ProviderCreateResponse {

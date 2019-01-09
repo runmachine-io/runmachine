@@ -202,8 +202,10 @@ func (s *Server) uuidFromName(
 					UsePrefix: false,
 				},
 			},
-			Name:      name,
-			UsePrefix: false,
+			NameFilter: &metapb.NameFilter{
+				Name:      name,
+				UsePrefix: false,
+			},
 		},
 	}
 	mc, err := s.metaClient()
@@ -237,7 +239,10 @@ func (s *Server) objectFromUuid(
 	req := &metapb.ObjectGetRequest{
 		Session: metaSession(sess),
 		Filter: &metapb.ObjectFilter{
-			Uuid: uuid,
+			UuidFilter: &metapb.UuidFilter{
+				Uuid:      uuid,
+				UsePrefix: false,
+			},
 		},
 	}
 	mc, err := s.metaClient()
@@ -268,32 +273,11 @@ func (s *Server) nameFromUuid(
 	sess *pb.Session,
 	uuid string,
 ) (string, error) {
-	req := &metapb.ObjectGetRequest{
-		Session: metaSession(sess),
-		Filter: &metapb.ObjectFilter{
-			Uuid: uuid,
-		},
-	}
-	mc, err := s.metaClient()
+	obj, err := s.objectFromUuid(sess, uuid)
 	if err != nil {
 		return "", err
 	}
-	rec, err := mc.ObjectGet(context.Background(), req)
-	if err != nil {
-		if s, ok := status.FromError(err); ok {
-			if s.Code() == codes.NotFound {
-				return "", errors.ErrNotFound
-			}
-		}
-		// We don't want to expose internal errors to the user, so just return
-		// an unknown error after logging it.
-		s.log.ERR(
-			"failed to retrieve object with UUID %s: %s",
-			uuid, err,
-		)
-		return "", ErrUnknown
-	}
-	return rec.Name, nil
+	return obj.Name, nil
 }
 
 // providerTypeGetByCode returns a provider type record matching the supplied

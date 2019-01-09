@@ -115,10 +115,15 @@ func buildObjectFilters() []*pb.ObjectFilter {
 			case "project":
 				filter.Project = value
 			case "uuid":
-				filter.Uuid = value
+				filter.UuidFilter = &pb.UuidFilter{
+					Uuid:      value,
+					UsePrefix: false,
+				}
 			case "name":
-				filter.Name = value
-				filter.UsePrefix = usePrefix
+				filter.NameFilter = &pb.NameFilter{
+					Name:      value,
+					UsePrefix: usePrefix,
+				}
 			default:
 				fmt.Fprintf(
 					os.Stderr,

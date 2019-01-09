@@ -162,7 +162,7 @@ func (s *Server) expandObjectFilter(
 	// partition filters, then go ahead and just return a single
 	// types.ObjectCondition with the search term and prefix indicator for the
 	// object.
-	if filter.Name != "" || filter.Uuid != "" || filter.Project != "" {
+	if filter.NameFilter != nil || filter.UuidFilter != nil || filter.Project != "" {
 		if len(res) == 0 {
 			res = append(res, &conditions.ObjectCondition{})
 		}
@@ -170,14 +170,18 @@ func (s *Server) expandObjectFilter(
 		// original ObjectFilter's Search and UsePrefix for each
 		// conditions.ObjectCondition we've created
 		for _, pf := range res {
-			if filter.Uuid != "" {
-				pf.UuidCondition = conditions.UuidEqual(filter.Uuid)
+			if filter.UuidFilter != nil {
+				pf.UuidCondition = conditions.UuidEqual(filter.UuidFilter.Uuid)
 			}
-			if filter.Name != "" {
-				if filter.UsePrefix {
-					pf.NameCondition = conditions.NameLike(filter.Name)
+			if filter.NameFilter != nil {
+				if filter.NameFilter.UsePrefix {
+					pf.NameCondition = conditions.NameLike(
+						filter.NameFilter.Name,
+					)
 				} else {
-					pf.NameCondition = conditions.NameEqual(filter.Name)
+					pf.NameCondition = conditions.NameEqual(
+						filter.NameFilter.Name,
+					)
 				}
 			}
 			pf.ProjectCondition = filter.Project

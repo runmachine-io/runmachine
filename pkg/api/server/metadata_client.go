@@ -196,9 +196,11 @@ func (s *Server) uuidFromName(
 	req := &metapb.ObjectGetRequest{
 		Session: metaSession(sess),
 		Filter: &metapb.ObjectFilter{
-			ObjectType: &metapb.ObjectTypeFilter{
-				Search:    objType,
-				UsePrefix: false,
+			ObjectTypeFilter: &metapb.ObjectTypeFilter{
+				CodeFilter: &metapb.CodeFilter{
+					Code:      objType,
+					UsePrefix: false,
+				},
 			},
 			Name:      name,
 			UsePrefix: false,

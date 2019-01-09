@@ -124,15 +124,17 @@ func (s *Store) ObjectTypeList(
 	// object type codes in order to return unique results
 	objs := make(map[string]*pb.ObjectType, 0)
 	for _, filter := range any {
-		filterObjs, err := s.objectTypesGetByCode(
-			filter.Search,
-			filter.UsePrefix,
-		)
-		if err != nil {
-			return nil, err
-		}
-		for _, obj := range filterObjs {
-			objs[obj.Code] = obj
+		if filter.CodeFilter != nil {
+			filterObjs, err := s.objectTypesGetByCode(
+				filter.CodeFilter.Code,
+				filter.CodeFilter.UsePrefix,
+			)
+			if err != nil {
+				return nil, err
+			}
+			for _, obj := range filterObjs {
+				objs[obj.Code] = obj
+			}
 		}
 	}
 	res := make([]*pb.ObjectType, len(objs))

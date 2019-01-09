@@ -15,10 +15,10 @@ func (s *Server) ObjectTypeGet(
 		return nil, err
 	}
 
-	if req.Filter == nil || req.Filter.Search == "" {
+	if req.Filter == nil || req.Filter.CodeFilter == nil || req.Filter.CodeFilter.Code == "" {
 		return nil, ErrCodeRequired
 	}
-	obj, err := s.store.ObjectTypeGet(req.Filter.Search)
+	obj, err := s.store.ObjectTypeGet(req.Filter.CodeFilter.Code)
 	if err != nil {
 		if err == errors.ErrNotFound {
 			return nil, ErrNotFound
@@ -27,7 +27,7 @@ func (s *Server) ObjectTypeGet(
 		// an unknown error after logging it.
 		s.log.ERR(
 			"failed to retrieve object type of %s: %s",
-			req.Filter.Search,
+			req.Filter.CodeFilter.Code,
 			err,
 		)
 		return nil, ErrUnknown

@@ -62,9 +62,13 @@ func (s *Server) expandObjectFilter(
 	// ObjectTypeFilter in the supplied ObjectFilter
 	var objTypes []*pb.ObjectType
 
-	if filter.Partition != nil {
+	if filter.PartitionFilter != nil {
 		// Verify that the requested partition(s) exist(s)
-		partitions, err = s.store.PartitionList([]*pb.PartitionFilter{filter.Partition})
+		partitions, err = s.store.PartitionList(
+			[]*pb.PartitionFilter{
+				filter.PartitionFilter,
+			},
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -101,10 +105,10 @@ func (s *Server) expandObjectFilter(
 		partitions = append(partitions, part)
 	}
 
-	if filter.ObjectType != nil {
+	if filter.ObjectTypeFilter != nil {
 		// Verify that the object type even exists
 		objTypes, err = s.store.ObjectTypeList(
-			[]*pb.ObjectTypeFilter{filter.ObjectType},
+			[]*pb.ObjectTypeFilter{filter.ObjectTypeFilter},
 		)
 		if err != nil {
 			return nil, err
@@ -201,7 +205,10 @@ func (s *Server) normalizeObjectFilters(
 				// which is why we don't just return nil here
 				continue
 			}
-			s.log.ERR("normalizeObjectFilters: failed to expand object filter %s: %s", filter, err)
+			s.log.ERR(
+				"normalizeObjectFilters: failed to expand object filter %s: %s",
+				filter, err,
+			)
 			return nil, errors.ErrUnknown
 		} else if len(pfs) > 0 {
 			for _, pf := range pfs {

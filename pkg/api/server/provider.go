@@ -87,8 +87,11 @@ func (s *Server) ProviderList(
 	// service
 	mfils := make([]*metapb.ObjectFilter, 0)
 	mfils = append(mfils, &metapb.ObjectFilter{
-		ObjectType: &metapb.ObjectTypeFilter{
-			Search: "runm.provider",
+		ObjectTypeFilter: &metapb.ObjectTypeFilter{
+			CodeFilter: &metapb.CodeFilter{
+				Code:      "runm.provider",
+				UsePrefix: false,
+			},
 		},
 	})
 	// Grab the basic object information from the metadata service first

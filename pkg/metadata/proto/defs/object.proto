@@ -45,8 +45,8 @@ message Object {
 
 // Used in matching object records
 message ObjectFilter {
-    PartitionFilter partition = 1;
-    ObjectTypeFilter object_type = 2;
+    PartitionFilter partition_filter = 1;
+    ObjectTypeFilter object_type_filter = 2;
     // The project the object must belong to, if the object type scope of this
     // object is PROJECT
     string project = 3;

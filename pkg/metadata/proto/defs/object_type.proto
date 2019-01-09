@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package runmmeta;
 
+import "filter.proto";
+
 // Indicates the scope of a type of object. The object type's scope indicates
 // the level at which an object's name is guaranteed to be unique. Objects that
 // have an object type with a PROJECT object type scope must be created with a
@@ -25,7 +27,5 @@ message ObjectType {
 // Used in matching object type records
 message ObjectTypeFilter {
     // A search term on the object type's string code
-    string search = 1;
-    // Indicates the search should be a prefix expression
-    bool use_prefix = 2;
+    CodeFilter code_filter = 1;
 }

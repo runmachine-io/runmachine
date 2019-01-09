@@ -19,12 +19,12 @@ func (s *Server) ProviderGet(
 	ctx context.Context,
 	req *pb.ProviderGetRequest,
 ) (*pb.Provider, error) {
-	if req.Filter == nil || req.Filter.Search == "" {
+	if req.Filter == nil || req.Filter.PrimaryFilter == nil || req.Filter.PrimaryFilter.Search == "" {
 		return nil, ErrSearchRequired
 	}
 	var err error
 	var search string
-	search = req.Filter.Search
+	search = req.Filter.PrimaryFilter.Search
 	if !util.IsUuidLike(search) {
 		// Look up the provider's UUID in the metadata service by name
 		search, err = s.uuidFromName(req.Session, "runm.provider", search)

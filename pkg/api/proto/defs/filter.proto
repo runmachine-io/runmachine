@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package runmapi;
+
+// Used in matching records using a simple string with optional prefix
+message SearchFilter {
+    // Search string
+    string search = 1;
+    // Indicates the search should be a prefix expression
+    bool use_prefix = 2;
+}

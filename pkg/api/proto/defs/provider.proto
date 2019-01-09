@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package runmapi;
 
+import "filter.proto";
 import "property.proto";
 
 // A provider exposes inventory of resources to be claimed by consumers of
@@ -18,11 +19,12 @@ message Provider {
     uint32 generation = 100;
 }
 
-
 // Used in matching provider records
 message ProviderFilter {
     // UUID or human-readable name of the provider
-    string search = 1;
-    // Indicates the search should be a prefix expression
-    bool use_prefix = 2;
+    SearchFilter primary_filter = 1;
+    // UUID or human-readable name of the provider's partition
+    SearchFilter partition_filter = 2;
+    // Type of the provider
+    SearchFilter provider_type_filter = 3;
 }

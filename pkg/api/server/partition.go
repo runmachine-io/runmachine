@@ -19,10 +19,10 @@ func (s *Server) PartitionGet(
 	ctx context.Context,
 	req *pb.PartitionGetRequest,
 ) (*pb.Partition, error) {
-	if req.Filter == nil || req.Filter.Search == "" {
+	if req.Filter == nil || req.Filter.PrimaryFilter == nil || req.Filter.PrimaryFilter.Search == "" {
 		return nil, ErrSearchRequired
 	}
-	return s.partitionGet(req.Session, req.Filter.Search)
+	return s.partitionGet(req.Session, req.Filter.PrimaryFilter.Search)
 }
 
 // PartitionList streams zero or more Partition objects back to the client that

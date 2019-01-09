@@ -84,20 +84,21 @@ func buildProviderFilters() []*pb.ProviderFilter {
 			}
 			switch field {
 			case "partition":
-				//filter.PartitionFilter = &pb.PartitionFilter{
-				//	Search:    value,
-				//	UsePrefix: usePrefix,
-				//}
+				filter.PartitionFilter = &pb.SearchFilter{
+					Search:    value,
+					UsePrefix: usePrefix,
+				}
 			case "type":
-				//filter.ProviderTypeFilter = &pb.ProviderTypeFilter{
-				//	Search:    value,
-				//	UsePrefix: usePrefix,
-				//}
+				filter.ProviderTypeFilter = &pb.SearchFilter{
+					Search:    value,
+					UsePrefix: usePrefix,
+				}
 			case "uuid":
-				filter.Search = value
 			case "name":
-				filter.Search = value
-				filter.UsePrefix = usePrefix
+				filter.PrimaryFilter = &pb.SearchFilter{
+					Search:    value,
+					UsePrefix: usePrefix,
+				}
 			default:
 				fmt.Fprintf(
 					os.Stderr,

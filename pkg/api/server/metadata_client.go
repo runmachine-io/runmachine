@@ -72,6 +72,50 @@ func (s *Server) metaClient() (metapb.RunmMetadataClient, error) {
 	return s.metaclient, nil
 }
 
+// partitionsGetMatching takes an API PartitionFilter and returns a list of
+// Partition messages matching the filter
+func (s *Server) partitionsGetMatchingFilter(
+	sess *pb.Session,
+	filter *pb.SearchFilter,
+) ([]*metapb.Partition, error) {
+	mfil := &metapb.PartitionFilter{}
+	if util.IsUuidLike(filter.Search) {
+		mfil.UuidFilter = &metapb.UuidFilter{
+			Uuid: filter.Search,
+		}
+	} else {
+		mfil.NameFilter = &metapb.NameFilter{
+			Name:      filter.Search,
+			UsePrefix: filter.UsePrefix,
+		}
+	}
+	mc, err := s.metaClient()
+	if err != nil {
+		return nil, err
+	}
+	req := &metapb.PartitionListRequest{
+		Session: metaSession(sess),
+		Any:     []*metapb.PartitionFilter{mfil},
+	}
+	stream, err := mc.PartitionList(context.Background(), req)
+	if err != nil {
+		return nil, err
+	}
+
+	msgs := make([]*metapb.Partition, 0)
+	for {
+		msg, err := stream.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		msgs = append(msgs, msg)
+	}
+	return msgs, nil
+}
+
 // partitionGet returns a partition record matching the supplied UUID or name
 // If no such partition could be found, returns (nil, ErrNotFound)
 func (s *Server) partitionGet(

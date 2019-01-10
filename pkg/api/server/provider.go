@@ -83,18 +83,87 @@ func (s *Server) ProviderList(
 	req *pb.ProviderListRequest,
 	stream pb.RunmAPI_ProviderListServer,
 ) error {
-	// TODO(jaypipes): Transform the supplied generic filters into the more
-	// specific UuidFilter or NameFilter objects accepted by the metadata
-	// service
 	mfils := make([]*metapb.ObjectFilter, 0)
-	mfils = append(mfils, &metapb.ObjectFilter{
-		ObjectTypeFilter: &metapb.ObjectTypeFilter{
-			CodeFilter: &metapb.CodeFilter{
-				Code:      "runm.provider",
-				UsePrefix: false,
+	// If we get, for example, a filter on a non-existent partition, we
+	// increment this variable. If the number of invalid conditions is equal to
+	// the number of filters, we return an empty stream and don't bother
+	// calling to the resource service.
+	invalidConds := 0
+	if len(req.Any) > 0 {
+		// Transform the supplied generic filters into the more specific
+		// UuidFilter or NameFilter objects accepted by the metadata service
+		for _, filter := range req.Any {
+			mfil := &metapb.ObjectFilter{
+				ObjectTypeFilter: &metapb.ObjectTypeFilter{
+					CodeFilter: &metapb.CodeFilter{
+						Code:      "runm.provider",
+						UsePrefix: false,
+					},
+				},
+			}
+			if filter.PrimaryFilter != nil {
+				if util.IsUuidLike(filter.PrimaryFilter.Search) {
+					mfil.UuidFilter = &metapb.UuidFilter{
+						Uuid: filter.PrimaryFilter.Search,
+					}
+				} else {
+					mfil.NameFilter = &metapb.NameFilter{
+						Name:      filter.PrimaryFilter.Search,
+						UsePrefix: filter.PrimaryFilter.UsePrefix,
+					}
+				}
+			}
+			if filter.PartitionFilter != nil {
+				// The user may have specified a partition UUID or a partition
+				// name with an optional prefix. We "expand" this by asking the
+				// metadata service for the partitions matching this
+				// name-or-UUID filter and then we pass those partition UUIDs
+				// in the object filter.
+				partObjs, err := s.partitionsGetMatchingFilter(
+					req.Session, filter.PartitionFilter,
+				)
+				if err != nil {
+					return err
+				}
+				if len(partObjs) == 0 {
+					// This filter will never return any objects since the
+					// searched-for partition term didn't match any partitions
+					invalidConds += 1
+					continue
+				}
+				partUuids := make([]string, len(partObjs))
+				for x, partObj := range partObjs {
+					partUuids[x] = partObj.Uuid
+				}
+				mfil.PartitionFilter = &metapb.UuidsFilter{
+					Uuids: partUuids,
+				}
+			}
+			mfils = append(mfils, mfil)
+		}
+
+	} else {
+		// Just get all provider objects from the metadata service
+		mfils = append(mfils, &metapb.ObjectFilter{
+			ObjectTypeFilter: &metapb.ObjectTypeFilter{
+				CodeFilter: &metapb.CodeFilter{
+					Code:      "runm.provider",
+					UsePrefix: false,
+				},
 			},
-		},
-	})
+		})
+
+	}
+
+	if len(req.Any) > 0 && len(req.Any) == invalidConds {
+		// No point going further, since all filters will return 0 results
+		s.log.L3(
+			"ProviderList: returning nil since all filters evaluated to " +
+				"impossible conditions",
+		)
+		return nil
+	}
+
 	// Grab the basic object information from the metadata service first
 	objs, err := s.objectsGetMatching(req.Session, mfils)
 	if err != nil {

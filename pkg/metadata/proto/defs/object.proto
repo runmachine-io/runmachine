@@ -4,7 +4,6 @@ package runmmeta;
 
 import "filter.proto";
 import "object_type.proto";
-import "partition.proto";
 import "property.proto";
 
 // An externally-referenceable object in the runm system. All objects in the
@@ -46,7 +45,7 @@ message Object {
 
 // Used in matching object records
 message ObjectFilter {
-    PartitionFilter partition_filter = 1;
+    UuidsFilter partition_filter = 1;
     ObjectTypeFilter object_type_filter = 2;
     UuidFilter uuid_filter = 3;
     NameFilter name_filter = 4;

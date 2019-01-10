@@ -94,16 +94,8 @@ func buildObjectFilters() []*pb.ObjectFilter {
 			}
 			switch field {
 			case "partition":
-				filter.PartitionFilter = &pb.PartitionFilter{
-					// name OR uuid...
-					UuidFilter: &pb.UuidFilter{
-						Uuid:      value,
-						UsePrefix: usePrefix,
-					},
-					NameFilter: &pb.NameFilter{
-						Name:      value,
-						UsePrefix: usePrefix,
-					},
+				filter.PartitionFilter = &pb.UuidsFilter{
+					Uuids: []string{value},
 				}
 			case "type":
 				filter.ObjectTypeFilter = &pb.ObjectTypeFilter{

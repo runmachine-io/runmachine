@@ -64,11 +64,16 @@ func (s *Server) expandObjectFilter(
 
 	if filter.PartitionFilter != nil {
 		// Verify that the requested partition(s) exist(s)
-		partitions, err = s.store.PartitionList(
-			[]*pb.PartitionFilter{
-				filter.PartitionFilter,
-			},
-		)
+		numParts := len(filter.PartitionFilter.Uuids)
+		pfils := make([]*pb.PartitionFilter, numParts)
+		for x, partUuid := range filter.PartitionFilter.Uuids {
+			pfils[x] = &pb.PartitionFilter{
+				UuidFilter: &pb.UuidFilter{
+					Uuid: partUuid,
+				},
+			}
+		}
+		partitions, err = s.store.PartitionList(pfils)
 		if err != nil {
 			return nil, err
 		}

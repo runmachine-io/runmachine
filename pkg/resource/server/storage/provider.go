@@ -14,6 +14,30 @@ type ProviderRecord struct {
 	ID       int64
 }
 
+// TODO(jaypipes): Move this to a utility package/lib
+// Returns a string containing the expression IN with one or more question
+// marks for parameter interpolation. If numArgs argument is 3, the returned
+// value would be "IN (?, ?, ?)"
+func InParamString(numArgs int) string {
+	resLen := 5 + ((numArgs * 3) - 2)
+	res := make([]byte, resLen)
+	res[0] = 'I'
+	res[1] = 'N'
+	res[2] = ' '
+	res[3] = '('
+	for x := 4; x < (resLen - 1); x++ {
+		res[x] = '?'
+		x++
+		if x < (resLen - 1) {
+			res[x] = ','
+			x++
+			res[x] = ' '
+		}
+	}
+	res[resLen-1] = ')'
+	return string(res)
+}
+
 // providerExists returns true if a provider with the UUID exists, false
 // otherwise
 func (s *Store) providerExists(
@@ -23,7 +47,8 @@ func (s *Store) providerExists(
 	return err == nil, nil
 }
 
-// ProviderGetByUuid returns a provider record matching the supplied UUID. If no such record exists, returns ErrNotFound
+// ProviderGetByUuid returns a provider record matching the supplied UUID. If
+// no such record exists, returns ErrNotFound
 func (s *Store) ProviderGetByUuid(
 	uuid string,
 ) (*ProviderRecord, error) {
@@ -56,6 +81,77 @@ WHERE p.uuid = ?`
 		log.Fatal(err)
 	}
 	return rec, nil
+}
+
+// ProviderGetMatching returns provider records matching any of the supplied
+// filters
+func (s *Store) ProvidersGetMatching(
+	any []*pb.ProviderFilter,
+) ([]*ProviderRecord, error) {
+	qargs := make([]interface{}, 0)
+	qs := `SELECT
+  p.id
+, p.uuid AS provider_uuid
+, part.uuid AS partition_uuid
+, pt.code AS provider_type
+, p.generation
+FROM providers AS p
+JOIN provider_types AS pt
+ ON p.provider_type_id = pt.id
+JOIN partitions AS part
+ ON p.partition_id = part.id`
+	if len(any) > 0 {
+		qs += `
+WHERE `
+	}
+	for x, filter := range any {
+		if x > 0 {
+			qs += `
+OR
+`
+		}
+		qs += "("
+		exprAnd := false
+		if filter.UuidFilter != nil {
+			qs += "p.uuid " + InParamString(len(filter.UuidFilter.Uuids))
+			for _, uuid := range filter.UuidFilter.Uuids {
+				qargs = append(qargs, uuid)
+			}
+			exprAnd = true
+		}
+		if filter.ProviderTypeFilter != nil {
+			if exprAnd {
+				qs += " AND "
+			}
+			qs += "pt.code " + InParamString(len(filter.ProviderTypeFilter.Codes))
+			for _, code := range filter.ProviderTypeFilter.Codes {
+				qargs = append(qargs, code)
+			}
+			exprAnd = true
+		}
+		qs += ")"
+	}
+	rows, err := s.DB().Query(qs, qargs...)
+	if err != nil {
+		panic(err.Error())
+	}
+	recs := make([]*ProviderRecord, 0)
+	for rows.Next() {
+		rec := &ProviderRecord{
+			Provider: &pb.Provider{},
+		}
+		if err := rows.Scan(
+			&rec.ID,
+			&rec.Provider.Uuid,
+			&rec.Provider.Partition,
+			&rec.Provider.ProviderType,
+			&rec.Provider.Generation,
+		); err != nil {
+			panic(err.Error())
+		}
+		recs = append(recs, rec)
+	}
+	return recs, nil
 }
 
 // ensurePartition creates a record in the partitions table for the supplied

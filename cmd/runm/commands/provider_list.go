@@ -56,6 +56,7 @@ func providerList(cmd *cobra.Command, args []string) {
 	}
 	headers := []string{
 		"Partition",
+		"Provider Type",
 		"UUID",
 		"Name",
 	}
@@ -63,6 +64,7 @@ func providerList(cmd *cobra.Command, args []string) {
 	for x, obj := range msgs {
 		rows[x] = []string{
 			obj.Partition,
+			obj.ProviderType,
 			obj.Uuid,
 			obj.Name,
 		}

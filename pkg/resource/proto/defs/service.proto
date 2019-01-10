@@ -3,6 +3,7 @@ syntax = "proto3";
 package runmresource;
 
 import "provider.proto";
+import "search.proto";
 import "session.proto";
 
 // The runm-resource gRPC service manages inventory of the deployment's set of
@@ -12,6 +13,9 @@ service RunmResource {
     // Returns information about a specific provider
     rpc provider_get(ProviderGetRequest) returns (Provider) {}
 
+    // Returns information about multiple providers
+    rpc provider_list(ProviderListRequest) returns (stream Provider) {}
+
     // Create a new provider
     rpc provider_create(ProviderCreateRequest) returns (
         ProviderCreateResponse) {}
@@ -20,6 +24,12 @@ service RunmResource {
 message ProviderGetRequest {
     Session session = 1;
     string uuid = 2;
+}
+
+message ProviderListRequest {
+    Session session = 1;
+    SearchOptions options = 2;
+    repeated ProviderFilter any = 3;
 }
 
 message ProviderCreateRequest {

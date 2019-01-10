@@ -7,6 +7,7 @@ import (
 	"github.com/runmachine-io/runmachine/pkg/api/types"
 	"github.com/runmachine-io/runmachine/pkg/errors"
 	metapb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
+	respb "github.com/runmachine-io/runmachine/pkg/resource/proto"
 	"github.com/runmachine-io/runmachine/pkg/util"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -104,14 +105,82 @@ func (s *Server) ProviderList(
 		return nil
 	}
 
-	// TODO(jaypipes): Create a set of respb.ProviderFilter objects and grab
-	// provider-specific information from the runm-resource service
+	// If the user specified one or more UUIDs or names in the incoming API
+	// provider filters, the metadata service will have already handled the
+	// translation/lookup to UUIDs, so we can pass the returned object's UUIDs
+	// to the resource service's ProviderFilter.UuidFilter below.
+	primaryFiltered := false
 
+	objMap := make(map[string]*metapb.Object, len(objs))
 	for _, obj := range objs {
+		objMap[obj.Uuid] = obj
+	}
+
+	var uuids []string
+	if primaryFiltered {
+		uuids = make([]string, len(objMap))
+		x := 0
+		for uuid, _ := range objMap {
+			uuids[x] = uuid
+			x += 1
+		}
+	}
+
+	// Create a set of respb.ProviderFilter objects and grab provider-specific
+	// information from the runm-resource service. For now, we only supply
+	// filters to the resource service's ProviderList API call if there were
+	// filters passed to the API service's ProviderList API call.
+	rfils := make([]*respb.ProviderFilter, 0)
+	if len(req.Any) > 0 {
+		for _, f := range req.Any {
+			rfil := &respb.ProviderFilter{}
+			if f.PartitionFilter != nil {
+				// TODO(jaypipes): Move the partition name -> UUID
+				// transformation from the metadata service to the API service
+				// and use that here
+			}
+			if f.ProviderTypeFilter != nil {
+				// TODO(jaypipes): Expand the API SearchFilter for provider
+				// types into a []string{} of provider type codes by calling
+				// the ProviderTypeList metadata service API. For now, just
+				// pass in the Search term as an exact match...
+				rfil.ProviderTypeFilter = &respb.CodeFilter{
+					Codes: []string{f.ProviderTypeFilter.Search},
+				}
+			}
+			if primaryFiltered {
+				rfil.UuidFilter = &respb.UuidFilter{
+					Uuids: uuids,
+				}
+			}
+			rfils = append(rfils, rfil)
+		}
+	}
+
+	// OK, now we grab the provider-specific information from the resource
+	// service and mash the generic object information into the returned API
+	// Provider structs
+	provs, err := s.providersGetMatching(req.Session, rfils)
+	if err != nil {
+		return err
+	}
+	for _, prov := range provs {
+		obj, exists := objMap[prov.Uuid]
+		if !exists {
+			s.log.ERR(
+				"DATA CORRUPTION! provider with UUID %s returned from "+
+					"resource service but no matching object exists in "+
+					"metadata service!",
+				prov.Uuid,
+			)
+			continue
+		}
 		p := &pb.Provider{
-			Partition: obj.Partition,
-			Name:      obj.Name,
-			Uuid:      obj.Uuid,
+			Partition:    obj.Partition,
+			Name:         obj.Name,
+			Uuid:         obj.Uuid,
+			ProviderType: prov.ProviderType,
+			Generation:   prov.Generation,
 		}
 		if err = stream.Send(p); err != nil {
 			return err

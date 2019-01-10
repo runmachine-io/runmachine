@@ -4,7 +4,7 @@ package runmresource;
 
 import "capability.proto";
 import "distance.proto";
-import "wrappers.proto";
+import "filter.proto";
 
 // A collection of related providers
 message ProviderGroup {
@@ -32,4 +32,11 @@ message Provider {
     repeated Capability capabilities = 54;
     repeated ProviderDistance distances = 55;
     uint32 generation = 100;
+}
+
+// Used in matching provider records
+message ProviderFilter {
+    UuidFilter uuid_filter = 1;
+    UuidFilter partition_filter = 2;
+    CodeFilter provider_type_filter = 3;
 }

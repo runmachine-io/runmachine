@@ -30,6 +30,24 @@ func (s *Server) ProviderGet(
 	return rec.Provider, nil
 }
 
+// ProviderList streams zero or more Provider objects back to the client that
+// match a set of optional filters
+func (s *Server) ProviderList(
+	req *pb.ProviderListRequest,
+	stream pb.RunmResource_ProviderListServer,
+) error {
+	objs, err := s.store.ProvidersGetMatching(req.Any)
+	if err != nil {
+		return err
+	}
+	for _, obj := range objs {
+		if err = stream.Send(obj.Provider); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // ProviderCreate creates a new provider record in backend storage
 func (s *Server) ProviderCreate(
 	ctx context.Context,

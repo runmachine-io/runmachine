@@ -360,7 +360,7 @@ func (s *Server) objectsGetMatching(
 		return nil, err
 	}
 
-	objs := make([]*metapb.Object, 0)
+	msgs := make([]*metapb.Object, 0)
 	for {
 		msg, err := stream.Recv()
 		if err == io.EOF {
@@ -369,14 +369,7 @@ func (s *Server) objectsGetMatching(
 		if err != nil {
 			return nil, err
 		}
-		objs = append(
-			objs, &metapb.Object{
-				Partition:  msg.Partition,
-				Uuid:       msg.Uuid,
-				Name:       msg.Name,
-				ObjectType: msg.ObjectType,
-			},
-		)
+		msgs = append(msgs, msg)
 	}
-	return objs, nil
+	return msgs, nil
 }

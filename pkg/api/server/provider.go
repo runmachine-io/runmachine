@@ -84,24 +84,35 @@ func (s *Server) providerGetByUuid(
 			return nil, ErrUnknown
 		}
 	}
+	return apiProviderFromComponents(prec, obj), nil
+}
+
+// mergeProviderWithObject simply takes a resource service Provider and a
+// metadata Object and merges the object information into the API Provider's
+// generic object fields (like name, tags, properties, etc), returning an API
+// provider object from the combined data
+func apiProviderFromComponents(
+	p *respb.Provider,
+	obj *metapb.Object,
+) *pb.Provider {
 	// Copy object properties to the returned Provider result
-	pProps := make([]*pb.Property, len(obj.Properties))
+	props := make([]*pb.Property, len(obj.Properties))
 	for x, oProp := range obj.Properties {
-		pProps[x] = &pb.Property{
+		props[x] = &pb.Property{
 			Key:   oProp.Key,
 			Value: oProp.Value,
 		}
 	}
 
 	return &pb.Provider{
-		Partition:    prec.Partition,
-		ProviderType: prec.ProviderType,
+		Partition:    p.Partition,
+		ProviderType: p.ProviderType,
 		Name:         obj.Name,
 		Uuid:         obj.Uuid,
-		Generation:   prec.Generation,
-		Properties:   pProps,
+		Generation:   p.Generation,
+		Properties:   props,
 		Tags:         obj.Tags,
-	}, nil
+	}
 }
 
 // ProviderList streams zero or more Provider objects back to the client that
@@ -278,13 +289,7 @@ func (s *Server) ProviderList(
 			)
 			continue
 		}
-		p := &pb.Provider{
-			Partition:    obj.Partition,
-			Name:         obj.Name,
-			Uuid:         obj.Uuid,
-			ProviderType: prov.ProviderType,
-			Generation:   prov.Generation,
-		}
+		p := apiProviderFromComponents(prov, obj)
 		if err = stream.Send(p); err != nil {
 			return err
 		}

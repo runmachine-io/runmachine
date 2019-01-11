@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"io"
 
 	pb "github.com/runmachine-io/runmachine/pkg/api/proto"
 	"github.com/runmachine-io/runmachine/pkg/api/types"
@@ -121,6 +122,25 @@ func (s *Server) ProviderList(
 	req *pb.ProviderListRequest,
 	stream pb.RunmAPI_ProviderListServer,
 ) error {
+	provs, err := s.providersGetMatching(req.Session, req.Any)
+	if err != nil {
+		return err
+	}
+	for _, prov := range provs {
+		if err = stream.Send(prov); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// providersGetMatching returns a slice of pointers to API Provider messages
+// matching any of a set of API ProviderFilter messages.
+func (s *Server) providersGetMatching(
+	sess *pb.Session,
+	any []*pb.ProviderFilter,
+) ([]*pb.Provider, error) {
+	res := make([]*pb.Provider, 0)
 	mfils := make([]*metapb.ObjectFilter, 0)
 	// If we get, for example, a filter on a non-existent partition, we
 	// increment this variable. If the number of invalid conditions is equal to
@@ -130,11 +150,11 @@ func (s *Server) ProviderList(
 	// We keep a cache of partition UUIDs that were normalized during filter
 	// expansion/solving with the metadata service so that when we pass filters
 	// to the resource service, we have those partition UUIDs handy
-	partUuidsReqMap := make(map[int][]string, len(req.Any))
-	if len(req.Any) > 0 {
+	partUuidsReqMap := make(map[int][]string, len(any))
+	if len(any) > 0 {
 		// Transform the supplied generic filters into the more specific
 		// UuidFilter or NameFilter objects accepted by the metadata service
-		for x, filter := range req.Any {
+		for x, filter := range any {
 			mfil := &metapb.ObjectFilter{
 				ObjectTypeFilter: &metapb.ObjectTypeFilter{
 					CodeFilter: &metapb.CodeFilter{
@@ -162,10 +182,10 @@ func (s *Server) ProviderList(
 				// name-or-UUID filter and then we pass those partition UUIDs
 				// in the object filter.
 				partObjs, err := s.partitionsGetMatchingFilter(
-					req.Session, filter.PartitionFilter,
+					sess, filter.PartitionFilter,
 				)
 				if err != nil {
-					return err
+					return nil, err
 				}
 				if len(partObjs) == 0 {
 					// This filter will never return any objects since the
@@ -200,23 +220,23 @@ func (s *Server) ProviderList(
 
 	}
 
-	if len(req.Any) > 0 && len(req.Any) == invalidConds {
+	if len(any) > 0 && len(any) == invalidConds {
 		// No point going further, since all filters will return 0 results
 		s.log.L3(
 			"ProviderList: returning nil since all filters evaluated to " +
 				"impossible conditions",
 		)
-		return nil
+		return res, nil
 	}
 
 	// Grab the basic object information from the metadata service first
-	objs, err := s.objectsGetMatching(req.Session, mfils)
+	objs, err := s.objectsGetMatching(sess, mfils)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if len(objs) == 0 {
-		return nil
+		return res, nil
 	}
 
 	// If the user specified one or more UUIDs or names in the incoming API
@@ -245,8 +265,8 @@ func (s *Server) ProviderList(
 	// filters to the resource service's ProviderList API call if there were
 	// filters passed to the API service's ProviderList API call.
 	rfils := make([]*respb.ProviderFilter, 0)
-	if len(req.Any) > 0 {
-		for x, f := range req.Any {
+	if len(any) > 0 {
+		for x, f := range any {
 			rfil := &respb.ProviderFilter{}
 			if f.PartitionFilter != nil {
 				rfil.PartitionFilter = &respb.UuidFilter{
@@ -274,27 +294,41 @@ func (s *Server) ProviderList(
 	// OK, now we grab the provider-specific information from the resource
 	// service and mash the generic object information into the returned API
 	// Provider structs
-	provs, err := s.providersGetMatching(req.Session, rfils)
+	rc, err := s.resClient()
 	if err != nil {
-		return err
+		return nil, err
 	}
-	for _, prov := range provs {
-		obj, exists := objMap[prov.Uuid]
+	req := &respb.ProviderListRequest{
+		Session: resSession(sess),
+		Any:     rfils,
+	}
+	stream, err := rc.ProviderList(context.Background(), req)
+	if err != nil {
+		return nil, err
+	}
+
+	for {
+		msg, err := stream.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		obj, exists := objMap[msg.Uuid]
 		if !exists {
 			s.log.ERR(
 				"DATA CORRUPTION! provider with UUID %s returned from "+
 					"resource service but no matching object exists in "+
 					"metadata service!",
-				prov.Uuid,
+				msg.Uuid,
 			)
 			continue
 		}
-		p := apiProviderFromComponents(prov, obj)
-		if err = stream.Send(p); err != nil {
-			return err
-		}
+		p := apiProviderFromComponents(msg, obj)
+		res = append(res, p)
 	}
-	return nil
+	return res, nil
 }
 
 // validateProviderCreateRequest ensures that the data the user sent in the

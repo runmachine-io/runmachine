@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"fmt"
-	"io"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -103,37 +102,4 @@ func (s *Server) providerCreate(
 		return nil, errors.ErrUnknown
 	}
 	return resp.Provider, nil
-}
-
-// providersGetMatching returns a slice of pointers to Provider messages
-// matching any ofa set of filters
-func (s *Server) providersGetMatching(
-	sess *pb.Session,
-	any []*respb.ProviderFilter,
-) ([]*respb.Provider, error) {
-	rc, err := s.resClient()
-	if err != nil {
-		return nil, err
-	}
-	req := &respb.ProviderListRequest{
-		Session: resSession(sess),
-		Any:     any,
-	}
-	stream, err := rc.ProviderList(context.Background(), req)
-	if err != nil {
-		return nil, err
-	}
-
-	msgs := make([]*respb.Provider, 0)
-	for {
-		msg, err := stream.Recv()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return nil, err
-		}
-		msgs = append(msgs, msg)
-	}
-	return msgs, nil
 }

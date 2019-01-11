@@ -150,7 +150,6 @@ OR
 		s.log.ERR("failed to get providers: %s.\nSQL: %s", err, qs)
 		return nil, err
 	}
-	s.log.L3("SQL: %s\nArgs: %v", qs, qargs)
 	recs := make([]*ProviderRecord, 0)
 	for rows.Next() {
 		rec := &ProviderRecord{

@@ -133,8 +133,8 @@ message PropertyDefinition {
 
 // Used in matching property definition records
 message PropertyDefinitionFilter {
-    PartitionFilter partition = 1;
-    ObjectTypeFilter object_type = 2;
+    PartitionFilter partition_filter = 1;
+    ObjectTypeFilter object_type_filter = 2;
     string uuid = 3;
     // A search term on the property definition's property key
     string key = 4;

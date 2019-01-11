@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"io"
 
 	pb "github.com/runmachine-io/runmachine/pkg/api/proto"
 	"github.com/runmachine-io/runmachine/pkg/errors"
@@ -69,6 +70,50 @@ func (s *Server) metaClient() (metapb.RunmMetadataClient, error) {
 	s.metaclient = metapb.NewRunmMetadataClient(conn)
 	s.log.L2("connected to metadata service at %s", addr)
 	return s.metaclient, nil
+}
+
+// partitionsGetMatching takes an API PartitionFilter and returns a list of
+// Partition messages matching the filter
+func (s *Server) partitionsGetMatchingFilter(
+	sess *pb.Session,
+	filter *pb.SearchFilter,
+) ([]*metapb.Partition, error) {
+	mfil := &metapb.PartitionFilter{}
+	if util.IsUuidLike(filter.Search) {
+		mfil.UuidFilter = &metapb.UuidFilter{
+			Uuid: filter.Search,
+		}
+	} else {
+		mfil.NameFilter = &metapb.NameFilter{
+			Name:      filter.Search,
+			UsePrefix: filter.UsePrefix,
+		}
+	}
+	mc, err := s.metaClient()
+	if err != nil {
+		return nil, err
+	}
+	req := &metapb.PartitionListRequest{
+		Session: metaSession(sess),
+		Any:     []*metapb.PartitionFilter{mfil},
+	}
+	stream, err := mc.PartitionList(context.Background(), req)
+	if err != nil {
+		return nil, err
+	}
+
+	msgs := make([]*metapb.Partition, 0)
+	for {
+		msg, err := stream.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		msgs = append(msgs, msg)
+	}
+	return msgs, nil
 }
 
 // partitionGet returns a partition record matching the supplied UUID or name
@@ -195,12 +240,16 @@ func (s *Server) uuidFromName(
 	req := &metapb.ObjectGetRequest{
 		Session: metaSession(sess),
 		Filter: &metapb.ObjectFilter{
-			ObjectType: &metapb.ObjectTypeFilter{
-				Search:    objType,
+			ObjectTypeFilter: &metapb.ObjectTypeFilter{
+				CodeFilter: &metapb.CodeFilter{
+					Code:      objType,
+					UsePrefix: false,
+				},
+			},
+			NameFilter: &metapb.NameFilter{
+				Name:      name,
 				UsePrefix: false,
 			},
-			Name:      name,
-			UsePrefix: false,
 		},
 	}
 	mc, err := s.metaClient()
@@ -234,7 +283,10 @@ func (s *Server) objectFromUuid(
 	req := &metapb.ObjectGetRequest{
 		Session: metaSession(sess),
 		Filter: &metapb.ObjectFilter{
-			Uuid: uuid,
+			UuidFilter: &metapb.UuidFilter{
+				Uuid:      uuid,
+				UsePrefix: false,
+			},
 		},
 	}
 	mc, err := s.metaClient()
@@ -265,32 +317,11 @@ func (s *Server) nameFromUuid(
 	sess *pb.Session,
 	uuid string,
 ) (string, error) {
-	req := &metapb.ObjectGetRequest{
-		Session: metaSession(sess),
-		Filter: &metapb.ObjectFilter{
-			Uuid: uuid,
-		},
-	}
-	mc, err := s.metaClient()
+	obj, err := s.objectFromUuid(sess, uuid)
 	if err != nil {
 		return "", err
 	}
-	rec, err := mc.ObjectGet(context.Background(), req)
-	if err != nil {
-		if s, ok := status.FromError(err); ok {
-			if s.Code() == codes.NotFound {
-				return "", errors.ErrNotFound
-			}
-		}
-		// We don't want to expose internal errors to the user, so just return
-		// an unknown error after logging it.
-		s.log.ERR(
-			"failed to retrieve object with UUID %s: %s",
-			uuid, err,
-		)
-		return "", ErrUnknown
-	}
-	return rec.Name, nil
+	return obj.Name, nil
 }
 
 // providerTypeGetByCode returns a provider type record matching the supplied
@@ -352,4 +383,37 @@ func (s *Server) objectCreate(
 		return nil, err
 	}
 	return resp.Object, nil
+}
+
+// objectsGetMatching takes a slice of pointers to object filters and returns
+// matching metapb.Object messages
+func (s *Server) objectsGetMatching(
+	sess *pb.Session,
+	any []*metapb.ObjectFilter,
+) ([]*metapb.Object, error) {
+	mc, err := s.metaClient()
+	if err != nil {
+		return nil, err
+	}
+	req := &metapb.ObjectListRequest{
+		Session: metaSession(sess),
+		Any:     any,
+	}
+	stream, err := mc.ObjectList(context.Background(), req)
+	if err != nil {
+		return nil, err
+	}
+
+	msgs := make([]*metapb.Object, 0)
+	for {
+		msg, err := stream.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		msgs = append(msgs, msg)
+	}
+	return msgs, nil
 }

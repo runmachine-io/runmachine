@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package runmresource;
+
+message UuidFilter {
+    // The thing must have one of these UUIDs
+    repeated string uuids = 1;
+}
+
+message CodeFilter {
+    // The thing must have one of these codes (used for lookup fields like
+    // provider type, consumer type, etc
+    repeated string codes = 1;
+}

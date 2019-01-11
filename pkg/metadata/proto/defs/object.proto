@@ -2,8 +2,8 @@ syntax = "proto3";
 
 package runmmeta;
 
+import "filter.proto";
 import "object_type.proto";
-import "partition.proto";
 import "property.proto";
 
 // An externally-referenceable object in the runm system. All objects in the
@@ -45,14 +45,11 @@ message Object {
 
 // Used in matching object records
 message ObjectFilter {
-    PartitionFilter partition = 1;
-    ObjectTypeFilter object_type = 2;
+    UuidsFilter partition_filter = 1;
+    ObjectTypeFilter object_type_filter = 2;
+    UuidFilter uuid_filter = 3;
+    NameFilter name_filter = 4;
     // The project the object must belong to, if the object type scope of this
     // object is PROJECT
-    string project = 3;
-    string uuid = 4;
-    // A search term on the object's name
-    string name = 5;
-    // Indicates the search on name should be a prefix expression
-    bool use_prefix = 6;
+    string project = 5;
 }

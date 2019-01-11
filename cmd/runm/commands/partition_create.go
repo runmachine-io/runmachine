@@ -43,9 +43,10 @@ func partitionCreate(cmd *cobra.Command, args []string) {
 	exitIfError(err)
 	obj := resp.Partition
 	if !quiet {
-		fmt.Printf("ok\n")
 		if verbose {
 			printPartition(obj)
+		} else {
+			fmt.Printf("%s\n", obj.Uuid)
 		}
 	}
 }

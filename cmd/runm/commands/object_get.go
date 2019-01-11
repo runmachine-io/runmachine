@@ -74,7 +74,10 @@ func objectGet(cmd *cobra.Command, args []string) {
 
 	if len(args) == 1 {
 		filter = &pb.ObjectFilter{
-			Uuid: args[0],
+			UuidFilter: &pb.UuidFilter{
+				Uuid:      args[0],
+				UsePrefix: false,
+			},
 		}
 	} else {
 		filters := buildObjectFilters()

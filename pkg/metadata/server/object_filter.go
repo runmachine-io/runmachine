@@ -62,9 +62,18 @@ func (s *Server) expandObjectFilter(
 	// ObjectTypeFilter in the supplied ObjectFilter
 	var objTypes []*pb.ObjectType
 
-	if filter.Partition != nil {
+	if filter.PartitionFilter != nil {
 		// Verify that the requested partition(s) exist(s)
-		partitions, err = s.store.PartitionList([]*pb.PartitionFilter{filter.Partition})
+		numParts := len(filter.PartitionFilter.Uuids)
+		pfils := make([]*pb.PartitionFilter, numParts)
+		for x, partUuid := range filter.PartitionFilter.Uuids {
+			pfils[x] = &pb.PartitionFilter{
+				UuidFilter: &pb.UuidFilter{
+					Uuid: partUuid,
+				},
+			}
+		}
+		partitions, err = s.store.PartitionList(pfils)
 		if err != nil {
 			return nil, err
 		}
@@ -101,10 +110,10 @@ func (s *Server) expandObjectFilter(
 		partitions = append(partitions, part)
 	}
 
-	if filter.ObjectType != nil {
+	if filter.ObjectTypeFilter != nil {
 		// Verify that the object type even exists
 		objTypes, err = s.store.ObjectTypeList(
-			[]*pb.ObjectTypeFilter{filter.ObjectType},
+			[]*pb.ObjectTypeFilter{filter.ObjectTypeFilter},
 		)
 		if err != nil {
 			return nil, err
@@ -158,7 +167,7 @@ func (s *Server) expandObjectFilter(
 	// partition filters, then go ahead and just return a single
 	// types.ObjectCondition with the search term and prefix indicator for the
 	// object.
-	if filter.Name != "" || filter.Uuid != "" || filter.Project != "" {
+	if filter.NameFilter != nil || filter.UuidFilter != nil || filter.Project != "" {
 		if len(res) == 0 {
 			res = append(res, &conditions.ObjectCondition{})
 		}
@@ -166,14 +175,18 @@ func (s *Server) expandObjectFilter(
 		// original ObjectFilter's Search and UsePrefix for each
 		// conditions.ObjectCondition we've created
 		for _, pf := range res {
-			if filter.Uuid != "" {
-				pf.UuidCondition = conditions.UuidEqual(filter.Uuid)
+			if filter.UuidFilter != nil {
+				pf.UuidCondition = conditions.UuidEqual(filter.UuidFilter.Uuid)
 			}
-			if filter.Name != "" {
-				if filter.UsePrefix {
-					pf.NameCondition = conditions.NameLike(filter.Name)
+			if filter.NameFilter != nil {
+				if filter.NameFilter.UsePrefix {
+					pf.NameCondition = conditions.NameLike(
+						filter.NameFilter.Name,
+					)
 				} else {
-					pf.NameCondition = conditions.NameEqual(filter.Name)
+					pf.NameCondition = conditions.NameEqual(
+						filter.NameFilter.Name,
+					)
 				}
 			}
 			pf.ProjectCondition = filter.Project
@@ -201,7 +214,10 @@ func (s *Server) normalizeObjectFilters(
 				// which is why we don't just return nil here
 				continue
 			}
-			s.log.ERR("normalizeObjectFilters: failed to expand object filter %s: %s", filter, err)
+			s.log.ERR(
+				"normalizeObjectFilters: failed to expand object filter %s: %s",
+				filter, err,
+			)
 			return nil, errors.ErrUnknown
 		} else if len(pfs) > 0 {
 			for _, pf := range pfs {

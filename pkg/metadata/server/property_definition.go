@@ -81,7 +81,7 @@ func (s *Server) PropertyDefinitionGet(
 			return nil, ErrPropertyDefinitionFilterInvalid
 		}
 	} else {
-		if req.Filter.ObjectType == nil {
+		if req.Filter.ObjectTypeFilter == nil {
 			return nil, ErrObjectTypeRequired
 		}
 	}

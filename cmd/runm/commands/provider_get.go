@@ -55,8 +55,10 @@ func providerGet(cmd *cobra.Command, args []string) {
 	}
 
 	filter = &pb.ProviderFilter{
-		Search:    args[0],
-		UsePrefix: false,
+		PrimaryFilter: &pb.SearchFilter{
+			Search:    args[0],
+			UsePrefix: false,
+		},
 	}
 	obj, err := client.ProviderGet(
 		context.Background(),

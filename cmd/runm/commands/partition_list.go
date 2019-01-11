@@ -56,8 +56,10 @@ func buildPartitionFilters() []*apipb.PartitionFilter {
 		filters = append(
 			filters,
 			&apipb.PartitionFilter{
-				Search:    f,
-				UsePrefix: usePrefix,
+				PrimaryFilter: &apipb.SearchFilter{
+					Search:    f,
+					UsePrefix: usePrefix,
+				},
 			},
 		)
 	}

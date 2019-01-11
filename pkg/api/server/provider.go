@@ -15,18 +15,21 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
+func isValidSingleProviderFilter(f *pb.ProviderFilter) bool {
+	return f != nil && f.PrimaryFilter != nil && f.PrimaryFilter.Search != ""
+}
+
 // ProviderGet looks up a provider by UUID or name and returns a Provider
 // protobuf message.
 func (s *Server) ProviderGet(
 	ctx context.Context,
 	req *pb.ProviderGetRequest,
 ) (*pb.Provider, error) {
-	if req.Filter == nil || req.Filter.PrimaryFilter == nil || req.Filter.PrimaryFilter.Search == "" {
+	if !isValidSingleProviderFilter(req.Filter) {
 		return nil, ErrSearchRequired
 	}
 	var err error
-	var search string
-	search = req.Filter.PrimaryFilter.Search
+	search := req.Filter.PrimaryFilter.Search
 	if !util.IsUuidLike(search) {
 		// Look up the provider's UUID in the metadata service by name
 		search, err = s.uuidFromName(req.Session, "runm.provider", search)

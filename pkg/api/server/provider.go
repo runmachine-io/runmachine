@@ -35,25 +35,52 @@ func (s *Server) ProviderGet(
 	}
 	p, err := s.providerGetByUuid(req.Session, search)
 	if err != nil {
-		if err == errors.ErrNotFound {
-			return nil, ErrNotFound
+		return nil, err
+	}
+	return p, nil
+}
+
+// providerGetByUuid returns a provider matching the supplied UUID key. If no
+// such provider could be found, returns (nil, ErrNotFound)
+func (s *Server) providerGetByUuid(
+	sess *pb.Session,
+	uuid string,
+) (*pb.Provider, error) {
+	// Grab the provider record from the resource service
+	req := &respb.ProviderGetRequest{
+		Session: resSession(sess),
+		Uuid:    uuid,
+	}
+	rc, err := s.resClient()
+	if err != nil {
+		return nil, err
+	}
+	prec, err := rc.ProviderGet(context.Background(), req)
+	if err != nil {
+		if s, ok := status.FromError(err); ok {
+			if s.Code() == codes.NotFound {
+				return nil, ErrNotFound
+			}
 		}
-		s.log.ERR("failed getting provider with UUID %s: %s", search, err)
+		s.log.ERR(
+			"failed to retrieve provider with UUID %s: %s",
+			uuid, err,
+		)
 		return nil, ErrUnknown
 	}
 	// Grab the object from the metadata service
-	obj, err := s.objectFromUuid(req.Session, search)
+	obj, err := s.objectFromUuid(sess, uuid)
 	if err != nil {
 		if err == errors.ErrNotFound {
 			s.log.ERR(
 				"DATA CORRUPTION! failed getting object with "+
 					"UUID %s: object with UUID %s does not exist in metadata "+
 					"service but providerGetByUuid returned a provider",
-				search, err,
+				uuid, err,
 			)
 			return nil, ErrUnknown
 		} else {
-			s.log.ERR("failed getting object with UUID %s: %s", search, err)
+			s.log.ERR("failed getting object with UUID %s: %s", uuid, err)
 			return nil, ErrUnknown
 		}
 	}
@@ -67,11 +94,11 @@ func (s *Server) ProviderGet(
 	}
 
 	return &pb.Provider{
-		Partition:    p.Partition,
-		ProviderType: p.ProviderType,
+		Partition:    prec.Partition,
+		ProviderType: prec.ProviderType,
 		Name:         obj.Name,
-		Uuid:         p.Uuid,
-		Generation:   p.Generation,
+		Uuid:         obj.Uuid,
+		Generation:   prec.Generation,
 		Properties:   pProps,
 		Tags:         obj.Tags,
 	}, nil

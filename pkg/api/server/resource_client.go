@@ -73,43 +73,6 @@ func (s *Server) resClient() (respb.RunmResourceClient, error) {
 	return s.resclient, nil
 }
 
-// providerGetByUuid returns a provider matching the supplied UUID key. If no
-// such provider could be found, returns (nil, ErrNotFound)
-func (s *Server) providerGetByUuid(
-	sess *pb.Session,
-	uuid string,
-) (*respb.Provider, error) {
-	req := &respb.ProviderGetRequest{
-		Session: resSession(sess),
-		Uuid:    uuid,
-	}
-	rc, err := s.resClient()
-	if err != nil {
-		return nil, err
-	}
-	rec, err := rc.ProviderGet(context.Background(), req)
-	if err != nil {
-		if s, ok := status.FromError(err); ok {
-			if s.Code() == codes.NotFound {
-				return nil, errors.ErrNotFound
-			}
-		}
-		// We don't want to expose internal errors to the user, so just return
-		// an unknown error after logging it.
-		s.log.ERR(
-			"failed to retrieve provider with UUID %s: %s",
-			uuid, err,
-		)
-		return nil, ErrUnknown
-	}
-	return &respb.Provider{
-		Partition:    rec.Partition,
-		ProviderType: rec.ProviderType,
-		Uuid:         rec.Uuid,
-		Generation:   rec.Generation,
-	}, nil
-}
-
 // providerCreate creates the supplied provider in the resource service. The
 // data supplied has already been validated/checked.
 func (s *Server) providerCreate(

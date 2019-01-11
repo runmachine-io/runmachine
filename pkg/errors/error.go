@@ -20,6 +20,11 @@ var (
 		Code:     400,
 		Message:  "bad input",
 	}
+	ErrInvalidPartitionFormat = &Error{
+		HTTPCode: 400,
+		Code:     400002,
+		Message:  "partition must be a UUID",
+	}
 	ErrNotFound = &Error{
 		HTTPCode: 404,
 		Code:     404,

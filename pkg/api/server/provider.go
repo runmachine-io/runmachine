@@ -89,10 +89,14 @@ func (s *Server) ProviderList(
 	// the number of filters, we return an empty stream and don't bother
 	// calling to the resource service.
 	invalidConds := 0
+	// We keep a cache of partition UUIDs that were normalized during filter
+	// expansion/solving with the metadata service so that when we pass filters
+	// to the resource service, we have those partition UUIDs handy
+	partUuidsReqMap := make(map[int][]string, len(req.Any))
 	if len(req.Any) > 0 {
 		// Transform the supplied generic filters into the more specific
 		// UuidFilter or NameFilter objects accepted by the metadata service
-		for _, filter := range req.Any {
+		for x, filter := range req.Any {
 			mfil := &metapb.ObjectFilter{
 				ObjectTypeFilter: &metapb.ObjectTypeFilter{
 					CodeFilter: &metapb.CodeFilter{
@@ -138,6 +142,9 @@ func (s *Server) ProviderList(
 				mfil.PartitionFilter = &metapb.UuidsFilter{
 					Uuids: partUuids,
 				}
+				// Save in our cache so that the request service filters can
+				// use the normalized partition UUIDs
+				partUuidsReqMap[x] = partUuids
 			}
 			mfils = append(mfils, mfil)
 		}
@@ -201,12 +208,12 @@ func (s *Server) ProviderList(
 	// filters passed to the API service's ProviderList API call.
 	rfils := make([]*respb.ProviderFilter, 0)
 	if len(req.Any) > 0 {
-		for _, f := range req.Any {
+		for x, f := range req.Any {
 			rfil := &respb.ProviderFilter{}
 			if f.PartitionFilter != nil {
-				// TODO(jaypipes): Move the partition name -> UUID
-				// transformation from the metadata service to the API service
-				// and use that here
+				rfil.PartitionFilter = &respb.UuidFilter{
+					Uuids: partUuidsReqMap[x],
+				}
 			}
 			if f.ProviderTypeFilter != nil {
 				// TODO(jaypipes): Expand the API SearchFilter for provider
@@ -337,6 +344,9 @@ func (s *Server) ProviderCreate(
 	}
 
 	input.Uuid = createdObj.Uuid
+	// Make sure we are only passing the partition's UUID, which the created
+	// object in the metadata service will have returned.
+	input.Partition = createdObj.Partition
 
 	// Next save the provider record in the resource service
 	resProv, err := s.providerCreate(req.Session, input)

@@ -7,6 +7,7 @@ import (
 	"github.com/go-sql-driver/mysql"
 	"github.com/runmachine-io/runmachine/pkg/errors"
 	pb "github.com/runmachine-io/runmachine/pkg/resource/proto"
+	"github.com/runmachine-io/runmachine/pkg/util"
 )
 
 type ProviderRecord struct {
@@ -84,10 +85,13 @@ WHERE p.uuid = ?`
 }
 
 // ProviderGetMatching returns provider records matching any of the supplied
-// filters
+// filters.
 func (s *Store) ProvidersGetMatching(
 	any []*pb.ProviderFilter,
 ) ([]*ProviderRecord, error) {
+	// TODO(jaypipes): Validate that the slice of supplied ProviderFilters is
+	// valid (for example, that the filter contains at least one UUID,
+	// partition, or provider type filter...
 	qargs := make([]interface{}, 0)
 	qs := `SELECT
   p.id
@@ -119,6 +123,16 @@ OR
 			}
 			exprAnd = true
 		}
+		if filter.PartitionFilter != nil {
+			if exprAnd {
+				qs += " AND "
+			}
+			qs += "part.uuid " + InParamString(len(filter.PartitionFilter.Uuids))
+			for _, uuid := range filter.PartitionFilter.Uuids {
+				qargs = append(qargs, uuid)
+			}
+			exprAnd = true
+		}
 		if filter.ProviderTypeFilter != nil {
 			if exprAnd {
 				qs += " AND "
@@ -133,8 +147,10 @@ OR
 	}
 	rows, err := s.DB().Query(qs, qargs...)
 	if err != nil {
-		panic(err.Error())
+		s.log.ERR("failed to get providers: %s.\nSQL: %s", err, qs)
+		return nil, err
 	}
+	s.log.L3("SQL: %s\nArgs: %v", qs, qargs)
 	recs := make([]*ProviderRecord, 0)
 	for rows.Next() {
 		rec := &ProviderRecord{
@@ -261,6 +277,10 @@ func (s *Store) ProviderCreate(
 	}
 	if exists {
 		return nil, errors.ErrDuplicate
+	}
+
+	if !util.IsUuidLike(prov.Partition) {
+		return nil, errors.ErrInvalidPartitionFormat
 	}
 
 	// Grab the internal IDs of the new provider's partition and provider type,

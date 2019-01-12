@@ -15,6 +15,47 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
+// ProviderDelete removes one or more providers from backend storage along with
+// their associated object metadata in the metadata service.
+func (s *Server) ProviderDelete(
+	ctx context.Context,
+	req *pb.ProviderDeleteRequest,
+) (*pb.DeleteResponse, error) {
+	if len(req.Any) == 0 {
+		return nil, ErrAtLeastOneProviderFilterRequired
+	}
+
+	provs, err := s.providersGetMatching(req.Session, req.Any)
+	if err != nil {
+		return nil, err
+	}
+
+	uuids := make([]string, len(provs))
+	for x, prov := range provs {
+		uuids[x] = prov.Uuid
+	}
+
+	// TODO(jaypipes): Archive the provider information?
+
+	// Delete the provider from the resource service
+	if err = s.providerDelete(req.Session, uuids); err != nil {
+		return nil, err
+	}
+
+	// And now delete the provider object from the metadata service
+	if err = s.objectDelete(req.Session, uuids); err != nil {
+		// TODO(jaypipes): Use Taskflow-oriented library to undo the delete
+		// that happened above in the resource service.
+		return nil, err
+	}
+
+	// TODO(jaypipes): Send an event notification
+
+	return &pb.DeleteResponse{
+		NumDeleted: uint64(len(provs)),
+	}, nil
+}
+
 func isValidSingleProviderFilter(f *pb.ProviderFilter) bool {
 	return f != nil && f.PrimaryFilter != nil && f.PrimaryFilter.Search != ""
 }
@@ -145,6 +186,11 @@ func (s *Server) providersGetMatching(
 ) ([]*pb.Provider, error) {
 	res := make([]*pb.Provider, 0)
 	mfils := make([]*metapb.ObjectFilter, 0)
+	// If the user specified one or more UUIDs or names in the incoming API
+	// provider filters, the metadata service will have already handled the
+	// translation/lookup to UUIDs, so we can pass the returned object's UUIDs
+	// to the resource service's ProviderFilter.UuidFilter below.
+	primaryFiltered := false
 	// If we get, for example, a filter on a non-existent partition, we
 	// increment this variable. If the number of invalid conditions is equal to
 	// the number of filters, we return an empty stream and don't bother
@@ -177,6 +223,7 @@ func (s *Server) providersGetMatching(
 						UsePrefix: filter.PrimaryFilter.UsePrefix,
 					}
 				}
+				primaryFiltered = true
 			}
 			if filter.PartitionFilter != nil {
 				// The user may have specified a partition UUID or a partition
@@ -241,12 +288,6 @@ func (s *Server) providersGetMatching(
 	if len(objs) == 0 {
 		return res, nil
 	}
-
-	// If the user specified one or more UUIDs or names in the incoming API
-	// provider filters, the metadata service will have already handled the
-	// translation/lookup to UUIDs, so we can pass the returned object's UUIDs
-	// to the resource service's ProviderFilter.UuidFilter below.
-	primaryFiltered := false
 
 	objMap := make(map[string]*metapb.Object, len(objs))
 	for _, obj := range objs {

@@ -335,3 +335,42 @@ INSERT INTO providers (
 		ID:       newId,
 	}, nil
 }
+
+// ProviderDeleteByUuid deletes provider records for any provider with a
+// matching UUID. It returns the number of provider records deleted.
+// TODO(jaypipes): Pass a hashmap of UUID -> generation and limit deletions by
+// generation?
+func (s *Store) ProviderDeleteByUuid(
+	uuids []string,
+) (uint64, error) {
+	qargs := make([]interface{}, len(uuids))
+	qs := `DELETE FROM providers WHERE uuid ` + InParamString(len(uuids))
+	for x, uuid := range uuids {
+		qargs[x] = uuid
+	}
+	tx, err := s.DB().Begin()
+	if err != nil {
+		return 0, err
+	}
+	defer tx.Rollback()
+
+	stmt, err := tx.Prepare(qs)
+	if err != nil {
+		return 0, err
+	}
+	defer stmt.Close()
+
+	res, err := stmt.Exec(qargs...)
+	if err != nil {
+		return 0, err
+	}
+	numDeleted, err := res.RowsAffected()
+	if err != nil {
+		return 0, err
+	}
+	err = tx.Commit()
+	if err != nil {
+		return 0, err
+	}
+	return uint64(numDeleted), nil
+}

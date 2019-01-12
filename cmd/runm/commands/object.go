@@ -67,7 +67,6 @@ func init() {
 	objectCommand.AddCommand(objectListCommand)
 	objectCommand.AddCommand(objectGetCommand)
 	objectCommand.AddCommand(objectSetCommand)
-	objectCommand.AddCommand(objectDeleteCommand)
 }
 
 func buildObjectFilters() []*pb.ObjectFilter {

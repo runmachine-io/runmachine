@@ -64,3 +64,21 @@ func (s *Server) ProviderCreate(
 		Provider: rec.Provider,
 	}, nil
 }
+
+func (s *Server) ProviderDelete(
+	ctx context.Context,
+	req *pb.ProviderDeleteRequest,
+) (*pb.DeleteResponse, error) {
+	if len(req.Uuids) == 0 {
+		return nil, ErrAtLeastOneUuidRequired
+	}
+
+	numDeleted, err := s.store.ProviderDeleteByUuid(req.Uuids)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.DeleteResponse{
+		NumDeleted: numDeleted,
+	}, nil
+}

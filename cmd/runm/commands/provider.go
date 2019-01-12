@@ -58,6 +58,7 @@ func init() {
 	providerCommand.AddCommand(providerListCommand)
 	providerCommand.AddCommand(providerGetCommand)
 	providerCommand.AddCommand(providerCreateCommand)
+	providerCommand.AddCommand(providerDeleteCommand)
 }
 
 func buildProviderFilters() []*pb.ProviderFilter {

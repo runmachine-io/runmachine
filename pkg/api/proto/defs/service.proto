@@ -37,6 +37,10 @@ service RunmAPI {
     // Create a new provider
     rpc provider_create(CreateRequest) returns (
         ProviderCreateResponse) {}
+
+    // Deletes one or more provideres
+    rpc provider_delete(ProviderDeleteRequest) returns (
+        DeleteResponse) {}
 }
 
 enum PayloadFormat {
@@ -50,6 +54,10 @@ message CreateRequest {
     // Raw bytes representing the new representation of the object. The server
     // is responsible for unmarshaling this raw payload.
     bytes payload = 3;
+}
+
+message DeleteResponse {
+    uint64 num_deleted = 2;
 }
 
 message PartitionGetRequest {
@@ -93,4 +101,11 @@ message ProviderListRequest {
 message ProviderCreateResponse {
     // The newly-created object
     Provider provider = 1;
+}
+
+message ProviderDeleteRequest {
+    Session session = 1;
+    // A set of filter expressions that are OR'd together when determining
+    // matches for deletion
+    repeated ProviderFilter any = 2;
 }

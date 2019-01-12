@@ -16,34 +16,30 @@ import (
 func (s *Server) ObjectDelete(
 	ctx context.Context,
 	req *pb.ObjectDeleteRequest,
-) (*pb.ObjectDeleteResponse, error) {
+) (*pb.DeleteResponse, error) {
 	if err := checkSession(req.Session); err != nil {
 		return nil, err
 	}
-	if len(req.Any) == 0 {
-		return nil, ErrAtLeastOneObjectFilterRequired
+	if len(req.Uuids) == 0 {
+		return nil, ErrAtLeastOneUuidRequired
 	}
 
-	filters, err := s.normalizeObjectFilters(req.Session, req.Any)
+	// TODO(jaypipes): Have a single filter for a list of UUIDs...
+	conds := make([]*conditions.ObjectCondition, len(req.Uuids))
+	for x, uuid := range req.Uuids {
+		conds[x] = &conditions.ObjectCondition{
+			UuidCondition: conditions.UuidEqual(uuid),
+		}
+	}
+	owrs, err := s.store.ObjectListWithReferences(conds)
 	if err != nil {
 		return nil, err
 	}
-	// Be extra-careful not to pass empty filters since that will delete all
-	// objects...
-	if len(filters) == 0 {
-		return nil, ErrAtLeastOneObjectFilterRequired
-	}
 
-	owrs, err := s.store.ObjectListWithReferences(filters)
-	if err != nil {
-		return nil, err
-	}
-
-	resErrors := make([]string, 0)
 	numDeleted := uint64(0)
 	for _, owr := range owrs {
 		if err = s.store.ObjectDelete(owr); err != nil {
-			resErrors = append(resErrors, err.Error())
+			return nil, err
 		}
 		// TODO(jaypipes): Send an event notification
 		s.log.L1(
@@ -53,14 +49,9 @@ func (s *Server) ObjectDelete(
 		)
 		numDeleted += 1
 	}
-	resp := &pb.ObjectDeleteResponse{
-		Errors:     resErrors,
+	return &pb.DeleteResponse{
 		NumDeleted: numDeleted,
-	}
-	if len(resErrors) > 0 {
-		return resp, ErrObjectDeleteFailed
-	}
-	return resp, nil
+	}, nil
 }
 
 func (s *Server) ObjectGet(

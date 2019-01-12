@@ -90,9 +90,9 @@ var (
 		codes.FailedPrecondition,
 		"partition name is required.",
 	)
-	ErrAtLeastOneObjectFilterRequired = status.Errorf(
+	ErrAtLeastOneProviderFilterRequired = status.Errorf(
 		codes.FailedPrecondition,
-		"at least one object filter is required.",
+		"at least one provider filter is required.",
 	)
 	ErrObjectDeleteFailed = status.Errorf(
 		codes.FailedPrecondition,

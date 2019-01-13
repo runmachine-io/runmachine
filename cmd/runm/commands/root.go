@@ -131,7 +131,6 @@ func init() {
 
 	RootCommand.AddCommand(helpEnvCommand)
 	RootCommand.AddCommand(bootstrapCommand)
-	RootCommand.AddCommand(objectCommand)
 	RootCommand.AddCommand(propertyDefinitionCommand)
 	RootCommand.AddCommand(partitionCommand)
 	RootCommand.AddCommand(providerCommand)

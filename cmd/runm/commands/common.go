@@ -15,22 +15,6 @@ import (
 )
 
 const (
-	permissionsHelpExtended = `
-
-    NOTE: To find out what permissions may be applied to a role, use
-          the runm permissions command.
-`
-)
-
-const (
-	rolesHelpExtended = `
-
-    NOTE: To find out what roles a user may be added to, use
-          the runm role list command.
-`
-)
-
-const (
 	errUnsetUser = `Error: unable to find the authenticating user.
 
 Please set the RUNM_USER environment variable or supply a value
@@ -41,7 +25,11 @@ for the --user CLI option.
 Please check the RUNM_HOST and RUNM_PORT environment
 variables or --host and --port  CLI options.
 `
-	errForbidden = `Error: you are not authorized to perform that action.`
+	errForbidden          = `Error: you are not authorized to perform that action.`
+	errMsgFieldExprFormat = `Error: field expression %s expected to be in the form $field=$value
+`
+	errMsgUnknownFieldInFieldExpr = `Error: field expression %s contained unknown field %s
+`
 )
 
 const (

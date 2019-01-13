@@ -42,12 +42,6 @@ var (
 )
 
 type PropertyDefinition struct {
-	// Identifier of the partition the object belongs to
-	Partition string `yaml:"partition"`
-	// Code for the type of object this is
-	ObjectType string `yaml:"object_type"`
-	// The key of the property this schema will apply to
-	Key string `yaml:"key"`
 	// JSONSchema property type document represented in YAML, dictating the
 	// constraints applied by this schema to the property's value
 	Schema *PropertySchema `yaml:"schema"`
@@ -59,15 +53,6 @@ type PropertyDefinition struct {
 
 // Validate returns an error if the definition is invalid, nil otherwise
 func (def *PropertyDefinition) Validate() error {
-	if def.ObjectType == "" {
-		return fmt.Errorf("object type required")
-	}
-	if def.Partition == "" {
-		return fmt.Errorf("partition required")
-	}
-	if def.Key == "" {
-		return fmt.Errorf("property key required")
-	}
 	for _, perm := range def.Permissions {
 		if err := perm.Validate(); err != nil {
 			return err

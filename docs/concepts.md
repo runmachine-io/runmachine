@@ -91,7 +91,7 @@ Any user with read access to an object's partition (or project if the object is
 [project-scoped](#object-type-scope)) may view an object's tags. Any user with
 write access to the object may view the object's tags.
 
-## Property Definition
+## Object and Property Definition
 
 When creating or updating objects in the system, a user may associate one or
 more [properties](#properties) with that object. Administrators may set up

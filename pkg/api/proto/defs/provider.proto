@@ -28,3 +28,14 @@ message ProviderFilter {
     // Type of the provider
     SearchFilter provider_type_filter = 3;
 }
+
+// Administrators can constrain the properties that may be set against a
+// provider by creating a ProviderDefinition
+message ProviderDefinition {
+    // UUID of the partition that providers constrained by this definition are
+    // in
+    string partition = 1;
+    // Collection of property definitions to apply to providers in this
+    // partition
+    repeated PropertyDefinition property_definitions = 51;
+}

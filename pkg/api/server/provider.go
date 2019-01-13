@@ -491,3 +491,21 @@ func (s *Server) ProviderCreate(
 		},
 	}, nil
 }
+
+func (s *Server) ProviderDefinitionSet(
+	ctx context.Context,
+	req *pb.CreateRequest,
+) (*pb.ProviderDefinitionSetResponse, error) {
+	// TODO(jaypipes): AUTHZ check if user can create definitions
+
+	//input, err := s.validateProviderDefineRequest(req)
+	//if err != nil {
+	//	return nil, err
+	//}
+	return &pb.ProviderDefinitionSetResponse{
+		ProviderDefinition: &pb.ProviderDefinition{
+			Partition:           "fake",
+			PropertyDefinitions: []*pb.PropertyDefinition{},
+		},
+	}, nil
+}

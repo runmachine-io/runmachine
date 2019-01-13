@@ -28,6 +28,10 @@ service RunmAPI {
     rpc provider_type_list(ProviderTypeListRequest) returns (
         stream ProviderType) {}
 
+    // Defines a schema for providers in a partition
+    rpc provider_definition_set(CreateRequest) returns (
+        ProviderDefinitionSetResponse) {}
+
     // Returns information about a specific provider
     rpc provider_get(ProviderGetRequest) returns (Provider) {}
 
@@ -85,6 +89,11 @@ message ProviderTypeListRequest {
     Session session = 1;
     SearchOptions options = 2;
     repeated ProviderTypeFilter any = 3;
+}
+
+message ProviderDefinitionSetResponse {
+    // The newly-created object
+    ProviderDefinition provider_definition = 1;
 }
 
 message ProviderGetRequest {

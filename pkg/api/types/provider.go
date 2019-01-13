@@ -11,6 +11,8 @@ var (
 	}
 )
 
+// Provider is an object that exposes inventories of consumable resources and
+// has a set of capabilities
 type Provider struct {
 	// Identifier of the partition the object belongs to
 	Partition string `yaml:"partition"`

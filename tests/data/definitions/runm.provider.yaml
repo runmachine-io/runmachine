@@ -1,0 +1,12 @@
+partition: part0
+property_definitions:
+  location.site:
+    required: true
+    permissions:
+      # Default to not allowing reads from anyone
+      - permission:
+      # Unless the user is an admin
+      - role: admin
+        permission: rw
+    schema:
+      type: string

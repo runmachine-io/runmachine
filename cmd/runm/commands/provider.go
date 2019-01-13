@@ -55,6 +55,7 @@ var providerCommand = &cobra.Command{
 }
 
 func init() {
+	providerCommand.AddCommand(providerDefinitionCommand)
 	providerCommand.AddCommand(providerListCommand)
 	providerCommand.AddCommand(providerGetCommand)
 	providerCommand.AddCommand(providerCreateCommand)

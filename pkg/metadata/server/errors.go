@@ -102,17 +102,17 @@ var (
 		codes.FailedPrecondition,
 		"failed to delete object (check response errors collection).",
 	)
-	ErrAtLeastOnePropertyDefinitionFilterRequired = status.Errorf(
+	ErrAtLeastOneObjectDefinitionFilterRequired = status.Errorf(
 		codes.FailedPrecondition,
-		"at least one property definition filter is required.",
+		"at least one object definition filter is required.",
 	)
-	ErrPropertyDefinitionFilterInvalid = status.Errorf(
+	ErrObjectDefinitionFilterInvalid = status.Errorf(
 		codes.FailedPrecondition,
-		"invalid property definition filter.",
+		"invalid object definition filter.",
 	)
-	ErrPropertyDefinitionDeleteFailed = status.Errorf(
+	ErrObjectDefinitionDeleteFailed = status.Errorf(
 		codes.FailedPrecondition,
-		"failed to delete property definition (check response errors collection).",
+		"failed to delete object definition (check response errors collection).",
 	)
 )
 

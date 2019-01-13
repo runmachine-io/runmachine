@@ -1,0 +1,10 @@
+partition: part0
+provider_type: runm.compute
+name: east1-row1-rack2-node1
+properties:
+  location.site: east1
+  location.row: 1
+  location.rack: 2
+  location.rack_position: 1
+tags:
+  - compute

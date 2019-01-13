@@ -19,6 +19,14 @@ service RunmResource {
     // Create a new provider
     rpc provider_create(ProviderCreateRequest) returns (
         ProviderCreateResponse) {}
+
+    // Deletes providers by UUID
+    rpc provider_delete(ProviderDeleteRequest) returns (
+        DeleteResponse) {}
+}
+
+message DeleteResponse {
+    uint64 num_deleted = 2;
 }
 
 message ProviderGetRequest {
@@ -40,4 +48,9 @@ message ProviderCreateRequest {
 message ProviderCreateResponse {
     // The newly-created object
     Provider provider = 1;
+}
+
+message ProviderDeleteRequest {
+    Session session = 1;
+    repeated string uuids = 2;
 }

@@ -385,6 +385,27 @@ func (s *Server) objectCreate(
 	return resp.Object, nil
 }
 
+// objectDelete deletes any object with one of the supplied UUIDs from the
+// metadata service
+func (s *Server) objectDelete(
+	sess *pb.Session,
+	uuids []string,
+) error {
+	req := &metapb.ObjectDeleteRequest{
+		Session: metaSession(sess),
+		Uuids:   uuids,
+	}
+	mc, err := s.metaClient()
+	if err != nil {
+		return err
+	}
+	_, err = mc.ObjectDelete(context.Background(), req)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // objectsGetMatching takes a slice of pointers to object filters and returns
 // matching metapb.Object messages
 func (s *Server) objectsGetMatching(

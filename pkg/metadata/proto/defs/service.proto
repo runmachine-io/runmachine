@@ -68,7 +68,7 @@ service RunmMetadata {
 
     // Deletes one or more objectes
     rpc object_delete(ObjectDeleteRequest) returns (
-        ObjectDeleteResponse) {}
+        DeleteResponse) {}
 
     // Set information about a specific object
     rpc object_set(ObjectSetRequest) returns (
@@ -96,6 +96,10 @@ service RunmMetadata {
     // Returns information about multiple provider types
     rpc provider_type_list(ProviderTypeListRequest) returns (
         stream ProviderType) {}
+}
+
+message DeleteResponse {
+    uint64 num_deleted = 2;
 }
 
 message BootstrapRequest {
@@ -187,14 +191,7 @@ message ObjectListRequest {
 
 message ObjectDeleteRequest {
     Session session = 1;
-    // A set of filter expressions that are OR'd together when determining
-    // matches for deletion
-    repeated ObjectFilter any = 2;
-}
-
-message ObjectDeleteResponse {
-    repeated string errors = 1;
-    uint64 num_deleted = 2;
+    repeated string uuids = 2;
 }
 
 message PropertyDefinitionGetRequest {

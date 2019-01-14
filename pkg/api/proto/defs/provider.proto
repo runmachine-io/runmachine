@@ -35,7 +35,7 @@ message ProviderDefinition {
     // UUID of the partition that providers constrained by this definition are
     // in
     string partition = 1;
-    // Collection of property definitions to apply to providers in this
-    // partition
-    repeated PropertyDefinition property_definitions = 51;
+    // JSONSchema document describing the constraints and fields that a
+    // provider in this partition must conform to
+    string schema = 2;
 }

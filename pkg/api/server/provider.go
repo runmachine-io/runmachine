@@ -492,20 +492,58 @@ func (s *Server) ProviderCreate(
 	}, nil
 }
 
+// validateProviderDefinitionSetRequest ensures that the data the user sent in
+// the request payload can be unmarshal'd properly into YAML and that the data
+// is valid
+func (s *Server) validateProviderDefinitionSetRequest(
+	req *pb.CreateRequest,
+) (*types.ProviderDefinition, error) {
+	var input types.ProviderDefinition
+	if err := yaml.Unmarshal(req.Payload, &input); err != nil {
+		return nil, err
+	}
+	if err := input.Validate(); err != nil {
+		return nil, err
+	}
+
+	// Check that the supplied partition exists
+	part, err := s.partitionGet(req.Session, input.Partition)
+	if err != nil {
+		if err == errors.ErrNotFound {
+			return nil, errPartitionNotFound(input.Partition)
+		}
+		s.log.ERR("failed checking provider definition's partition: %s", err)
+		return nil, ErrUnknown
+	}
+	input.Partition = part.Uuid
+
+	return &input, nil
+}
+
 func (s *Server) ProviderDefinitionSet(
 	ctx context.Context,
 	req *pb.CreateRequest,
 ) (*pb.ProviderDefinitionSetResponse, error) {
-	// TODO(jaypipes): AUTHZ check if user can create definitions
+	// TODO(jaypipes): AUTHZ check if user can write definitions
 
-	//input, err := s.validateProviderDefineRequest(req)
-	//if err != nil {
-	//	return nil, err
-	//}
+	input, err := s.validateProviderDefinitionSetRequest(req)
+	if err != nil {
+		return nil, err
+	}
+
+	schema := input.JSONSchemaString()
+
+	def := &metapb.ObjectDefinition{
+		Partition:  input.Partition,
+		ObjectType: "runm.provider",
+		Schema:     schema,
+		// Permissions: propPermissions,
+	}
+
 	return &pb.ProviderDefinitionSetResponse{
 		ProviderDefinition: &pb.ProviderDefinition{
-			Partition:           "fake",
-			PropertyDefinitions: []*pb.PropertyDefinition{},
+			Partition: def.Partition,
+			Schema:    schema,
 		},
 	}, nil
 }

@@ -19,8 +19,5 @@ func init() {
 
 func printProviderDefinition(obj *pb.ProviderDefinition) {
 	fmt.Printf("Partition:    %s\n", obj.Partition)
-	for _, propDef := range obj.PropertyDefinitions {
-		fmt.Printf("Property definitions:\n")
-		printPropertyDefinition(propDef)
-	}
+	fmt.Printf("Schema:\n%s", obj.Schema)
 }

@@ -217,39 +217,39 @@ func (schema *PropertySchema) JSONSchemaString() string {
 	case 0:
 		break
 	case 1:
-		res += "type: " + schema.Types[0] + "\n"
+		res += "          \"type\": \"" + schema.Types[0] + "\"\n"
 	default:
-		res += "type:\n"
+		res += "          \"type\":\n"
 		for _, t := range schema.Types {
-			res += "  - " + t + "\n"
+			res += "            - \"" + t + "\"\n"
 		}
 	}
 	if len(schema.Enum) > 0 {
-		res += "enum:\n"
+		res += "          \"enum\":\n"
 		for _, val := range schema.Enum {
-			res += "  - " + val + "\n"
+			res += "            - \"" + val + "\"\n"
 		}
 	}
 	if schema.MultipleOf != nil {
-		res += fmt.Sprintf("multipleOf: %d\n", *schema.MultipleOf)
+		res += fmt.Sprintf("          \"multipleOf\": %d\n", *schema.MultipleOf)
 	}
 	if schema.Minimum != nil {
-		res += fmt.Sprintf("minimum: %d\n", *schema.Minimum)
+		res += fmt.Sprintf("          \"minimum\": %d\n", *schema.Minimum)
 	}
 	if schema.Maximum != nil {
-		res += fmt.Sprintf("maximum: %d\n", *schema.Maximum)
+		res += fmt.Sprintf("          \"maximum\": %d\n", *schema.Maximum)
 	}
 	if schema.MinLength != nil {
-		res += fmt.Sprintf("minLength: %d\n", *schema.MinLength)
+		res += fmt.Sprintf("          \"minLength\": %d\n", *schema.MinLength)
 	}
 	if schema.MaxLength != nil {
-		res += fmt.Sprintf("maxLength: %d\n", *schema.MaxLength)
+		res += fmt.Sprintf("          \"maxLength\": %d\n", *schema.MaxLength)
 	}
 	if schema.Format != "" {
-		res += "format: " + schema.Format + "\n"
+		res += "          \"format\": \"" + schema.Format + "\"\n"
 	}
 	if schema.Pattern != "" {
-		res += "pattern: " + schema.Pattern + "\n"
+		res += "          \"pattern\": \"" + schema.Pattern + "\"\n"
 	}
 	return res
 }

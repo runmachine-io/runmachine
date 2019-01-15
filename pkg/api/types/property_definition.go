@@ -2,6 +2,7 @@ package types
 
 import (
 	"fmt"
+	"text/template"
 )
 
 const (
@@ -39,6 +40,42 @@ var (
 		"iri-reference",
 		"uri-template",
 	}
+	propertySchemaTemplateContents = `{{ define "property-schema" }}
+        {{ quote .Key}}: {
+          "type": [{{ quote_join .Types ", " }}]
+{{- if .MultipleOf }}
+          , "multipleOf": {{ deref_uint .MultipleOf }}
+{{- end }}
+{{- if .Minimum }}
+          , "minimum": {{ deref_int .Minimum }}
+{{- end }}
+{{- if .Maximum }}
+          , "maximum": {{ deref_int .Maximum }}
+{{- end }}
+{{- if .MinLength }}
+          , "minLength": {{ deref_uint .MinLength }}
+{{- end }}
+{{- if .MaxLength }}
+          , "maxLength": {{ deref_uint .MaxLength }}
+{{- end }}
+{{- if .Pattern }}
+          , "pattern": {{ .Pattern }}
+{{- end }}
+{{- if .Format }}
+          , "format": {{ .Formet }}
+{{- end }}
+        }
+{{- end -}}
+`
+	propertySchemaTemplate = template.Must(
+		template.New(
+			"property-schema",
+		).Funcs(
+			templateFuncMap,
+		).Parse(
+			providerSchemaTemplateContents,
+		),
+	)
 )
 
 type PropertyDefinition struct {
@@ -159,6 +196,11 @@ type PropertySchema struct {
 	// * "iri-reference"
 	// * "uri-template"
 	Format string `yaml:"format"`
+}
+
+type propertySchemaWithKey struct {
+	*PropertySchema
+	Key string
 }
 
 // Validate returns an error if the schema document isn't valid, or nil

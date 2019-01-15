@@ -1,13 +1,20 @@
 package types
 
-import "fmt"
+import (
+	"bytes"
+	"fmt"
+	"strconv"
+	"strings"
+	"text/template"
+)
 
 var (
 	baseProviderRequiredFields = []string{
 		"partition",
 		"provider_type",
 	}
-	baseProviderSchema = `{
+	providerSchemaTemplateContents = `
+{
   "$id": "https://runmachine.io/runm.provider.schema.json",
   "$schema": "http://json-schema.org/draft-07/schema#",
   "description": "A provider of resources",
@@ -19,8 +26,64 @@ var (
     "provider_type": {
       "type": "string"
     },
+    "properties": {
+      "type": "object",
+      {{ if len .PropertySchemas -}}
+      "properties": {
+{{- range .PropertySchemas -}}
+{{ template "property-schema" . }}
+{{- end }}
+      },{{ end }}
+      "patternProperties": {
+        "^[a-zA-Z0-9]*$": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "required": [{{ quote_join .RequiredFields ", " }}],
+  "additionalProperties": false
+}
 `
+	providerSchemaTemplate *template.Template
+	templateFuncMap        = template.FuncMap{
+		"join":  strings.Join,
+		"quote": strconv.Quote,
+		"quote_join": func(elems []string, delim string) string {
+			quoted := make([]string, len(elems))
+			for x, elem := range elems {
+				quoted[x] = strconv.Quote(elem)
+			}
+			return strings.Join(quoted, delim)
+		},
+		"deref_int": func(x *int) int {
+			return *x
+		},
+		"deref_uint": func(x *uint) uint {
+			return *x
+		},
+	}
 )
+
+func init() {
+	providerSchemaTemplate = template.Must(
+		template.New(
+			"provider-schema",
+		).Funcs(
+			templateFuncMap,
+		).Parse(
+			providerSchemaTemplateContents,
+		),
+	)
+	// include the property schema template. I wish golang's template
+	// construction wasn't so bonkers...
+	_, err := providerSchemaTemplate.Parse(
+		propertySchemaTemplateContents,
+	)
+	if err != nil {
+		panic(err)
+	}
+}
 
 // ProviderDefinition is used by runmachine system administrators to constrain
 // the properties that may be set on provider objects
@@ -46,51 +109,35 @@ func (def *ProviderDefinition) Validate() error {
 	return nil
 }
 
+type templateVars struct {
+	RequiredFields  []string
+	PropertySchemas []*propertySchemaWithKey
+}
+
 // JSONSchemaString returns a valid JSONSchema DRAFT-07 document describing the
 // fields and properties that may be set for the providers described by the
 // provider definition
 func (def *ProviderDefinition) JSONSchemaString() string {
-	reqFields := make([]string, 0)
+	vars := &templateVars{
+		RequiredFields:  make([]string, 0),
+		PropertySchemas: make([]*propertySchemaWithKey, 0),
+	}
 	for _, field := range baseProviderRequiredFields {
-		reqFields = append(reqFields, field)
+		vars.RequiredFields = append(vars.RequiredFields, field)
 	}
-	s := baseProviderSchema
-	if len(def.PropertyDefinitions) > 0 {
-		s += `    "properties": {
-      "type": "object",
-      "properties": {
-`
-		numPropDefs := len(def.PropertyDefinitions)
-		x := 0
-		for key, prop := range def.PropertyDefinitions {
-			if prop.Required {
-				reqFields = append(reqFields, key)
-			}
-			s += "        \"" + key + "\": {\n"
-			s += prop.Schema.JSONSchemaString()
-			s += "        }"
-			if (x + 1) < numPropDefs {
-				s += ",\n"
-			}
+	for key, prop := range def.PropertyDefinitions {
+		if prop.Required {
+			vars.RequiredFields = append(vars.RequiredFields, key)
 		}
-		s += `
-      }
-    }`
-	}
-	s += `
-  },
-  "required": [
-`
-	numReqFields := len(reqFields)
-	for x, reqField := range reqFields {
-		s += `    "` + reqField + `"`
-		if (x + 1) < numReqFields {
-			s += ",\n"
+		ps := &propertySchemaWithKey{
+			PropertySchema: prop.Schema,
+			Key:            key,
 		}
+		vars.PropertySchemas = append(vars.PropertySchemas, ps)
 	}
-	s += `
-  ]
-}
-`
-	return s
+	var b bytes.Buffer
+	if err := providerSchemaTemplate.Execute(&b, vars); err != nil {
+		return fmt.Sprintf("TEMPLATE ERROR: %s", err)
+	}
+	return b.String()
 }

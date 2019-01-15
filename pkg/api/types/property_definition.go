@@ -2,7 +2,6 @@ package types
 
 import (
 	"fmt"
-	"text/template"
 )
 
 const (
@@ -67,15 +66,6 @@ var (
         }
 {{- end -}}
 `
-	propertySchemaTemplate = template.Must(
-		template.New(
-			"property-schema",
-		).Funcs(
-			templateFuncMap,
-		).Parse(
-			providerSchemaTemplateContents,
-		),
-	)
 )
 
 type PropertyDefinition struct {
@@ -246,52 +236,4 @@ func (schema *PropertySchema) Validate() error {
 		}
 	}
 	return nil
-}
-
-// Returns a JSONSchema (DRAFT-7) document representing the schema for the
-// object type and key pair.
-func (schema *PropertySchema) JSONSchemaString() string {
-	if schema == nil {
-		return ""
-	}
-	res := ""
-	switch len(schema.Types) {
-	case 0:
-		break
-	case 1:
-		res += "          \"type\": \"" + schema.Types[0] + "\"\n"
-	default:
-		res += "          \"type\":\n"
-		for _, t := range schema.Types {
-			res += "            - \"" + t + "\"\n"
-		}
-	}
-	if len(schema.Enum) > 0 {
-		res += "          \"enum\":\n"
-		for _, val := range schema.Enum {
-			res += "            - \"" + val + "\"\n"
-		}
-	}
-	if schema.MultipleOf != nil {
-		res += fmt.Sprintf("          \"multipleOf\": %d\n", *schema.MultipleOf)
-	}
-	if schema.Minimum != nil {
-		res += fmt.Sprintf("          \"minimum\": %d\n", *schema.Minimum)
-	}
-	if schema.Maximum != nil {
-		res += fmt.Sprintf("          \"maximum\": %d\n", *schema.Maximum)
-	}
-	if schema.MinLength != nil {
-		res += fmt.Sprintf("          \"minLength\": %d\n", *schema.MinLength)
-	}
-	if schema.MaxLength != nil {
-		res += fmt.Sprintf("          \"maxLength\": %d\n", *schema.MaxLength)
-	}
-	if schema.Format != "" {
-		res += "          \"format\": \"" + schema.Format + "\"\n"
-	}
-	if schema.Pattern != "" {
-		res += "          \"pattern\": \"" + schema.Pattern + "\"\n"
-	}
-	return res
 }

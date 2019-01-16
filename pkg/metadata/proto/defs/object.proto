@@ -69,5 +69,5 @@ message ObjectDefinition {
 // Used in matching object definition records
 message ObjectDefinitionFilter {
     UuidsFilter partition_filter = 1;
-    ObjectTypeFilter object_type_filter = 2;
+    CodeFilter object_type_filter = 2;
 }

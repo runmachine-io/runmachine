@@ -520,6 +520,8 @@ func (s *Server) validateProviderDefinitionSetRequest(
 	return &input, nil
 }
 
+// ProviderDefinitionSet creates or updates the schema and property permissions
+// for providers in a particular partition
 func (s *Server) ProviderDefinitionSet(
 	ctx context.Context,
 	req *pb.CreateRequest,
@@ -533,17 +535,82 @@ func (s *Server) ProviderDefinitionSet(
 
 	schema := input.JSONSchemaString()
 
+	// Set default access permissions to read/write by any role in the
+	// creating project and read by anyone
+	//if len(def.Permissions) == 0 {
+	//	s.log.L3(
+	//		"setting default permissions on object definition '%s' "+
+	//			"to READ/WRITE for project '%s' and READ any",
+	//		pk, req.Session.Project,
+	//	)
+	//	def.Permissions = []*pb.ObjectPermission{
+	//		&pb.ObjectPermission{
+	//			Project: &pb.StringValue{
+	//				Value: req.Session.Project,
+	//			},
+	//			Permission: apitypes.PERMISSION_READ |
+	//				apitypes.PERMISSION_WRITE,
+	//		},
+	//		&pb.ObjectPermission{
+	//			Permission: apitypes.PERMISSION_READ,
+	//		},
+	//	}
+	//} else {
+	//	// Make sure that the project that created the object definition
+	//	// can read and write it...
+	//	foundProj := false
+	//	for _, perm := range def.Permissions {
+	//		if perm.Project != nil && perm.Project.Value == req.Session.Project {
+	//			if (perm.Permission & apitypes.PERMISSION_WRITE) == 0 {
+	//				s.log.L1(
+	//					"added missing WRITE permission for "+
+	//						"object definition '%s' in project '%s'",
+	//					pk, perm.Project.Value,
+	//				)
+	//				perm.Permission |= apitypes.PERMISSION_WRITE
+	//			}
+	//			foundProj = true
+	//		}
+	//	}
+	//	if !foundProj {
+	//		s.log.L1(
+	//			"added missing WRITE permission for object "+
+	//				"definition '%s' in project '%s'",
+	//			pk, req.Session.Project,
+	//		)
+	//		def.Permissions = append(
+	//			def.Permissions,
+	//			&pb.ObjectPermission{
+	//				Project: &pb.StringValue{
+	//					Value: req.Session.Project,
+	//				},
+	//				Permission: apitypes.PERMISSION_READ |
+	//					apitypes.PERMISSION_WRITE,
+	//			},
+	//		)
+	//	}
+	//}
+
 	def := &metapb.ObjectDefinition{
 		Partition:  input.Partition,
 		ObjectType: "runm.provider",
 		Schema:     schema,
 		// Permissions: propPermissions,
 	}
+	if _, err := s.objectDefinitionSet(req.Session, def); err != nil {
+		s.log.ERR(
+			"failed setting object definition for runm.provider objects "+
+				"in partition '%s'",
+			input.Partition,
+		)
+		return nil, err
+	}
 
 	return &pb.ProviderDefinitionSetResponse{
 		ProviderDefinition: &pb.ProviderDefinition{
 			Partition: def.Partition,
 			Schema:    schema,
+			// Permissions: propPermissions,
 		},
 	}, nil
 }

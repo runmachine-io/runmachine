@@ -6,7 +6,6 @@ import (
 
 	"github.com/runmachine-io/runmachine/pkg/errors"
 	pb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
-	"github.com/runmachine-io/runmachine/pkg/metadata/types"
 )
 
 const (
@@ -43,17 +42,17 @@ func (s *Store) ObjectDefinitionGet(
 
 // ObjectDefinitionCreate writes a object definition to backend storage
 func (s *Store) ObjectDefinitionCreate(
-	pdwr *types.ObjectDefinitionWithReferences,
-) (*types.ObjectDefinitionWithReferences, error) {
+	def *pb.ObjectDefinition,
+) error {
 	ctx, cancel := s.requestCtx()
 	defer cancel()
 
-	pk := _PARTITIONS_KEY + pdwr.Partition.Uuid + "/" +
-		_OBJECT_DEFINITIONS_BY_TYPE_KEY + pdwr.ObjectType.Code
+	pk := _PARTITIONS_KEY + def.Partition + "/" +
+		_OBJECT_DEFINITIONS_BY_TYPE_KEY + def.ObjectType
 
-	value, err := proto.Marshal(pdwr.Definition)
+	value, err := proto.Marshal(def)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// create the object definition using a transaction that ensures another
@@ -68,10 +67,10 @@ func (s *Store) ObjectDefinitionCreate(
 
 	if err != nil {
 		s.log.ERR("failed to create txn in etcd: %v", err)
-		return nil, err
+		return err
 	} else if resp.Succeeded == false {
 		s.log.L3("another thread already created key %s.", pk)
-		return nil, errors.ErrGenerationConflict
+		return errors.ErrDuplicate
 	}
-	return pdwr, nil
+	return nil
 }

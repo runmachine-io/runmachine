@@ -364,8 +364,8 @@ func (s *Server) providerTypeGetByCode(
 	}, nil
 }
 
-// objectCreate takes a new object definition and returns a metapb.Object
-// message representing the newly-created object in the metadata service.
+// objectCreate takes a new object and returns a metapb.Object message
+// representing the newly-created object in the metadata service.
 func (s *Server) objectCreate(
 	sess *pb.Session,
 	obj *metapb.Object,
@@ -437,4 +437,71 @@ func (s *Server) objectsGetMatching(
 		msgs = append(msgs, msg)
 	}
 	return msgs, nil
+}
+
+// objectDefinitionGetByCode returns an object definition record matching the
+// supplied object type and partition identifier. If no such object definition
+// could be found, returns (nil, ErrNotFound)
+func (s *Server) objectDefinitionGet(
+	sess *pb.Session,
+	objType string,
+	partition string,
+) (*metapb.ObjectDefinition, error) {
+	// Look up the partition's UUID
+	part, err := s.partitionGet(sess, partition)
+	if err != nil {
+		if err == errors.ErrNotFound {
+			return nil, errPartitionNotFound(partition)
+		}
+		s.log.ERR("failed retrieving partition '%s': %s", partition, err)
+		return nil, errors.ErrUnknown
+	}
+
+	req := &metapb.ObjectDefinitionGetRequest{
+		Session:    metaSession(sess),
+		Partition:  part.Uuid,
+		ObjectType: objType,
+	}
+	mc, err := s.metaClient()
+	if err != nil {
+		return nil, err
+	}
+	def, err := mc.ObjectDefinitionGet(context.Background(), req)
+	if err != nil {
+		if s, ok := status.FromError(err); ok {
+			if s.Code() == codes.NotFound {
+				return nil, errors.ErrNotFound
+			}
+		}
+		// We don't want to expose internal errors to the user, so just return
+		// an unknown error after logging it.
+		s.log.ERR(
+			"failed to retrieve object definition for partition '%s' "+
+				"and object type '%s': %s",
+			part.Uuid, objType, err,
+		)
+		return nil, ErrUnknown
+	}
+	return def, nil
+}
+
+// objectDefinitionSet takes an object definition and saves it in the metadata
+// service, returning the saved object definition
+func (s *Server) objectDefinitionSet(
+	sess *pb.Session,
+	def *metapb.ObjectDefinition,
+) (*metapb.ObjectDefinition, error) {
+	req := &metapb.ObjectDefinitionSetRequest{
+		Session:          metaSession(sess),
+		ObjectDefinition: def,
+	}
+	mc, err := s.metaClient()
+	if err != nil {
+		return nil, err
+	}
+	resp, err := mc.ObjectDefinitionSet(context.Background(), req)
+	if err != nil {
+		return nil, err
+	}
+	return resp.ObjectDefinition, nil
 }

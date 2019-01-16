@@ -22,10 +22,12 @@ fi
 
 for f in $FIXTURES_DIR/partitions/*; do
     part_id=$( basename "$f")
+    echo -n "creating partition '$part_id' ... "
     $SCRIPTS_DIR/runm.sh partition create -f tests/data/objects/partitions/$part_id
 done
 
 for f in $FIXTURES_DIR/providers/*; do
     prov_id=$( basename "$f")
+    echo -n "creating provider '$prov_id' ... "
     $SCRIPTS_DIR/runm.sh provider create -f tests/data/objects/providers/$prov_id
 done

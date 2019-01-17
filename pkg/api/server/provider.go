@@ -497,7 +497,7 @@ func (s *Server) ProviderCreate(
 // is valid
 func (s *Server) validateProviderDefinitionSetRequest(
 	req *pb.CreateRequest,
-) (*types.ProviderDefinition, error) {
+) (*pb.ProviderDefinition, error) {
 	var input types.ProviderDefinition
 	if err := yaml.Unmarshal(req.Payload, &input); err != nil {
 		return nil, err
@@ -515,9 +515,93 @@ func (s *Server) validateProviderDefinitionSetRequest(
 		s.log.ERR("failed checking provider definition's partition: %s", err)
 		return nil, ErrUnknown
 	}
-	input.Partition = part.Uuid
+	partUuid := part.Uuid
 
-	return &input, nil
+	propPerms := make([]*pb.PropertyPermissions, 0)
+
+	// Ensure that we've got some default access permissions for any properties
+	// that have been defined on the provider definition
+	for propKey, propDef := range input.PropertyDefinitions {
+		if len(propDef.Permissions) == 0 {
+			s.log.L3(
+				"setting default permissions on provider definition "+
+					"in partition '%s' for property key '%s' to READ/WRITE "+
+					"for project '%s' and READ any",
+				partUuid, propKey, req.Session.Project,
+			)
+			propPerms = append(propPerms,
+				&pb.PropertyPermissions{
+					Key: propKey,
+					Permissions: []*pb.PropertyPermission{
+						&pb.PropertyPermission{
+							Project: req.Session.Project,
+							Permission: types.PERMISSION_READ |
+								types.PERMISSION_WRITE,
+						},
+						&pb.PropertyPermission{
+							Permission: types.PERMISSION_READ,
+						},
+					},
+				},
+			)
+		} else {
+			// Make sure that the project that created the provider definition
+			// can read and write the properties defined on it...
+			foundProj := false
+			for _, perm := range propDef.Permissions {
+				if perm.Project != "" && perm.Project == req.Session.Project {
+					permCode := perm.PermissionUint32()
+					if (permCode & types.PERMISSION_WRITE) == 0 {
+						s.log.L1(
+							"added missing WRITE permission for "+
+								"provider definition in partition '%s' "+
+								"for property key '%s' in project '%s'",
+							partUuid, propKey, perm.Project,
+						)
+						permCode |= types.PERMISSION_WRITE
+					}
+					foundProj = true
+					propPerms = append(propPerms,
+						&pb.PropertyPermissions{
+							Key: propKey,
+							Permissions: []*pb.PropertyPermission{
+								&pb.PropertyPermission{
+									Project:    perm.Project,
+									Role:       perm.Role,
+									Permission: permCode,
+								},
+							},
+						},
+					)
+					break
+				}
+			}
+			if !foundProj {
+				s.log.L1(
+					"added missing WRITE permission for provider definition "+
+						"in partition '%s' for property key '%s' in project '%s'",
+					partUuid, propKey, req.Session.Project,
+				)
+				propPerms = append(propPerms,
+					&pb.PropertyPermissions{
+						Key: propKey,
+						Permissions: []*pb.PropertyPermission{
+							&pb.PropertyPermission{
+								Project: req.Session.Project,
+								Permission: types.PERMISSION_READ |
+									types.PERMISSION_WRITE,
+							},
+						},
+					},
+				)
+			}
+		}
+	}
+	return &pb.ProviderDefinition{
+		Partition:           partUuid,
+		Schema:              input.JSONSchemaString(),
+		PropertyPermissions: propPerms,
+	}, nil
 }
 
 // ProviderDefinitionSet creates or updates the schema and property permissions
@@ -528,89 +612,46 @@ func (s *Server) ProviderDefinitionSet(
 ) (*pb.ProviderDefinitionSetResponse, error) {
 	// TODO(jaypipes): AUTHZ check if user can write definitions
 
-	input, err := s.validateProviderDefinitionSetRequest(req)
+	def, err := s.validateProviderDefinitionSetRequest(req)
 	if err != nil {
 		return nil, err
 	}
 
-	schema := input.JSONSchemaString()
-
-	// Set default access permissions to read/write by any role in the
-	// creating project and read by anyone
-	//if len(def.Permissions) == 0 {
-	//	s.log.L3(
-	//		"setting default permissions on object definition '%s' "+
-	//			"to READ/WRITE for project '%s' and READ any",
-	//		pk, req.Session.Project,
-	//	)
-	//	def.Permissions = []*pb.ObjectPermission{
-	//		&pb.ObjectPermission{
-	//			Project: &pb.StringValue{
-	//				Value: req.Session.Project,
-	//			},
-	//			Permission: apitypes.PERMISSION_READ |
-	//				apitypes.PERMISSION_WRITE,
-	//		},
-	//		&pb.ObjectPermission{
-	//			Permission: apitypes.PERMISSION_READ,
-	//		},
-	//	}
-	//} else {
-	//	// Make sure that the project that created the object definition
-	//	// can read and write it...
-	//	foundProj := false
-	//	for _, perm := range def.Permissions {
-	//		if perm.Project != nil && perm.Project.Value == req.Session.Project {
-	//			if (perm.Permission & apitypes.PERMISSION_WRITE) == 0 {
-	//				s.log.L1(
-	//					"added missing WRITE permission for "+
-	//						"object definition '%s' in project '%s'",
-	//					pk, perm.Project.Value,
-	//				)
-	//				perm.Permission |= apitypes.PERMISSION_WRITE
-	//			}
-	//			foundProj = true
-	//		}
-	//	}
-	//	if !foundProj {
-	//		s.log.L1(
-	//			"added missing WRITE permission for object "+
-	//				"definition '%s' in project '%s'",
-	//			pk, req.Session.Project,
-	//		)
-	//		def.Permissions = append(
-	//			def.Permissions,
-	//			&pb.ObjectPermission{
-	//				Project: &pb.StringValue{
-	//					Value: req.Session.Project,
-	//				},
-	//				Permission: apitypes.PERMISSION_READ |
-	//					apitypes.PERMISSION_WRITE,
-	//			},
-	//		)
-	//	}
-	//}
-
-	def := &metapb.ObjectDefinition{
-		Partition:  input.Partition,
-		ObjectType: "runm.provider",
-		Schema:     schema,
-		// Permissions: propPermissions,
+	// copy API property permissions to metadata property permissions
+	metaPropPerms := make([]*metapb.PropertyPermissions, len(def.PropertyPermissions))
+	for x, apiPropPerms := range def.PropertyPermissions {
+		metaPropKeyPerms := make(
+			[]*metapb.PropertyPermission, len(apiPropPerms.Permissions),
+		)
+		for y, apiPropKeyPerm := range apiPropPerms.Permissions {
+			metaPropKeyPerms[y] = &metapb.PropertyPermission{
+				Project:    apiPropKeyPerm.Project,
+				Role:       apiPropKeyPerm.Role,
+				Permission: apiPropKeyPerm.Permission,
+			}
+		}
+		metaPropPerms[x] = &metapb.PropertyPermissions{
+			Key:         apiPropPerms.Key,
+			Permissions: metaPropKeyPerms,
+		}
 	}
-	if _, err := s.objectDefinitionSet(req.Session, def); err != nil {
+
+	odef := &metapb.ObjectDefinition{
+		Partition:           def.Partition,
+		ObjectType:          "runm.provider",
+		Schema:              def.Schema,
+		PropertyPermissions: metaPropPerms,
+	}
+	if _, err := s.objectDefinitionSet(req.Session, odef); err != nil {
 		s.log.ERR(
 			"failed setting object definition for runm.provider objects "+
 				"in partition '%s'",
-			input.Partition,
+			def.Partition,
 		)
 		return nil, err
 	}
 
 	return &pb.ProviderDefinitionSetResponse{
-		ProviderDefinition: &pb.ProviderDefinition{
-			Partition: def.Partition,
-			Schema:    schema,
-			// Permissions: propPermissions,
-		},
+		ProviderDefinition: def,
 	}, nil
 }

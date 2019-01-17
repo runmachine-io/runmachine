@@ -2,11 +2,6 @@ syntax = "proto3";
 
 package runmmeta;
 
-import "object_type.proto";
-import "partition.proto";
-import "permission.proto";
-import "wrappers.proto";
-
 message Property {
     string key = 1;
     string value = 2;
@@ -15,7 +10,11 @@ message Property {
 // Indicates whether a particular property item may be changed or read by a
 // class of user
 message PropertyPermission {
+    // The project this property's permissions are scoped to. Empty string
+    // indicates all projects (GLOBAL)
     string project = 1;
+    // The role this property's permissions are scoped to. Empty string
+    // indicates all roles in any of the scoped projects
     string role = 2;
     // The read/write permissions on the property. The default permissions for
     // any property on an object is that if a user is allowed to read the
@@ -30,8 +29,11 @@ message PropertyPermission {
     uint32 permission = 3;
 }
 
-// All property permissions for a specific property key
+// Properties on certain objects (providers, provider groups, consumers, etc)
+// can be constrained by administrators applying a property definition to them
 message PropertyPermissions {
+    // The property key to apply the property definition to. e.g. "architecture"
     string key = 1;
+    // Collection of access permissions applied to this property
     repeated PropertyPermission permissions = 50;
 }

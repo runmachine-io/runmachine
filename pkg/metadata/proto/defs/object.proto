@@ -63,7 +63,7 @@ message ObjectDefinition {
     // JSONSchema DRAFT-07 serialized string describing the object's schema
     string schema = 3;
     // Collection of access permissions applied to this object's properties
-    PropertyPermissions property_permissions = 50;
+    repeated PropertyPermissions property_permissions = 50;
 }
 
 // Used in matching object definition records

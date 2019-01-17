@@ -2,8 +2,6 @@ syntax = "proto3";
 
 package runmapi;
 
-import "wrappers.proto";
-
 message Property {
     string key = 1;
     string value = 2;
@@ -12,7 +10,11 @@ message Property {
 // Indicates whether a particular property item may be changed or read by a
 // class of user
 message PropertyPermission {
+    // The project this property's permissions are scoped to. Empty string
+    // indicates all projects (GLOBAL)
     string project = 1;
+    // The role this property's permissions are scoped to. Empty string
+    // indicates all roles in any of the scoped projects
     string role = 2;
     // The read/write permissions on the property. The default permissions for
     // any property on an object is that if a user is allowed to read the
@@ -27,98 +29,11 @@ message PropertyPermission {
     uint32 permission = 3;
 }
 
-// Administrators are able to create schemas that allow the restriction of data
-// type and format for a particular property key. The only restriction is that
-// the schema may not allow the value of the property item value to be
-// an object or array. In other words, the value of the property item must be a
-// scalar value.
-//
-// For example, let's say an administrator wants to allow users to associate an
-// "application type" to images that may be used to launch machines. There are
-// three possible values for the application type, corresponding to internal IT
-// classifications of various company software:
-//
-// * tool
-// * product
-// * vendor
-//
-// The administrator would create a property definition object with schema that looks
-// like this:
-//
-// type: string
-// enum:
-//   - tool
-//   - product
-//   - vendor
-//
-// The adminstrator would then save a PropertyDefinition message with an
-// object_type of "image", a key of "application_code", and the above schema.
-//
-// Once saved to the property service, the "application_type" property item
-// values would be validated against the above schema before being stored.
-message PropertySchema {
-    // A property's value may be any scalar JSON type
-    enum Type {
-        TYPE_STRING = 0;
-        TYPE_INTEGER = 1;
-        TYPE_NUMBER = 2;
-        TYPE_BOOLEAN = 3;
-    }
-
-    // Some pre-defined patterns that match JSONSchema Draft 7 formats that are
-    // supported by runmachine property schemas
-    enum Format {
-        FORMAT_NONE = 0;
-        FORMAT_DATETIME = 1;
-        FORMAT_DATE = 2;
-        FORMAT_TIME = 3;
-        FORMAT_EMAIL = 4;
-        FORMAT_IDN_EMAIL = 5;
-        FORMAT_HOSTNAME = 6;
-        FORMAT_IDN_HOSTNAME = 7;
-        FORMAT_IPV4 = 8;
-        FORMAT_IPV6 = 9;
-        FORMAT_URI = 10;
-        FORMAT_URI_REFERENCE = 11;
-        FORMAT_IRI = 12;
-        FORMAT_IRI_REFERENCE = 13;
-        FORMAT_URI_TEMPLATE = 14;
-    }
-    // Zero or more valid scalar types for the value. If empty, "string" is
-    // assumed
-    repeated Type types = 1;
-    // The valid strings the value may be
-    repeated string enum_values = 2;
-    // If the type is numeric, the value must be a multiple of this number
-    UInt64Value multiple_of = 3;
-    // If the type is numeric, the value must be greater than or equal to this
-    // number
-    Int64Value minimum = 4;
-    // If the type is numeric, the value must be less than or equal to this
-    // number
-    Int64Value maximum = 5;
-    // If the type is string, the value must have a length greater than or
-    // equal to this number
-    UInt64Value minimum_length = 6;
-    // If the type is string, the value must have a length less than or equal
-    // to this number
-    UInt64Value maximum_length = 7;
-    // Regex pattern that value must match
-    string pattern = 8;
-    // Pre-defined regex format the value must match (see JSONSchema Draft 7
-    // formats)
-    Format format = 9;
-}
-
 // Properties on certain objects (providers, provider groups, consumers, etc)
 // can be constrained by administrators applying a property definition to them
-message PropertyDefinition {
+message PropertyPermissions {
     // The property key to apply the property definition to. e.g. "architecture"
     string key = 1;
-    // true if this property key must be set on objects of this type
-    bool is_required = 2;
-    // Describes the format and type constraints of the value of the property
-    PropertySchema schema = 50;
     // Collection of access permissions applied to this property
-    repeated PropertyPermission permissions = 51;
+    repeated PropertyPermission permissions = 50;
 }

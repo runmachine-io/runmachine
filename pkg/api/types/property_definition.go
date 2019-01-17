@@ -122,6 +122,23 @@ func (perm *PropertyPermission) Validate() error {
 	return nil
 }
 
+// ToUint32 converts the string representation of the access permission to the
+// unsigned integer flag used for storage and comparisons internally
+func (perm *PropertyPermission) PermissionUint32() uint32 {
+	switch perm.Permission {
+	case "":
+		return 0
+	case "r":
+		return PERMISSION_READ
+	case "w":
+		return PERMISSION_WRITE
+	case "rw":
+		return PERMISSION_READ | PERMISSION_WRITE
+	default:
+		return 0
+	}
+}
+
 // NOTE(jaypipes): A type that can be represented in YAML as *either* a string
 // *or* an array of strings, which is what JSONSchema's type field needs.
 // see: https://github.com/go-yaml/yaml/issues/100

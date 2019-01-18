@@ -10,3 +10,33 @@ property_definitions:
         permission: rw
     schema:
       type: string
+  location.row:
+    required: true
+    permissions:
+      # Default to not allowing reads from anyone
+      - permission:
+      # Unless the user is an admin
+      - role: admin
+        permission: rw
+    schema:
+      type: integer
+  location.rack:
+    required: true
+    permissions:
+      # Default to not allowing reads from anyone
+      - permission:
+      # Unless the user is an admin
+      - role: admin
+        permission: rw
+    schema:
+      type: integer
+  location.rack_position:
+    required: true
+    permissions:
+      # Default to not allowing reads from anyone
+      - permission:
+      # Unless the user is an admin
+      - role: admin
+        permission: rw
+    schema:
+      type: integer

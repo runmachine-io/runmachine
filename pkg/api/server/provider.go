@@ -393,22 +393,14 @@ func (s *Server) validateProviderCreateRequest(
 	// partition name, translate it to a partition UUID
 	part, err := s.partitionGet(req.Session, input.Partition)
 	if err != nil {
-		if err == errors.ErrNotFound {
-			return nil, errPartitionNotFound(input.Partition)
-		}
-		s.log.ERR("failed checking provider's partition: %s", err)
-		return nil, ErrUnknown
+		return nil, err
 	}
 	partUuid := part.Uuid
 
 	// Check that the supplied provider type exists
 	ptCode := input.ProviderType
 	if _, err = s.providerTypeGetByCode(req.Session, ptCode); err != nil {
-		if err == errors.ErrNotFound {
-			return nil, errProviderTypeNotFound(ptCode)
-		}
-		s.log.ERR("failed checking provider type: %s", err)
-		return nil, ErrUnknown
+		return nil, err
 	}
 
 	props := make([]*pb.Property, 0)
@@ -465,23 +457,12 @@ func (s *Server) ProviderCreate(
 		}
 		obj.Properties = props
 	}
-	createdObj, err := s.objectCreate(req.Session, obj)
-	if err != nil {
-		if s, ok := status.FromError(err); ok {
-			scode := s.Code()
-			if scode == codes.FailedPrecondition || scode == codes.NotFound {
-				return nil, err
-			}
-		}
-		s.log.ERR(
-			"failed creating provider object in metadata service: %s",
-			err,
-		)
-		return nil, ErrUnknown
+	if err := s.objectCreate(req.Session, obj); err != nil {
+		return nil, err
 	}
 
 	// The new object may have set the UUID if it was empty from the user
-	p.Uuid = createdObj.Uuid
+	p.Uuid = obj.Uuid
 
 	// Next save the provider record in the resource service
 	if err := s.providerCreate(req.Session, p); err != nil {

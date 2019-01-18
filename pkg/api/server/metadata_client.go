@@ -149,18 +149,7 @@ func (s *Server) partitionGetByUuid(
 	}
 	rec, err := mc.PartitionGet(context.Background(), req)
 	if err != nil {
-		if s, ok := status.FromError(err); ok {
-			if s.Code() == codes.NotFound {
-				return nil, errors.ErrNotFound
-			}
-		}
-		// We don't want to expose internal errors to the user, so just return
-		// an unknown error after logging it.
-		s.log.ERR(
-			"failed to retrieve partition with UUID %s: %s",
-			uuid, err,
-		)
-		return nil, ErrUnknown
+		return nil, err
 	}
 	return &pb.Partition{
 		Uuid: rec.Uuid,
@@ -189,18 +178,7 @@ func (s *Server) partitionGetByName(
 	}
 	rec, err := mc.PartitionGet(context.Background(), req)
 	if err != nil {
-		if s, ok := status.FromError(err); ok {
-			if s.Code() == codes.NotFound {
-				return nil, errors.ErrNotFound
-			}
-		}
-		// We don't want to expose internal errors to the user, so just return
-		// an unknown error after logging it.
-		s.log.ERR(
-			"failed to retrieve partition with name %s: %s",
-			name, err,
-		)
-		return nil, ErrUnknown
+		return nil, err
 	}
 	return &pb.Partition{
 		Uuid: rec.Uuid,
@@ -258,18 +236,7 @@ func (s *Server) uuidFromName(
 	}
 	rec, err := mc.ObjectGet(context.Background(), req)
 	if err != nil {
-		if s, ok := status.FromError(err); ok {
-			if s.Code() == codes.NotFound {
-				return "", ErrNotFound
-			}
-		}
-		// We don't want to expose internal errors to the user, so just return
-		// an unknown error after logging it.
-		s.log.ERR(
-			"failed to retrieve object of type %s with name %s: %s",
-			objType, name, err,
-		)
-		return "", ErrUnknown
+		return "", err
 	}
 	return rec.Uuid, nil
 }
@@ -295,18 +262,7 @@ func (s *Server) objectFromUuid(
 	}
 	rec, err := mc.ObjectGet(context.Background(), req)
 	if err != nil {
-		if s, ok := status.FromError(err); ok {
-			if s.Code() == codes.NotFound {
-				return nil, errors.ErrNotFound
-			}
-		}
-		// We don't want to expose internal errors to the user, so just return
-		// an unknown error after logging it.
-		s.log.ERR(
-			"failed to retrieve object with UUID %s: %s",
-			uuid, err,
-		)
-		return nil, ErrUnknown
+		return nil, err
 	}
 	return rec, nil
 }
@@ -345,18 +301,7 @@ func (s *Server) providerTypeGetByCode(
 	}
 	rec, err := mc.ProviderTypeGet(context.Background(), req)
 	if err != nil {
-		if s, ok := status.FromError(err); ok {
-			if s.Code() == codes.NotFound {
-				return nil, errors.ErrNotFound
-			}
-		}
-		// We don't want to expose internal errors to the user, so just return
-		// an unknown error after logging it.
-		s.log.ERR(
-			"failed to retrieve provider type with code '%s': %s",
-			code, err,
-		)
-		return nil, ErrUnknown
+		return nil, err
 	}
 	return &pb.ProviderType{
 		Code:        rec.Code,
@@ -364,25 +309,29 @@ func (s *Server) providerTypeGetByCode(
 	}, nil
 }
 
-// objectCreate takes a new object and returns a metapb.Object message
-// representing the newly-created object in the metadata service.
+// objectCreate creates a supplied object in the metadata service. The supplied
+// pointer to an Object is updated with fields from the newly-created object in
+// the metadata service, including any auto-created UUIDs
 func (s *Server) objectCreate(
 	sess *pb.Session,
 	obj *metapb.Object,
-) (*metapb.Object, error) {
+) error {
 	req := &metapb.ObjectCreateRequest{
 		Session: metaSession(sess),
 		Object:  obj,
 	}
 	mc, err := s.metaClient()
 	if err != nil {
-		return nil, err
+		return err
 	}
 	resp, err := mc.ObjectCreate(context.Background(), req)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return resp.Object, nil
+	// Make sure that our object's UUID is set to the (possibly auto-created)
+	// UUID returned by the metadata service
+	obj.Uuid = resp.Object.Uuid
+	return nil
 }
 
 // objectDelete deletes any object with one of the supplied UUIDs from the
@@ -450,11 +399,7 @@ func (s *Server) objectDefinitionGet(
 	// Look up the partition's UUID
 	part, err := s.partitionGet(sess, partition)
 	if err != nil {
-		if err == errors.ErrNotFound {
-			return nil, errPartitionNotFound(partition)
-		}
-		s.log.ERR("failed retrieving partition '%s': %s", partition, err)
-		return nil, errors.ErrUnknown
+		return nil, err
 	}
 
 	req := &metapb.ObjectDefinitionGetRequest{

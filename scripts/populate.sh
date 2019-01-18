@@ -10,15 +10,11 @@ FIXTURES_DIR=$ROOT_DIR/tests/data/objects
 
 source $LIB_DIR/common
 
-check_is_installed docker
-
-source $LIB_DIR/container
-source $LIB_DIR/etcd
-source $LIB_DIR/mysql
-
 if debug_enabled; then
     set -o xtrace
 fi
+
+source $SCRIPTS_DIR/service-up.sh
 
 for f in $FIXTURES_DIR/partitions/*; do
     part_id=$( basename "$f")

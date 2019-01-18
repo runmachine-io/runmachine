@@ -380,19 +380,30 @@ func (s *Server) providersGetMatching(
 // fields and meets things like property meta validation checks.
 func (s *Server) validateProviderCreateRequest(
 	req *pb.CreateRequest,
-) (*types.Provider, error) {
-	var p types.Provider
-	if err := yaml.Unmarshal(req.Payload, &p); err != nil {
+) (*pb.Provider, error) {
+	var input types.Provider
+	if err := yaml.Unmarshal(req.Payload, &input); err != nil {
 		return nil, err
 	}
-	if err := p.Validate(); err != nil {
+	if err := input.Validate(); err != nil {
 		return nil, err
 	}
 
-	// Check that the supplied provider type exists
-	ptCode := p.ProviderType
-	_, err := s.providerTypeGetByCode(req.Session, ptCode)
+	// Check that the supplied partition exists, and if the user supplied a
+	// partition name, translate it to a partition UUID
+	part, err := s.partitionGet(req.Session, input.Partition)
 	if err != nil {
+		if err == errors.ErrNotFound {
+			return nil, errPartitionNotFound(input.Partition)
+		}
+		s.log.ERR("failed checking provider's partition: %s", err)
+		return nil, ErrUnknown
+	}
+	partUuid := part.Uuid
+
+	// Check that the supplied provider type exists
+	ptCode := input.ProviderType
+	if _, err = s.providerTypeGetByCode(req.Session, ptCode); err != nil {
 		if err == errors.ErrNotFound {
 			return nil, errProviderTypeNotFound(ptCode)
 		}
@@ -400,7 +411,24 @@ func (s *Server) validateProviderCreateRequest(
 		return nil, ErrUnknown
 	}
 
-	return &p, nil
+	props := make([]*pb.Property, 0)
+	if input.Properties != nil {
+		for key, val := range input.Properties {
+			props = append(props, &pb.Property{
+				Key:   key,
+				Value: val,
+			})
+		}
+	}
+
+	return &pb.Provider{
+		Partition:    partUuid,
+		ProviderType: ptCode,
+		Name:         input.Name,
+		Uuid:         input.Uuid,
+		Tags:         input.Tags,
+		Properties:   props,
+	}, nil
 }
 
 func (s *Server) ProviderCreate(
@@ -409,32 +437,31 @@ func (s *Server) ProviderCreate(
 ) (*pb.ProviderCreateResponse, error) {
 	// TODO(jaypipes): AUTHZ check if user can write objects
 
-	input, err := s.validateProviderCreateRequest(req)
+	p, err := s.validateProviderCreateRequest(req)
 	if err != nil {
 		return nil, err
 	}
 
 	s.log.L3(
 		"creating new provider in partition %s with name %s...",
-		input.Partition,
-		input.Name,
+		p.Partition, p.Name,
 	)
 
 	// First save the object in the metadata service
 	obj := &metapb.Object{
-		Partition:  input.Partition,
+		Partition:  p.Partition,
 		ObjectType: "runm.provider",
-		Uuid:       input.Uuid,
-		Name:       input.Name,
-		Tags:       input.Tags,
+		Uuid:       p.Uuid,
+		Name:       p.Name,
+		Tags:       p.Tags,
 	}
-	if input.Properties != nil {
-		props := make([]*metapb.Property, 0)
-		for key, val := range input.Properties {
-			props = append(props, &metapb.Property{
-				Key:   key,
-				Value: val,
-			})
+	if len(p.Properties) > 0 {
+		props := make([]*metapb.Property, len(p.Properties))
+		for x, prop := range p.Properties {
+			props[x] = &metapb.Property{
+				Key:   prop.Key,
+				Value: prop.Value,
+			}
 		}
 		obj.Properties = props
 	}
@@ -453,42 +480,20 @@ func (s *Server) ProviderCreate(
 		return nil, ErrUnknown
 	}
 
-	input.Uuid = createdObj.Uuid
-	// Make sure we are only passing the partition's UUID, which the created
-	// object in the metadata service will have returned.
-	input.Partition = createdObj.Partition
+	// The new object may have set the UUID if it was empty from the user
+	p.Uuid = createdObj.Uuid
 
 	// Next save the provider record in the resource service
-	resProv, err := s.providerCreate(req.Session, input)
-	if err != nil {
+	if err := s.providerCreate(req.Session, p); err != nil {
 		return nil, err
 	}
 	s.log.L1(
 		"created new provider with UUID %s in partition %s with name %s",
-		input.Uuid,
-		createdObj.Partition,
-		input.Name,
+		p.Uuid, p.Partition, p.Name,
 	)
 
-	// Copy object properties to the returned Provider result
-	pProps := make([]*pb.Property, len(obj.Properties))
-	for x, oProp := range obj.Properties {
-		pProps[x] = &pb.Property{
-			Key:   oProp.Key,
-			Value: oProp.Value,
-		}
-	}
-
 	return &pb.ProviderCreateResponse{
-		Provider: &pb.Provider{
-			Uuid:         input.Uuid,
-			Name:         input.Name,
-			Partition:    createdObj.Partition,
-			ProviderType: input.ProviderType,
-			Generation:   resProv.Generation,
-			Properties:   pProps,
-			Tags:         input.Tags,
-		},
+		Provider: p,
 	}, nil
 }
 
@@ -506,7 +511,8 @@ func (s *Server) validateProviderDefinitionSetRequest(
 		return nil, err
 	}
 
-	// Check that the supplied partition exists
+	// Check that the supplied partition exists, and if the user supplied a
+	// partition name, translate it to a partition UUID
 	part, err := s.partitionGet(req.Session, input.Partition)
 	if err != nil {
 		if err == errors.ErrNotFound {

@@ -9,7 +9,6 @@ import (
 	"google.golang.org/grpc/status"
 
 	pb "github.com/runmachine-io/runmachine/pkg/api/proto"
-	"github.com/runmachine-io/runmachine/pkg/api/types"
 	"github.com/runmachine-io/runmachine/pkg/errors"
 	respb "github.com/runmachine-io/runmachine/pkg/resource/proto"
 )
@@ -73,11 +72,13 @@ func (s *Server) resClient() (respb.RunmResourceClient, error) {
 }
 
 // providerCreate creates the supplied provider in the resource service. The
-// data supplied has already been validated/checked.
+// data supplied has already been validated/checked. The supplied provider
+// object may have fields updated on it when creation is successful (such as
+// the provider's generation)
 func (s *Server) providerCreate(
 	sess *pb.Session,
-	prov *types.Provider,
-) (*respb.Provider, error) {
+	prov *pb.Provider,
+) error {
 	p := &respb.Provider{
 		Uuid:         prov.Uuid,
 		Partition:    prov.Partition,
@@ -92,16 +93,17 @@ func (s *Server) providerCreate(
 	if err != nil {
 		if s, ok := status.FromError(err); ok {
 			if s.Code() == codes.AlreadyExists {
-				return nil, errors.ErrDuplicate
+				return errors.ErrDuplicate
 			}
 		}
 		s.log.ERR(
 			"failed saving provider with name '%s' in resource service: %s",
 			prov.Name, err,
 		)
-		return nil, errors.ErrUnknown
+		return errors.ErrUnknown
 	}
-	return resp.Provider, nil
+	prov.Generation = resp.Provider.Generation
+	return nil
 }
 
 // providerDelete deletes the provider records from the resource service having

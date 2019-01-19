@@ -6,12 +6,9 @@ import (
 	"io"
 
 	pb "github.com/runmachine-io/runmachine/pkg/api/proto"
-	"github.com/runmachine-io/runmachine/pkg/errors"
 	metapb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
 	"github.com/runmachine-io/runmachine/pkg/util"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 // metaSession transforms an API protobuffer Session message into a metadata
@@ -149,18 +146,7 @@ func (s *Server) partitionGetByUuid(
 	}
 	rec, err := mc.PartitionGet(context.Background(), req)
 	if err != nil {
-		if s, ok := status.FromError(err); ok {
-			if s.Code() == codes.NotFound {
-				return nil, errors.ErrNotFound
-			}
-		}
-		// We don't want to expose internal errors to the user, so just return
-		// an unknown error after logging it.
-		s.log.ERR(
-			"failed to retrieve partition with UUID %s: %s",
-			uuid, err,
-		)
-		return nil, ErrUnknown
+		return nil, err
 	}
 	return &pb.Partition{
 		Uuid: rec.Uuid,
@@ -189,18 +175,7 @@ func (s *Server) partitionGetByName(
 	}
 	rec, err := mc.PartitionGet(context.Background(), req)
 	if err != nil {
-		if s, ok := status.FromError(err); ok {
-			if s.Code() == codes.NotFound {
-				return nil, errors.ErrNotFound
-			}
-		}
-		// We don't want to expose internal errors to the user, so just return
-		// an unknown error after logging it.
-		s.log.ERR(
-			"failed to retrieve partition with name %s: %s",
-			name, err,
-		)
-		return nil, ErrUnknown
+		return nil, err
 	}
 	return &pb.Partition{
 		Uuid: rec.Uuid,
@@ -258,18 +233,7 @@ func (s *Server) uuidFromName(
 	}
 	rec, err := mc.ObjectGet(context.Background(), req)
 	if err != nil {
-		if s, ok := status.FromError(err); ok {
-			if s.Code() == codes.NotFound {
-				return "", ErrNotFound
-			}
-		}
-		// We don't want to expose internal errors to the user, so just return
-		// an unknown error after logging it.
-		s.log.ERR(
-			"failed to retrieve object of type %s with name %s: %s",
-			objType, name, err,
-		)
-		return "", ErrUnknown
+		return "", err
 	}
 	return rec.Uuid, nil
 }
@@ -295,18 +259,7 @@ func (s *Server) objectFromUuid(
 	}
 	rec, err := mc.ObjectGet(context.Background(), req)
 	if err != nil {
-		if s, ok := status.FromError(err); ok {
-			if s.Code() == codes.NotFound {
-				return nil, errors.ErrNotFound
-			}
-		}
-		// We don't want to expose internal errors to the user, so just return
-		// an unknown error after logging it.
-		s.log.ERR(
-			"failed to retrieve object with UUID %s: %s",
-			uuid, err,
-		)
-		return nil, ErrUnknown
+		return nil, err
 	}
 	return rec, nil
 }
@@ -345,18 +298,7 @@ func (s *Server) providerTypeGetByCode(
 	}
 	rec, err := mc.ProviderTypeGet(context.Background(), req)
 	if err != nil {
-		if s, ok := status.FromError(err); ok {
-			if s.Code() == codes.NotFound {
-				return nil, errors.ErrNotFound
-			}
-		}
-		// We don't want to expose internal errors to the user, so just return
-		// an unknown error after logging it.
-		s.log.ERR(
-			"failed to retrieve provider type with code '%s': %s",
-			code, err,
-		)
-		return nil, ErrUnknown
+		return nil, err
 	}
 	return &pb.ProviderType{
 		Code:        rec.Code,
@@ -364,25 +306,29 @@ func (s *Server) providerTypeGetByCode(
 	}, nil
 }
 
-// objectCreate takes a new object definition and returns a metapb.Object
-// message representing the newly-created object in the metadata service.
+// objectCreate creates a supplied object in the metadata service. The supplied
+// pointer to an Object is updated with fields from the newly-created object in
+// the metadata service, including any auto-created UUIDs
 func (s *Server) objectCreate(
 	sess *pb.Session,
 	obj *metapb.Object,
-) (*metapb.Object, error) {
+) error {
 	req := &metapb.ObjectCreateRequest{
 		Session: metaSession(sess),
 		Object:  obj,
 	}
 	mc, err := s.metaClient()
 	if err != nil {
-		return nil, err
+		return err
 	}
 	resp, err := mc.ObjectCreate(context.Background(), req)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return resp.Object, nil
+	// Make sure that our object's UUID is set to the (possibly auto-created)
+	// UUID returned by the metadata service
+	obj.Uuid = resp.Object.Uuid
+	return nil
 }
 
 // objectDelete deletes any object with one of the supplied UUIDs from the
@@ -437,4 +383,55 @@ func (s *Server) objectsGetMatching(
 		msgs = append(msgs, msg)
 	}
 	return msgs, nil
+}
+
+// objectDefinitionGetByCode returns an object definition record matching the
+// supplied object type and partition identifier. If no such object definition
+// could be found, returns (nil, ErrNotFound)
+func (s *Server) objectDefinitionGet(
+	sess *pb.Session,
+	objType string,
+	partition string,
+) (*metapb.ObjectDefinition, error) {
+	// Look up the partition's UUID
+	part, err := s.partitionGet(sess, partition)
+	if err != nil {
+		return nil, err
+	}
+
+	req := &metapb.ObjectDefinitionGetRequest{
+		Session:    metaSession(sess),
+		Partition:  part.Uuid,
+		ObjectType: objType,
+	}
+	mc, err := s.metaClient()
+	if err != nil {
+		return nil, err
+	}
+	def, err := mc.ObjectDefinitionGet(context.Background(), req)
+	if err != nil {
+		return nil, err
+	}
+	return def, nil
+}
+
+// objectDefinitionSet takes an object definition and saves it in the metadata
+// service, returning the saved object definition
+func (s *Server) objectDefinitionSet(
+	sess *pb.Session,
+	def *metapb.ObjectDefinition,
+) (*metapb.ObjectDefinition, error) {
+	req := &metapb.ObjectDefinitionSetRequest{
+		Session:          metaSession(sess),
+		ObjectDefinition: def,
+	}
+	mc, err := s.metaClient()
+	if err != nil {
+		return nil, err
+	}
+	resp, err := mc.ObjectDefinitionSet(context.Background(), req)
+	if err != nil {
+		return nil, err
+	}
+	return resp.ObjectDefinition, nil
 }

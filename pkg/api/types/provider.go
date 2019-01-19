@@ -11,26 +11,28 @@ var (
 	}
 )
 
+// Provider is an object that exposes inventories of consumable resources and
+// has a set of capabilities
 type Provider struct {
 	// Identifier of the partition the object belongs to
-	Partition string `yaml:"partition"`
+	Partition string `yaml:"partition" json:"partition"`
 	// Code for the type of provider this is
-	ProviderType string `yaml:"provider_type"`
+	ProviderType string `yaml:"provider_type" json:"provider_type"`
 	// Optional identifier of the provider the provider is a child of. Leave
 	// empty if the provider has no parents (it's a "root provider")
-	Parent string `yaml:"parent"`
+	Parent string `yaml:"parent" json:"parent,omitempty"`
 	// The UUID of the provider. Expected to be blank when a user is creating a
 	// new provider.
-	Uuid string `yaml:"uuid"`
+	Uuid string `yaml:"uuid" json:"uuid,omitempty"`
 	// Human-readable name for the provider. Uniqueness is guaranteed in the
 	// scope of the partition the provider belongs to.
-	Name string `yaml:"name"`
+	Name string `yaml:"name" json:"name"`
 	// Map of key/value properties associated with this provider. Properties can
 	// have a structure and be validated against a schema.
-	Properties map[string]string `yaml:"properties"`
+	Properties map[string]interface{} `yaml:"properties" json:"properties,omitempty"`
 	// Array of string tags. Tags are unstructured and unvalidated and any user
 	// with write access to the provider can add or remove any tag.
-	Tags []string `yaml:"tags"`
+	Tags []string `yaml:"tags" json:"tags,omitempty"`
 }
 
 // Validate returns an error if the definition is invalid, nil otherwise

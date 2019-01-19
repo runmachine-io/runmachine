@@ -53,3 +53,21 @@ message ObjectFilter {
     // object is PROJECT
     string project = 5;
 }
+
+message ObjectDefinition {
+    // UUID of the partition this object definition has been created in
+    string partition = 1;
+    // String code of the object type the object definition applies to. e.g.
+    // "runm.machine"
+    string object_type = 2;
+    // JSONSchema DRAFT-07 serialized string describing the object's schema
+    string schema = 3;
+    // Collection of access permissions applied to this object's properties
+    repeated PropertyPermissions property_permissions = 50;
+}
+
+// Used in matching object definition records
+message ObjectDefinitionFilter {
+    UuidsFilter partition_filter = 1;
+    CodeFilter object_type_filter = 2;
+}

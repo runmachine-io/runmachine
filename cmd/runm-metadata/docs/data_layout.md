@@ -83,11 +83,7 @@ $ROOT
       d3873f99a21f45f5bce156c1f8b84b03 -> serialized Partition message
       d79706e01fbd4e48aae89209061cdb71 -> serialized Partition message
     d3873f99a21f45f5bce156c1f8b84b03/
-    d79706e01fbd4e48aae89209061cdb71/A
-  property-definitions/by-uuid/
-    9ef32862afd54a32b4a6c5f11c590061 -> serialized PropertyDefinition message
-    f287341160ee4feba4012eb7f8125b82 -> serialized PropertyDefinition message
-    f2aaa1bffbba4d5e860404176564347e -> serialized PropertyDefinition message
+    d79706e01fbd4e48aae89209061cdb71/
   types/
     object/
       runm.image -> serialized ObjectType message
@@ -121,9 +117,6 @@ the object as the key and a serialized Google Protobuffer message of the
 `$ROOT/objects/by-uuid/` key namespace's valued keys allows the `runm-metadata`
 service to answer queries like "get me the tags on this object" with an
 efficient single key fetch operation.
-
-The `$ROOT/property-definitions/by-uuid/` key namespace has a set of valued
-keys describing the property definitions known to the system.
 
 The `$ROOT/partitions/` key namespace has two key namespaces below it that
 implement indexes into partitions, called `by-name` and `by-uuid`. In addition
@@ -163,26 +156,41 @@ with UUID `d79706e01fbd4e48aae89209061cdb71`.
 
 ### The `$PARTITION` key namespace
 
-Under `$PARTITION`, we store information about the objects, property schemas,
-and the object metadata (properties and tags) in the partition:
+Under `$PARTITION`, we store information about the definitions (schemas),
+objects, and the object metadata (properties and tags) in the partition:
 
 ```
 $PARTITION (e.g. $ROOT/partitions/d79706e01fbd4e48aae89209061cdb71/)
+  definitions/
   objects/
   properties/
   tags/
 ```
 
 We will refer to the `$PARTITION/objects/` key namespace as `$OBJECT` from here
-on. Similarly, we will refer to `$PARTITION/properties/` as just `$PROPERTIES` and
+on. Similarly, we will refer to `$PARTITION/definitions/` as just
+`$DEFINITIONS`, `$PARTITION/properties/` as just `$PROPERTIES` and
 `$PARTITION/tags,` as just `$TAGS`. Each of these key namespaces is described
 in detail in the following sections.
 
+### The `$DEFINITIONS` key namespace
+
+`$DEFINITIONS` key namespace contains a sub key namespace called `by-type` that
+contains indexes into object definitions by type.
+
+```
+$DEFINITIONS (e.g. $ROOT/partitions/d79706e01fbd4e48aae89209061cdb71/definitions/)
+  by-type/
+    runm.image -> serialized ObjectType message
+    runm.machine -> serialized ObjectType message
+    runm.provider -> serialized ObjectType message
+    runm.provider_group -> serialized ObjectType message
+```
+
 ### The `$OBJECTS` key namespace
 
-Let's first take a look at what is contained in the `$OBJECTS` key
-namespace. The `$OBJECTS` key namespace contains a sub key namespaces called
-`by-type` that contains indexes into objects by type.
+The `$OBJECTS` key namespace contains a sub key namespace called `by-type`
+that contains indexes into objects by type.
 
 ```
 $OBJECTS (e.g. $ROOT/partitions/d79706e01fbd4e48aae89209061cdb71/objects/)

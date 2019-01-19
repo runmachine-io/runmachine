@@ -12,18 +12,13 @@ import "search.proto";
 import "session.proto";
 import "wrappers.proto";
 
-enum PayloadFormat {
-    YAML = 0;
-    PROTOBUFFER = 1;
-}
-
 // The runm-metadata gRPC service is a lookup service for UUID to external
 // unique names.
 //
 // In addition to the name and UUID lookups, runm-metadata serves as a
 // specialized key/value store for various objects in the runm system. An
-// administrator may create property definition items which dictate the required
-// format or type of a property's values.
+// administrator may create object definitions which dictate the required
+// format or type of an object's property's values.
 service RunmMetadata {
     // Creates minimal information for service to run, including a name for a
     // partition.
@@ -47,21 +42,13 @@ service RunmMetadata {
     rpc object_type_list(ObjectTypeListRequest) returns (
         stream ObjectType) {}
 
-    // Returns information about a specific property definition
-    rpc property_definition_get(PropertyDefinitionGetRequest) returns (
-        PropertyDefinition) {}
+    // Returns information about a specific object definition
+    rpc object_definition_get(ObjectDefinitionGetRequest) returns (
+        ObjectDefinition) {}
 
-    // Deletes one or more property definitions
-    rpc property_definition_delete(PropertyDefinitionDeleteRequest) returns (
-        PropertyDefinitionDeleteResponse) {}
-
-    // Set information about a specific property definition
-    rpc property_definition_set(PropertyDefinitionSetRequest) returns (
-        PropertyDefinitionSetResponse) {}
-
-    // Returns information about multiple property definitions
-    rpc property_definition_list(PropertyDefinitionListRequest) returns (
-        stream PropertyDefinition) {}
+    // Set information about a specific object definition
+    rpc object_definition_set(ObjectDefinitionSetRequest) returns (
+        ObjectDefinitionSetResponse) {}
 
     // Returns information about a specific object
     rpc object_get(ObjectGetRequest) returns (Object) {}
@@ -69,10 +56,6 @@ service RunmMetadata {
     // Deletes one or more objectes
     rpc object_delete(ObjectDeleteRequest) returns (
         DeleteResponse) {}
-
-    // Set information about a specific object
-    rpc object_set(ObjectSetRequest) returns (
-        ObjectSetResponse) {}
 
     // Create a new object
     rpc object_create(ObjectCreateRequest) returns (
@@ -158,19 +141,6 @@ message ObjectGetRequest {
     ObjectFilter filter = 2;
 }
 
-message ObjectSetRequest {
-    Session session = 1;
-    PayloadFormat format = 2;
-    // Raw bytes representing the new representation of the object. The server
-    // is responsible for unmarshaling this raw payload.
-    bytes payload = 3;
-}
-
-message ObjectSetResponse {
-    // The changed/created object
-    Object object = 1;
-}
-
 message ObjectCreateRequest {
     Session session = 1;
     Object object = 2;
@@ -194,41 +164,19 @@ message ObjectDeleteRequest {
     repeated string uuids = 2;
 }
 
-message PropertyDefinitionGetRequest {
+message ObjectDefinitionGetRequest {
     Session session = 1;
-    PropertyDefinitionFilter filter = 2;
+    string partition = 2;
+    string object_type = 3;
 }
 
-message PropertyDefinitionSetRequest {
+message ObjectDefinitionSetRequest {
     Session session = 1;
-    PayloadFormat format = 2;
-    // Raw bytes representing the new representation of the property definition.
-    // The server is responsible for unmarshaling this raw payload.
-    bytes payload = 3;
+    ObjectDefinition object_definition = 2;
 }
 
-message PropertyDefinitionSetResponse {
-    PropertyDefinition property_definition = 2;
-}
-
-message PropertyDefinitionListRequest {
-    Session session = 1;
-    SearchOptions options = 2;
-    // A set of filter expressions that are OR'd together when determining
-    // matches
-    repeated PropertyDefinitionFilter any = 3;
-}
-
-message PropertyDefinitionDeleteRequest {
-    Session session = 1;
-    // A set of filter expressions that are OR'd together when determining
-    // matches
-    repeated PropertyDefinitionFilter any = 2;
-}
-
-message PropertyDefinitionDeleteResponse {
-    repeated string errors = 1;
-    uint64 num_deleted = 2;
+message ObjectDefinitionSetResponse {
+    ObjectDefinition object_definition = 1;
 }
 
 message ObjectPropertiesSetRequest {

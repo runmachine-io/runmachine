@@ -39,15 +39,36 @@ var (
 		"iri-reference",
 		"uri-template",
 	}
+	propertySchemaTemplateContents = `{{ define "property-schema" }}
+        {{ quote .Key}}: {
+          "type": [{{ quote_join .Types ", " }}]
+{{- if .MultipleOf }}
+          , "multipleOf": {{ deref_uint .MultipleOf }}
+{{- end }}
+{{- if .Minimum }}
+          , "minimum": {{ deref_int .Minimum }}
+{{- end }}
+{{- if .Maximum }}
+          , "maximum": {{ deref_int .Maximum }}
+{{- end }}
+{{- if .MinLength }}
+          , "minLength": {{ deref_uint .MinLength }}
+{{- end }}
+{{- if .MaxLength }}
+          , "maxLength": {{ deref_uint .MaxLength }}
+{{- end }}
+{{- if .Pattern }}
+          , "pattern": {{ .Pattern }}
+{{- end }}
+{{- if .Format }}
+          , "format": {{ .Formet }}
+{{- end }}
+        }
+{{- end -}}
+`
 )
 
 type PropertyDefinition struct {
-	// Identifier of the partition the object belongs to
-	Partition string `yaml:"partition"`
-	// Code for the type of object this is
-	ObjectType string `yaml:"object_type"`
-	// The key of the property this schema will apply to
-	Key string `yaml:"key"`
 	// JSONSchema property type document represented in YAML, dictating the
 	// constraints applied by this schema to the property's value
 	Schema *PropertySchema `yaml:"schema"`
@@ -59,15 +80,6 @@ type PropertyDefinition struct {
 
 // Validate returns an error if the definition is invalid, nil otherwise
 func (def *PropertyDefinition) Validate() error {
-	if def.ObjectType == "" {
-		return fmt.Errorf("object type required")
-	}
-	if def.Partition == "" {
-		return fmt.Errorf("partition required")
-	}
-	if def.Key == "" {
-		return fmt.Errorf("property key required")
-	}
 	for _, perm := range def.Permissions {
 		if err := perm.Validate(); err != nil {
 			return err
@@ -108,6 +120,23 @@ func (perm *PropertyPermission) Validate() error {
 		)
 	}
 	return nil
+}
+
+// ToUint32 converts the string representation of the access permission to the
+// unsigned integer flag used for storage and comparisons internally
+func (perm *PropertyPermission) PermissionUint32() uint32 {
+	switch perm.Permission {
+	case "":
+		return 0
+	case "r":
+		return PERMISSION_READ
+	case "w":
+		return PERMISSION_WRITE
+	case "rw":
+		return PERMISSION_READ | PERMISSION_WRITE
+	default:
+		return 0
+	}
 }
 
 // NOTE(jaypipes): A type that can be represented in YAML as *either* a string
@@ -176,6 +205,11 @@ type PropertySchema struct {
 	Format string `yaml:"format"`
 }
 
+type propertySchemaWithKey struct {
+	*PropertySchema
+	Key string
+}
+
 // Validate returns an error if the schema document isn't valid, or nil
 // otherwise
 func (schema *PropertySchema) Validate() error {
@@ -219,52 +253,4 @@ func (schema *PropertySchema) Validate() error {
 		}
 	}
 	return nil
-}
-
-// Returns a JSONSchema (DRAFT-7) document representing the schema for the
-// object type and key pair.
-func (schema *PropertySchema) JSONSchemaString() string {
-	if schema == nil {
-		return ""
-	}
-	res := ""
-	switch len(schema.Types) {
-	case 0:
-		break
-	case 1:
-		res += "type: " + schema.Types[0] + "\n"
-	default:
-		res += "type:\n"
-		for _, t := range schema.Types {
-			res += "  - " + t + "\n"
-		}
-	}
-	if len(schema.Enum) > 0 {
-		res += "enum:\n"
-		for _, val := range schema.Enum {
-			res += "  - " + val + "\n"
-		}
-	}
-	if schema.MultipleOf != nil {
-		res += fmt.Sprintf("multipleOf: %d\n", *schema.MultipleOf)
-	}
-	if schema.Minimum != nil {
-		res += fmt.Sprintf("minimum: %d\n", *schema.Minimum)
-	}
-	if schema.Maximum != nil {
-		res += fmt.Sprintf("maximum: %d\n", *schema.Maximum)
-	}
-	if schema.MinLength != nil {
-		res += fmt.Sprintf("minLength: %d\n", *schema.MinLength)
-	}
-	if schema.MaxLength != nil {
-		res += fmt.Sprintf("maxLength: %d\n", *schema.MaxLength)
-	}
-	if schema.Format != "" {
-		res += "format: " + schema.Format + "\n"
-	}
-	if schema.Pattern != "" {
-		res += "pattern: " + schema.Pattern + "\n"
-	}
-	return res
 }

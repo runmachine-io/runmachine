@@ -2,7 +2,14 @@ package server
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"io"
+
+	"github.com/xeipuuv/gojsonschema"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	yaml "gopkg.in/yaml.v2"
 
 	pb "github.com/runmachine-io/runmachine/pkg/api/proto"
 	"github.com/runmachine-io/runmachine/pkg/api/types"
@@ -10,9 +17,6 @@ import (
 	metapb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
 	respb "github.com/runmachine-io/runmachine/pkg/resource/proto"
 	"github.com/runmachine-io/runmachine/pkg/util"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-	yaml "gopkg.in/yaml.v2"
 )
 
 // ProviderDelete removes one or more providers from backend storage along with
@@ -380,27 +384,85 @@ func (s *Server) providersGetMatching(
 // fields and meets things like property meta validation checks.
 func (s *Server) validateProviderCreateRequest(
 	req *pb.CreateRequest,
-) (*types.Provider, error) {
-	var p types.Provider
-	if err := yaml.Unmarshal(req.Payload, &p); err != nil {
+) (*pb.Provider, error) {
+	var input types.Provider
+	if err := yaml.Unmarshal(req.Payload, &input); err != nil {
 		return nil, err
 	}
-	if err := p.Validate(); err != nil {
+	if err := input.Validate(); err != nil {
 		return nil, err
 	}
+
+	// Check that the supplied partition exists, and if the user supplied a
+	// partition name, translate it to a partition UUID
+	part, err := s.partitionGet(req.Session, input.Partition)
+	if err != nil {
+		return nil, err
+	}
+	partUuid := part.Uuid
 
 	// Check that the supplied provider type exists
-	ptCode := p.ProviderType
-	_, err := s.providerTypeGetByCode(req.Session, ptCode)
-	if err != nil {
-		if err == errors.ErrNotFound {
-			return nil, errProviderTypeNotFound(ptCode)
-		}
-		s.log.ERR("failed checking provider type: %s", err)
-		return nil, ErrUnknown
+	ptCode := input.ProviderType
+	if _, err = s.providerTypeGetByCode(req.Session, ptCode); err != nil {
+		return nil, err
 	}
 
-	return &p, nil
+	// Grab the provider definition for this partition and use it to validate
+	// the supplied provider attributes and properties
+	inputJson, err := json.Marshal(&input)
+	if err != nil {
+		return nil, err
+	}
+	odef, err := s.objectDefinitionGet(
+		req.Session, "runm.provider", partUuid,
+	)
+	if err != nil {
+		return nil, err
+	}
+	schemaLoader := gojsonschema.NewStringLoader(odef.Schema)
+	docLoader := gojsonschema.NewBytesLoader(inputJson)
+	result, err := gojsonschema.Validate(schemaLoader, docLoader)
+	if err != nil {
+		return nil, err
+	}
+	if !result.Valid() {
+		msg := "Error: provider not valid:\n"
+		for _, err := range result.Errors() {
+			msg += fmt.Sprintf("- %s\n", err)
+		}
+		return nil, fmt.Errorf(msg)
+	}
+
+	props := make([]*pb.Property, 0)
+	if input.Properties != nil {
+		for key, val := range input.Properties {
+			props = append(props, &pb.Property{
+				Key:   key,
+				Value: propertyValueString(val),
+			})
+		}
+	}
+
+	return &pb.Provider{
+		Partition:    partUuid,
+		ProviderType: ptCode,
+		Name:         input.Name,
+		Uuid:         input.Uuid,
+		Tags:         input.Tags,
+		Properties:   props,
+	}, nil
+}
+
+func propertyValueString(v interface{}) string {
+	switch vt := v.(type) {
+	case string:
+		return v.(string)
+	case int:
+		return fmt.Sprintf("%s", v)
+	default:
+		fmt.Printf("found unknown type for value: %s", vt)
+		return ""
+	}
 }
 
 func (s *Server) ProviderCreate(
@@ -409,85 +471,216 @@ func (s *Server) ProviderCreate(
 ) (*pb.ProviderCreateResponse, error) {
 	// TODO(jaypipes): AUTHZ check if user can write objects
 
-	input, err := s.validateProviderCreateRequest(req)
+	p, err := s.validateProviderCreateRequest(req)
 	if err != nil {
 		return nil, err
 	}
 
 	s.log.L3(
 		"creating new provider in partition %s with name %s...",
-		input.Partition,
-		input.Name,
+		p.Partition, p.Name,
 	)
 
 	// First save the object in the metadata service
 	obj := &metapb.Object{
-		Partition:  input.Partition,
+		Partition:  p.Partition,
 		ObjectType: "runm.provider",
-		Uuid:       input.Uuid,
-		Name:       input.Name,
-		Tags:       input.Tags,
+		Uuid:       p.Uuid,
+		Name:       p.Name,
+		Tags:       p.Tags,
 	}
-	if input.Properties != nil {
-		props := make([]*metapb.Property, 0)
-		for key, val := range input.Properties {
-			props = append(props, &metapb.Property{
-				Key:   key,
-				Value: val,
-			})
+	if len(p.Properties) > 0 {
+		props := make([]*metapb.Property, len(p.Properties))
+		for x, prop := range p.Properties {
+			props[x] = &metapb.Property{
+				Key:   prop.Key,
+				Value: prop.Value,
+			}
 		}
 		obj.Properties = props
 	}
-	createdObj, err := s.objectCreate(req.Session, obj)
-	if err != nil {
-		if s, ok := status.FromError(err); ok {
-			scode := s.Code()
-			if scode == codes.FailedPrecondition || scode == codes.NotFound {
-				return nil, err
-			}
-		}
-		s.log.ERR(
-			"failed creating provider object in metadata service: %s",
-			err,
-		)
-		return nil, ErrUnknown
+	if err := s.objectCreate(req.Session, obj); err != nil {
+		return nil, err
 	}
 
-	input.Uuid = createdObj.Uuid
-	// Make sure we are only passing the partition's UUID, which the created
-	// object in the metadata service will have returned.
-	input.Partition = createdObj.Partition
+	// The new object may have set the UUID if it was empty from the user
+	p.Uuid = obj.Uuid
 
 	// Next save the provider record in the resource service
-	resProv, err := s.providerCreate(req.Session, input)
-	if err != nil {
+	if err := s.providerCreate(req.Session, p); err != nil {
 		return nil, err
 	}
 	s.log.L1(
 		"created new provider with UUID %s in partition %s with name %s",
-		input.Uuid,
-		createdObj.Partition,
-		input.Name,
+		p.Uuid, p.Partition, p.Name,
 	)
 
-	// Copy object properties to the returned Provider result
-	pProps := make([]*pb.Property, len(obj.Properties))
-	for x, oProp := range obj.Properties {
-		pProps[x] = &pb.Property{
-			Key:   oProp.Key,
-			Value: oProp.Value,
+	return &pb.ProviderCreateResponse{
+		Provider: p,
+	}, nil
+}
+
+// validateProviderDefinitionSetRequest ensures that the data the user sent in
+// the request payload can be unmarshal'd properly into YAML and that the data
+// is valid
+func (s *Server) validateProviderDefinitionSetRequest(
+	req *pb.CreateRequest,
+) (*pb.ProviderDefinition, error) {
+	var input types.ProviderDefinition
+	if err := yaml.Unmarshal(req.Payload, &input); err != nil {
+		return nil, err
+	}
+	if err := input.Validate(); err != nil {
+		return nil, err
+	}
+
+	// Check that the supplied partition exists, and if the user supplied a
+	// partition name, translate it to a partition UUID
+	part, err := s.partitionGet(req.Session, input.Partition)
+	if err != nil {
+		if err == errors.ErrNotFound {
+			return nil, errPartitionNotFound(input.Partition)
+		}
+		s.log.ERR("failed checking provider definition's partition: %s", err)
+		return nil, ErrUnknown
+	}
+	partUuid := part.Uuid
+
+	propPerms := make([]*pb.PropertyPermissions, 0)
+
+	// Ensure that we've got some default access permissions for any properties
+	// that have been defined on the provider definition
+	for propKey, propDef := range input.PropertyDefinitions {
+		if len(propDef.Permissions) == 0 {
+			s.log.L3(
+				"setting default permissions on provider definition "+
+					"in partition '%s' for property key '%s' to READ/WRITE "+
+					"for project '%s' and READ any",
+				partUuid, propKey, req.Session.Project,
+			)
+			propPerms = append(propPerms,
+				&pb.PropertyPermissions{
+					Key: propKey,
+					Permissions: []*pb.PropertyPermission{
+						&pb.PropertyPermission{
+							Project: req.Session.Project,
+							Permission: types.PERMISSION_READ |
+								types.PERMISSION_WRITE,
+						},
+						&pb.PropertyPermission{
+							Permission: types.PERMISSION_READ,
+						},
+					},
+				},
+			)
+		} else {
+			// Make sure that the project that created the provider definition
+			// can read and write the properties defined on it...
+			foundProj := false
+			for _, perm := range propDef.Permissions {
+				if perm.Project != "" && perm.Project == req.Session.Project {
+					permCode := perm.PermissionUint32()
+					if (permCode & types.PERMISSION_WRITE) == 0 {
+						s.log.L1(
+							"added missing WRITE permission for "+
+								"provider definition in partition '%s' "+
+								"for property key '%s' in project '%s'",
+							partUuid, propKey, perm.Project,
+						)
+						permCode |= types.PERMISSION_WRITE
+					}
+					foundProj = true
+					propPerms = append(propPerms,
+						&pb.PropertyPermissions{
+							Key: propKey,
+							Permissions: []*pb.PropertyPermission{
+								&pb.PropertyPermission{
+									Project:    perm.Project,
+									Role:       perm.Role,
+									Permission: permCode,
+								},
+							},
+						},
+					)
+					break
+				}
+			}
+			if !foundProj {
+				s.log.L1(
+					"added missing WRITE permission for provider definition "+
+						"in partition '%s' for property key '%s' in project '%s'",
+					partUuid, propKey, req.Session.Project,
+				)
+				propPerms = append(propPerms,
+					&pb.PropertyPermissions{
+						Key: propKey,
+						Permissions: []*pb.PropertyPermission{
+							&pb.PropertyPermission{
+								Project: req.Session.Project,
+								Permission: types.PERMISSION_READ |
+									types.PERMISSION_WRITE,
+							},
+						},
+					},
+				)
+			}
+		}
+	}
+	return &pb.ProviderDefinition{
+		Partition:           partUuid,
+		Schema:              input.JSONSchemaString(),
+		PropertyPermissions: propPerms,
+	}, nil
+}
+
+// ProviderDefinitionSet creates or updates the schema and property permissions
+// for providers in a particular partition
+func (s *Server) ProviderDefinitionSet(
+	ctx context.Context,
+	req *pb.CreateRequest,
+) (*pb.ProviderDefinitionSetResponse, error) {
+	// TODO(jaypipes): AUTHZ check if user can write definitions
+
+	def, err := s.validateProviderDefinitionSetRequest(req)
+	if err != nil {
+		return nil, err
+	}
+
+	// copy API property permissions to metadata property permissions
+	metaPropPerms := make([]*metapb.PropertyPermissions, len(def.PropertyPermissions))
+	for x, apiPropPerms := range def.PropertyPermissions {
+		metaPropKeyPerms := make(
+			[]*metapb.PropertyPermission, len(apiPropPerms.Permissions),
+		)
+		for y, apiPropKeyPerm := range apiPropPerms.Permissions {
+			metaPropKeyPerms[y] = &metapb.PropertyPermission{
+				Project:    apiPropKeyPerm.Project,
+				Role:       apiPropKeyPerm.Role,
+				Permission: apiPropKeyPerm.Permission,
+			}
+		}
+		metaPropPerms[x] = &metapb.PropertyPermissions{
+			Key:         apiPropPerms.Key,
+			Permissions: metaPropKeyPerms,
 		}
 	}
 
-	return &pb.ProviderCreateResponse{
-		Provider: &pb.Provider{
-			Uuid:         input.Uuid,
-			Name:         input.Name,
-			Partition:    createdObj.Partition,
-			ProviderType: input.ProviderType,
-			Generation:   resProv.Generation,
-			Properties:   pProps,
-			Tags:         input.Tags,
-		},
+	odef := &metapb.ObjectDefinition{
+		Partition:           def.Partition,
+		ObjectType:          "runm.provider",
+		Schema:              def.Schema,
+		PropertyPermissions: metaPropPerms,
+	}
+	if _, err := s.objectDefinitionSet(req.Session, odef); err != nil {
+		s.log.ERR(
+			"failed setting object definition for runm.provider objects "+
+				"in partition '%s'",
+			def.Partition,
+		)
+		return nil, err
+	}
+
+	return &pb.ProviderDefinitionSetResponse{
+		ProviderDefinition: def,
 	}, nil
 }

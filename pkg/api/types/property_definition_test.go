@@ -28,53 +28,37 @@ func TestPropertyDefinitionYAML(t *testing.T) {
 		// Required missing
 		{
 			doc: `
-object_type: runm.image
-key: architecture
 `,
 			expect: types.PropertyDefinition{
-				ObjectType: "runm.image",
-				Key:        "architecture",
-				Required:   false,
+				Required: false,
 			},
 		},
 		// Required false
 		{
 			doc: `
-object_type: runm.image
-key: architecture
 required: false
 `,
 			expect: types.PropertyDefinition{
-				ObjectType: "runm.image",
-				Key:        "architecture",
-				Required:   false,
+				Required: false,
 			},
 		},
 		// Required true
 		{
 			doc: `
-object_type: runm.image
-key: architecture
 required: true
 `,
 			expect: types.PropertyDefinition{
-				ObjectType: "runm.image",
-				Key:        "architecture",
-				Required:   true,
+				Required: true,
 			},
 		},
 		// Project access permission specified
 		{
 			doc: `
-object_type: runm.image
-key: architecture
 permissions:
   - project: proj1
     permission: rw
 `,
 			expect: types.PropertyDefinition{
-				ObjectType: "runm.image",
-				Key:        "architecture",
 				Permissions: []*types.PropertyPermission{
 					&types.PropertyPermission{
 						Project:    "proj1",
@@ -86,15 +70,11 @@ permissions:
 		// Role access permission specified
 		{
 			doc: `
-object_type: runm.image
-key: architecture
 permissions:
   - role: admin
     permission: rw
 `,
 			expect: types.PropertyDefinition{
-				ObjectType: "runm.image",
-				Key:        "architecture",
 				Permissions: []*types.PropertyPermission{
 					&types.PropertyPermission{
 						Role:       "admin",
@@ -106,16 +86,12 @@ permissions:
 		// Project and role access permission specified
 		{
 			doc: `
-object_type: runm.image
-key: architecture
 permissions:
   - role: member
     project: proj2
     permission: r
 `,
 			expect: types.PropertyDefinition{
-				ObjectType: "runm.image",
-				Key:        "architecture",
 				Permissions: []*types.PropertyPermission{
 					&types.PropertyPermission{
 						Role:       "member",
@@ -129,16 +105,12 @@ permissions:
 		// permissions on a property)
 		{
 			doc: `
-object_type: runm.image
-key: architecture
 permissions:
   - role: member
     project: blacklisted
     permission:
 `,
 			expect: types.PropertyDefinition{
-				ObjectType: "runm.image",
-				Key:        "architecture",
 				Permissions: []*types.PropertyPermission{
 					&types.PropertyPermission{
 						Role:       "member",

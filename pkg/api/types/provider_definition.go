@@ -26,19 +26,36 @@ var (
     "provider_type": {
       "type": "string"
     },
+    "name": {
+      "type": "string"
+    },
+    "uuid": {
+      "type": "string"
+    },
+    "parent": {
+      "type": "string"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
     "properties": {
       "type": "object",
       {{ if len .PropertySchemas -}}
       "properties": {
-{{- range .PropertySchemas -}}
-{{ template "property-schema" . }}
+		  {{- range $index, $propSchema := .PropertySchemas -}}
+{{if $index}},{{end}}{{ template "property-schema" $propSchema }}
 {{- end }}
       },{{ end }}
       "patternProperties": {
         "^[a-zA-Z0-9]*$": {
           "type": "string"
         }
-      }
+      },
+      "required": [{{ quote_join .RequiredProperties ", " }}],
+	  "additionalProperties": false
     }
   },
   "required": [{{ quote_join .RequiredFields ", " }}],
@@ -110,8 +127,9 @@ func (def *ProviderDefinition) Validate() error {
 }
 
 type templateVars struct {
-	RequiredFields  []string
-	PropertySchemas []*propertySchemaWithKey
+	RequiredFields     []string
+	RequiredProperties []string
+	PropertySchemas    []*propertySchemaWithKey
 }
 
 // JSONSchemaString returns a valid JSONSchema DRAFT-07 document describing the
@@ -119,15 +137,13 @@ type templateVars struct {
 // provider definition
 func (def *ProviderDefinition) JSONSchemaString() string {
 	vars := &templateVars{
-		RequiredFields:  make([]string, 0),
-		PropertySchemas: make([]*propertySchemaWithKey, 0),
-	}
-	for _, field := range baseProviderRequiredFields {
-		vars.RequiredFields = append(vars.RequiredFields, field)
+		RequiredFields:     baseProviderRequiredFields,
+		RequiredProperties: make([]string, 0),
+		PropertySchemas:    make([]*propertySchemaWithKey, 0),
 	}
 	for key, prop := range def.PropertyDefinitions {
 		if prop.Required {
-			vars.RequiredFields = append(vars.RequiredFields, key)
+			vars.RequiredProperties = append(vars.RequiredProperties, key)
 		}
 		ps := &propertySchemaWithKey{
 			PropertySchema: prop.Schema,

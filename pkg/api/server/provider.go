@@ -2,7 +2,14 @@ package server
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"io"
+
+	"github.com/xeipuuv/gojsonschema"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	yaml "gopkg.in/yaml.v2"
 
 	pb "github.com/runmachine-io/runmachine/pkg/api/proto"
 	"github.com/runmachine-io/runmachine/pkg/api/types"
@@ -10,9 +17,6 @@ import (
 	metapb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
 	respb "github.com/runmachine-io/runmachine/pkg/resource/proto"
 	"github.com/runmachine-io/runmachine/pkg/util"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-	yaml "gopkg.in/yaml.v2"
 )
 
 // ProviderDelete removes one or more providers from backend storage along with
@@ -403,12 +407,38 @@ func (s *Server) validateProviderCreateRequest(
 		return nil, err
 	}
 
+	// Grab the provider definition for this partition and use it to validate
+	// the supplied provider attributes and properties
+	inputJson, err := json.Marshal(&input)
+	if err != nil {
+		return nil, err
+	}
+	odef, err := s.objectDefinitionGet(
+		req.Session, "runm.provider", partUuid,
+	)
+	if err != nil {
+		return nil, err
+	}
+	schemaLoader := gojsonschema.NewStringLoader(odef.Schema)
+	docLoader := gojsonschema.NewBytesLoader(inputJson)
+	result, err := gojsonschema.Validate(schemaLoader, docLoader)
+	if err != nil {
+		return nil, err
+	}
+	if !result.Valid() {
+		msg := "Error: provider not valid:\n"
+		for _, err := range result.Errors() {
+			msg += fmt.Sprintf("- %s\n", err)
+		}
+		return nil, fmt.Errorf(msg)
+	}
+
 	props := make([]*pb.Property, 0)
 	if input.Properties != nil {
 		for key, val := range input.Properties {
 			props = append(props, &pb.Property{
 				Key:   key,
-				Value: val,
+				Value: propertyValueString(val),
 			})
 		}
 	}
@@ -421,6 +451,18 @@ func (s *Server) validateProviderCreateRequest(
 		Tags:         input.Tags,
 		Properties:   props,
 	}, nil
+}
+
+func propertyValueString(v interface{}) string {
+	switch vt := v.(type) {
+	case string:
+		return v.(string)
+	case int:
+		return fmt.Sprintf("%s", v)
+	default:
+		fmt.Printf("found unknown type for value: %s", vt)
+		return ""
+	}
 }
 
 func (s *Server) ProviderCreate(

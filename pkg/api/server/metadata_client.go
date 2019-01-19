@@ -6,12 +6,9 @@ import (
 	"io"
 
 	pb "github.com/runmachine-io/runmachine/pkg/api/proto"
-	"github.com/runmachine-io/runmachine/pkg/errors"
 	metapb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
 	"github.com/runmachine-io/runmachine/pkg/util"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 // metaSession transforms an API protobuffer Session message into a metadata
@@ -413,19 +410,7 @@ func (s *Server) objectDefinitionGet(
 	}
 	def, err := mc.ObjectDefinitionGet(context.Background(), req)
 	if err != nil {
-		if s, ok := status.FromError(err); ok {
-			if s.Code() == codes.NotFound {
-				return nil, errors.ErrNotFound
-			}
-		}
-		// We don't want to expose internal errors to the user, so just return
-		// an unknown error after logging it.
-		s.log.ERR(
-			"failed to retrieve object definition for partition '%s' "+
-				"and object type '%s': %s",
-			part.Uuid, objType, err,
-		)
-		return nil, ErrUnknown
+		return nil, err
 	}
 	return def, nil
 }

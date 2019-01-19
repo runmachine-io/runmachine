@@ -122,6 +122,24 @@
   version = "v1.2.2"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/xeipuuv/gojsonpointer"
+  packages = ["."]
+  revision = "4e3ac2762d5f479393488629ee9370b50873b3a6"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/xeipuuv/gojsonreference"
+  packages = ["."]
+  revision = "bd5ef7bd5415a7ac448318e64f11a24cd21e594b"
+
+[[projects]]
+  name = "github.com/xeipuuv/gojsonschema"
+  packages = ["."]
+  revision = "f971f3cd73b2899de6923801c147f075263e0c50"
+  version = "v1.1.0"
+
+[[projects]]
   name = "go.etcd.io/etcd"
   packages = ["clientv3"]
   revision = "27fc7e2296f506182f58ce846e48f36b34fe6842"
@@ -223,6 +241,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "fd750eb2067547963b2fc043fcee025d66086729215e1f06e472f2ebe4d086e9"
+  inputs-digest = "73f8b55fd232011bda1d8afd2e8aef1c3dfc5d2e785b96ee71b6e4bb908cd904"
   solver-name = "gps-cdcl"
   solver-version = 1

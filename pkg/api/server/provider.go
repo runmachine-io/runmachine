@@ -520,6 +520,50 @@ func (s *Server) ProviderCreate(
 	}, nil
 }
 
+// ProviderDefinitionGet looks up a provider definition by partition UUID or
+// name and returns a ProviderDefinition protobuf message.
+func (s *Server) ProviderDefinitionGet(
+	ctx context.Context,
+	req *pb.ProviderDefinitionGetRequest,
+) (*pb.ProviderDefinition, error) {
+	if req.Filter.PartitionFilter == nil || req.Filter.PartitionFilter.Search == "" {
+		return nil, ErrPartitionRequired
+	}
+	partSearch := req.Filter.PartitionFilter.Search
+	part, err := s.partitionGet(req.Session, partSearch)
+	if err != nil {
+		return nil, err
+	}
+	odef, err := s.objectDefinitionGet(req.Session, "runm.provider", part.Uuid)
+	if err != nil {
+		return nil, err
+	}
+
+	// copy metadata property permissions to API property permissions
+	apiPropPerms := make([]*pb.PropertyPermissions, len(odef.PropertyPermissions))
+	for x, metaPropPerms := range odef.PropertyPermissions {
+		apiPropKeyPerms := make(
+			[]*pb.PropertyPermission, len(metaPropPerms.Permissions),
+		)
+		for y, metaPropKeyPerm := range metaPropPerms.Permissions {
+			apiPropKeyPerms[y] = &pb.PropertyPermission{
+				Project:    metaPropKeyPerm.Project,
+				Role:       metaPropKeyPerm.Role,
+				Permission: metaPropKeyPerm.Permission,
+			}
+		}
+		apiPropPerms[x] = &pb.PropertyPermissions{
+			Key:         metaPropPerms.Key,
+			Permissions: apiPropKeyPerms,
+		}
+	}
+	return &pb.ProviderDefinition{
+		Partition:           part.Uuid,
+		Schema:              odef.Schema,
+		PropertyPermissions: apiPropPerms,
+	}, nil
+}
+
 // validateProviderDefinitionSetRequest ensures that the data the user sent in
 // the request payload can be unmarshal'd properly into YAML and that the data
 // is valid

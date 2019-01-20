@@ -13,8 +13,7 @@ var (
 		"partition",
 		"provider_type",
 	}
-	providerSchemaTemplateContents = `
-{
+	providerSchemaTemplateContents = `{
   "$id": "https://runmachine.io/runm.provider.schema.json",
   "$schema": "http://json-schema.org/draft-07/schema#",
   "description": "A provider of resources",
@@ -55,7 +54,7 @@ var (
         }
       },
       "required": [{{ quote_join .RequiredProperties ", " }}],
-	  "additionalProperties": false
+      "additionalProperties": false
     }
   },
   "required": [{{ quote_join .RequiredFields ", " }}],

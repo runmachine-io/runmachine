@@ -21,6 +21,7 @@ var providerDefinitionCommand = &cobra.Command{
 }
 
 func init() {
+	providerDefinitionCommand.AddCommand(providerDefinitionGetCommand)
 	providerDefinitionCommand.AddCommand(providerDefinitionSetCommand)
 }
 
@@ -60,7 +61,7 @@ func printPropertyPermission(obj *pb.PropertyPermission) {
 }
 
 func printProviderDefinition(obj *pb.ProviderDefinition) {
-	fmt.Printf("Partition:    %s\n", obj.Partition)
+	fmt.Printf("Partition: %s\n", obj.Partition)
 	fmt.Printf("Schema:\n%s", obj.Schema)
 	if len(obj.PropertyPermissions) > 0 {
 		fmt.Printf("Property permissions:\n")

@@ -23,7 +23,7 @@ message Provider {
 message ProviderFilter {
     // UUID or human-readable name of the provider
     SearchFilter primary_filter = 1;
-    // UUID or human-readable name of the provider's partition
+    // UUID or human-readable name of the partition
     SearchFilter partition_filter = 2;
     // Type of the provider
     SearchFilter provider_type_filter = 3;
@@ -40,4 +40,12 @@ message ProviderDefinition {
     string schema = 2;
     // The set of permissions to apply on properties
     repeated PropertyPermissions property_permissions = 50;
+}
+
+// Used in matching provider definition records
+message ProviderDefinitionFilter {
+    // UUID or human-readable name of the partition
+    SearchFilter partition_filter = 2;
+    // Type of the provider
+    SearchFilter provider_type_filter = 3;
 }

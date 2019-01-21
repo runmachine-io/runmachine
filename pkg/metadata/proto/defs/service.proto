@@ -5,6 +5,7 @@ package runmmeta;
 import "error.proto";
 import "property.proto";
 import "object.proto";
+import "object_definition.proto";
 import "object_type.proto";
 import "partition.proto";
 import "provider_type.proto";

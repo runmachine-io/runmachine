@@ -393,17 +393,20 @@ func (s *Server) validateProviderCreateRequest(
 		return nil, err
 	}
 
-	// Check that the supplied partition exists, and if the user supplied a
-	// partition name, translate it to a partition UUID
-	part, err := s.partitionGet(req.Session, input.Partition)
-	if err != nil {
-		return nil, err
+	partUuid := ""
+	if input.Partition != "" {
+		// Check that the supplied partition exists, and if the user supplied a
+		// partition name, translate it to a partition UUID
+		part, err := s.partitionGet(req.Session, input.Partition)
+		if err != nil {
+			return nil, err
+		}
+		partUuid = part.Uuid
 	}
-	partUuid := part.Uuid
 
 	// Check that the supplied provider type exists
 	ptCode := input.ProviderType
-	if _, err = s.providerTypeGetByCode(req.Session, ptCode); err != nil {
+	if _, err := s.providerTypeGetByCode(req.Session, ptCode); err != nil {
 		return nil, err
 	}
 
@@ -413,9 +416,7 @@ func (s *Server) validateProviderCreateRequest(
 	if err != nil {
 		return nil, err
 	}
-	odef, err := s.objectDefinitionGet(
-		req.Session, "runm.provider", partUuid,
-	)
+	odef, err := s.providerDefinitionGet(req.Session, partUuid)
 	if err != nil {
 		return nil, err
 	}
@@ -525,16 +526,17 @@ func (s *Server) ProviderCreate(
 func (s *Server) ProviderDefinitionGet(
 	ctx context.Context,
 	req *pb.ProviderDefinitionGetRequest,
-) (*pb.ProviderDefinition, error) {
-	if req.Filter.PartitionFilter == nil || req.Filter.PartitionFilter.Search == "" {
-		return nil, ErrPartitionRequired
+) (*pb.ObjectDefinition, error) {
+	partUuid := ""
+	if req.Partition != "" {
+		// Translate any supplied partition identifier into a UUID
+		part, err := s.partitionGet(req.Session, req.Partition)
+		if err != nil {
+			return nil, err
+		}
+		partUuid = part.Uuid
 	}
-	partSearch := req.Filter.PartitionFilter.Search
-	part, err := s.partitionGet(req.Session, partSearch)
-	if err != nil {
-		return nil, err
-	}
-	odef, err := s.objectDefinitionGet(req.Session, "runm.provider", part.Uuid)
+	odef, err := s.providerDefinitionGet(req.Session, partUuid)
 	if err != nil {
 		return nil, err
 	}
@@ -557,8 +559,7 @@ func (s *Server) ProviderDefinitionGet(
 			Permissions: apiPropKeyPerms,
 		}
 	}
-	return &pb.ProviderDefinition{
-		Partition:           part.Uuid,
+	return &pb.ObjectDefinition{
 		Schema:              odef.Schema,
 		PropertyPermissions: apiPropPerms,
 	}, nil
@@ -568,8 +569,8 @@ func (s *Server) ProviderDefinitionGet(
 // the request payload can be unmarshal'd properly into YAML and that the data
 // is valid
 func (s *Server) validateProviderDefinitionSetRequest(
-	req *pb.CreateRequest,
-) (*pb.ProviderDefinition, error) {
+	req *pb.ProviderDefinitionSetRequest,
+) (*pb.ObjectDefinition, error) {
 	var input types.ProviderDefinition
 	if err := yaml.Unmarshal(req.Payload, &input); err != nil {
 		return nil, err
@@ -578,17 +579,21 @@ func (s *Server) validateProviderDefinitionSetRequest(
 		return nil, err
 	}
 
-	// Check that the supplied partition exists, and if the user supplied a
-	// partition name, translate it to a partition UUID
-	part, err := s.partitionGet(req.Session, input.Partition)
-	if err != nil {
-		if err == errors.ErrNotFound {
-			return nil, errPartitionNotFound(input.Partition)
+	partDisplay := "GLOBAL"
+	if req.Partition != "" {
+		// Check that any supplied partition exists, and if the user supplied a
+		// partition name, translate it to a partition UUID
+		part, err := s.partitionGet(req.Session, req.Partition)
+		if err != nil {
+			if err == errors.ErrNotFound {
+				return nil, errPartitionNotFound(req.Partition)
+			}
+			s.log.ERR("failed checking provider definition's partition: %s", err)
+			return nil, ErrUnknown
 		}
-		s.log.ERR("failed checking provider definition's partition: %s", err)
-		return nil, ErrUnknown
+		partDisplay = "partition: '" + part.Uuid + "'"
+		req.Partition = part.Uuid
 	}
-	partUuid := part.Uuid
 
 	propPerms := make([]*pb.PropertyPermissions, 0)
 
@@ -598,9 +603,9 @@ func (s *Server) validateProviderDefinitionSetRequest(
 		if len(propDef.Permissions) == 0 {
 			s.log.L3(
 				"setting default permissions on provider definition "+
-					"in partition '%s' for property key '%s' to READ/WRITE "+
+					"in %s for property key '%s' to READ/WRITE "+
 					"for project '%s' and READ any",
-				partUuid, propKey, req.Session.Project,
+				partDisplay, propKey, req.Session.Project,
 			)
 			propPerms = append(propPerms,
 				&pb.PropertyPermissions{
@@ -627,9 +632,9 @@ func (s *Server) validateProviderDefinitionSetRequest(
 					if (permCode & types.PERMISSION_WRITE) == 0 {
 						s.log.L1(
 							"added missing WRITE permission for "+
-								"provider definition in partition '%s' "+
+								"provider definition in %s "+
 								"for property key '%s' in project '%s'",
-							partUuid, propKey, perm.Project,
+							partDisplay, propKey, perm.Project,
 						)
 						permCode |= types.PERMISSION_WRITE
 					}
@@ -652,8 +657,8 @@ func (s *Server) validateProviderDefinitionSetRequest(
 			if !foundProj {
 				s.log.L1(
 					"added missing WRITE permission for provider definition "+
-						"in partition '%s' for property key '%s' in project '%s'",
-					partUuid, propKey, req.Session.Project,
+						"in %s for property key '%s' in project '%s'",
+					partDisplay, propKey, req.Session.Project,
 				)
 				propPerms = append(propPerms,
 					&pb.PropertyPermissions{
@@ -670,8 +675,7 @@ func (s *Server) validateProviderDefinitionSetRequest(
 			}
 		}
 	}
-	return &pb.ProviderDefinition{
-		Partition:           partUuid,
+	return &pb.ObjectDefinition{
 		Schema:              input.JSONSchemaString(),
 		PropertyPermissions: propPerms,
 	}, nil
@@ -681,18 +685,18 @@ func (s *Server) validateProviderDefinitionSetRequest(
 // for providers in a particular partition
 func (s *Server) ProviderDefinitionSet(
 	ctx context.Context,
-	req *pb.CreateRequest,
-) (*pb.ProviderDefinitionSetResponse, error) {
+	req *pb.ProviderDefinitionSetRequest,
+) (*pb.ObjectDefinitionSetResponse, error) {
 	// TODO(jaypipes): AUTHZ check if user can write definitions
 
-	def, err := s.validateProviderDefinitionSetRequest(req)
+	odef, err := s.validateProviderDefinitionSetRequest(req)
 	if err != nil {
 		return nil, err
 	}
 
 	// copy API property permissions to metadata property permissions
-	metaPropPerms := make([]*metapb.PropertyPermissions, len(def.PropertyPermissions))
-	for x, apiPropPerms := range def.PropertyPermissions {
+	metaPropPerms := make([]*metapb.PropertyPermissions, len(odef.PropertyPermissions))
+	for x, apiPropPerms := range odef.PropertyPermissions {
 		metaPropKeyPerms := make(
 			[]*metapb.PropertyPermission, len(apiPropPerms.Permissions),
 		)
@@ -709,22 +713,20 @@ func (s *Server) ProviderDefinitionSet(
 		}
 	}
 
-	odef := &metapb.ObjectDefinition{
-		Partition:           def.Partition,
-		ObjectType:          "runm.provider",
-		Schema:              def.Schema,
+	metadef := &metapb.ObjectDefinition{
+		Schema:              odef.Schema,
 		PropertyPermissions: metaPropPerms,
 	}
-	if _, err := s.objectDefinitionSet(req.Session, odef); err != nil {
+	if _, err := s.providerDefinitionSet(req.Session, metadef, req.Partition); err != nil {
 		s.log.ERR(
 			"failed setting object definition for runm.provider objects "+
 				"in partition '%s'",
-			def.Partition,
+			req.Partition,
 		)
 		return nil, err
 	}
 
-	return &pb.ProviderDefinitionSetResponse{
-		ProviderDefinition: def,
+	return &pb.ObjectDefinitionSetResponse{
+		ObjectDefinition: odef,
 	}, nil
 }

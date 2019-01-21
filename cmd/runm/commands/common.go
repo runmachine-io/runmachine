@@ -75,6 +75,13 @@ func exitNoRecords() {
 	os.Exit(0)
 }
 
+func errIsNotFound(err error) bool {
+	if s, ok := status.FromError(err); ok {
+		return s.Code() == codes.NotFound
+	}
+	return false
+}
+
 func readInputDocumentOrExit() []byte {
 	var b []byte
 	if cliObjectDocPath == "" {

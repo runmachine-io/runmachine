@@ -13,63 +13,85 @@ const (
 	_OBJECT_DEFINITIONS_BY_TYPE_KEY = "definitions/by-type/"
 )
 
-// ObjectDefinitionGet returns an object definition given a partition UUID and
-// object type code
-func (s *Store) ObjectDefinitionGet(
-	partition string,
+func objectDefinitionKey(
 	objType string,
+	partUuid string,
+) string {
+	if partUuid == "" {
+		return _OBJECT_DEFINITIONS_BY_TYPE_KEY + objType + "/default"
+	}
+	return _PARTITIONS_KEY + partUuid + "/" +
+		_OBJECT_DEFINITIONS_BY_TYPE_KEY + objType + "/default"
+}
+
+// ObjectDefinitionGet returns an object definition given an
+// object type and partition UUID. If the partition UUID is empty, returns the
+// global default object definition for that object type
+func (s *Store) ObjectDefinitionGet(
+	objType string,
+	partUuid string,
+) (*pb.ObjectDefinition, error) {
+	return s.objectDefinitionGetByKey(objectDefinitionKey(objType, partUuid))
+}
+
+// objectDefinitionGetByKey returns an object definition given a storage key
+// for where the object definition can be found
+func (s *Store) objectDefinitionGetByKey(
+	key string,
 ) (*pb.ObjectDefinition, error) {
 	ctx, cancel := s.requestCtx()
 	defer cancel()
 
-	pk := _PARTITIONS_KEY + partition + "/" +
-		_OBJECT_DEFINITIONS_BY_TYPE_KEY + objType
-	resp, err := s.kv.Get(ctx, pk)
+	resp, err := s.kv.Get(ctx, key)
 	if err != nil {
-		s.log.ERR("error listing object definitions: %v", err)
+		s.log.ERR("error getting object definition at key %s: %v", key, err)
 		return nil, err
 	}
 	if resp.Count == 0 {
 		return nil, errors.ErrNotFound
 	}
 
-	obj := &pb.ObjectDefinition{}
-	if err = proto.Unmarshal(resp.Kvs[0].Value, obj); err != nil {
+	var obj pb.ObjectDefinition
+	if err = proto.Unmarshal(resp.Kvs[0].Value, &obj); err != nil {
 		return nil, err
 	}
-	return obj, nil
+	return &obj, nil
 }
 
-// ObjectDefinitionCreate writes a object definition to backend storage
+// ObjectDefinitionCreate writes an object definition to backend storage for a
+// specified object type and (optional) partition UUID. If the supplid
+// partition UUID is empty, this method creates the default object definition
+// for that object type.
 func (s *Store) ObjectDefinitionCreate(
+	objType string,
+	partUuid string,
 	def *pb.ObjectDefinition,
 ) error {
 	ctx, cancel := s.requestCtx()
 	defer cancel()
-
-	pk := _PARTITIONS_KEY + def.Partition + "/" +
-		_OBJECT_DEFINITIONS_BY_TYPE_KEY + def.ObjectType
 
 	value, err := proto.Marshal(def)
 	if err != nil {
 		return err
 	}
 
+	key := objectDefinitionKey(objType, partUuid)
+
 	// create the object definition using a transaction that ensures another
 	// thread hasn't created a object definition with the same key underneath
 	// us
 	onSuccess := []etcd.Op{
-		etcd.OpPut(pk, string(value)),
+		etcd.OpPut(key, string(value)),
 	}
 	// Ensure the key doesn't yet exist
-	compare := etcd.Compare(etcd.Version(pk), "=", 0)
+	compare := etcd.Compare(etcd.Version(key), "=", 0)
 	resp, err := s.kv.Txn(ctx).If(compare).Then(onSuccess...).Commit()
 
 	if err != nil {
 		s.log.ERR("failed to create txn in etcd: %v", err)
 		return err
 	} else if resp.Succeeded == false {
-		s.log.L3("another thread already created key %s.", pk)
+		s.log.L3("another thread already created key %s.", key)
 		return errors.ErrDuplicate
 	}
 	return nil

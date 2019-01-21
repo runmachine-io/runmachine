@@ -385,51 +385,55 @@ func (s *Server) objectsGetMatching(
 	return msgs, nil
 }
 
-// objectDefinitionGetByCode returns an object definition record matching the
-// supplied object type and partition identifier. If no such object definition
-// could be found, returns (nil, ErrNotFound)
-func (s *Server) objectDefinitionGet(
+// providerDefinitionGet returns the object definition for providers. The
+// partition argument may be empty, which indicates to return the global
+// default definition for providers. If no such object definition could be
+// found, returns (nil, ErrNotFound)
+func (s *Server) providerDefinitionGet(
 	sess *pb.Session,
-	objType string,
 	partition string,
 ) (*metapb.ObjectDefinition, error) {
 	// Look up the partition's UUID
-	part, err := s.partitionGet(sess, partition)
-	if err != nil {
-		return nil, err
+	if partition != "" {
+		part, err := s.partitionGet(sess, partition)
+		if err != nil {
+			return nil, err
+		}
+		partition = part.Uuid
 	}
 
-	req := &metapb.ObjectDefinitionGetRequest{
-		Session:    metaSession(sess),
-		Partition:  part.Uuid,
-		ObjectType: objType,
+	req := &metapb.ProviderDefinitionGetRequest{
+		Session:   metaSession(sess),
+		Partition: partition,
 	}
 	mc, err := s.metaClient()
 	if err != nil {
 		return nil, err
 	}
-	def, err := mc.ObjectDefinitionGet(context.Background(), req)
+	def, err := mc.ProviderDefinitionGet(context.Background(), req)
 	if err != nil {
 		return nil, err
 	}
 	return def, nil
 }
 
-// objectDefinitionSet takes an object definition and saves it in the metadata
+// providerDefinitionSet takes an object definition and saves it in the metadata
 // service, returning the saved object definition
-func (s *Server) objectDefinitionSet(
+func (s *Server) providerDefinitionSet(
 	sess *pb.Session,
 	def *metapb.ObjectDefinition,
+	partition string,
 ) (*metapb.ObjectDefinition, error) {
-	req := &metapb.ObjectDefinitionSetRequest{
+	req := &metapb.ProviderDefinitionSetRequest{
 		Session:          metaSession(sess),
 		ObjectDefinition: def,
+		Partition:        partition,
 	}
 	mc, err := s.metaClient()
 	if err != nil {
 		return nil, err
 	}
-	resp, err := mc.ObjectDefinitionSet(context.Background(), req)
+	resp, err := mc.ProviderDefinitionSet(context.Background(), req)
 	if err != nil {
 		return nil, err
 	}

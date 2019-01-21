@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package runmapi;
+
+import "property.proto";
+
+// Administrators can constrain the properties that may be set against an
+// object by creating a ObjectDefinition
+message ObjectDefinition {
+    // JSONSchema document describing the constraints and fields that the
+    // object must conform to
+    string schema = 2;
+    // The set of permissions to apply on properties
+    repeated PropertyPermissions property_permissions = 50;
+}

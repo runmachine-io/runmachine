@@ -130,7 +130,6 @@ func init() {
 	addConnectFlags()
 
 	RootCommand.AddCommand(helpEnvCommand)
-	RootCommand.AddCommand(bootstrapCommand)
 	RootCommand.AddCommand(partitionCommand)
 	RootCommand.AddCommand(providerCommand)
 	RootCommand.AddCommand(providerTypeCommand)

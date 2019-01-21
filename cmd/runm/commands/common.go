@@ -10,8 +10,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	apipb "github.com/runmachine-io/runmachine/pkg/api/proto"
-	pb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
+	pb "github.com/runmachine-io/runmachine/pkg/api/proto"
 )
 
 const (
@@ -20,7 +19,7 @@ const (
 Please set the RUNM_USER environment variable or supply a value
 for the --user CLI option.
 `
-	errConnect = `Error: unable to connect to the runm-metadata server.
+	errConnect = `Error: unable to connect to the runm-api server.
 
 Please check the RUNM_HOST and RUNM_PORT environment
 variables or --host and --port  CLI options.
@@ -120,36 +119,13 @@ func getSession() *pb.Session {
 		Partition: partition,
 	}
 }
-func apiGetSession() *apipb.Session {
-	sess := getSession()
-	return &apipb.Session{
-		User:      sess.User,
-		Project:   sess.Project,
-		Partition: sess.Partition,
-	}
-}
 
 func connect() *grpc.ClientConn {
 	var opts []grpc.DialOption
 	// TODO(jaypipes): Don't hardcode this to WithInsecure
 	opts = append(opts, grpc.WithInsecure())
 	addr := fmt.Sprintf("%s:%d", connectHost, connectPort)
-	printIf(verbose, "connecting to runm services at %s\n", addr)
-	conn, err := grpc.Dial(addr, opts...)
-	if err != nil {
-		fmt.Println(errConnect)
-		os.Exit(1)
-		return nil
-	}
-	return conn
-}
-
-func apiConnect() *grpc.ClientConn {
-	var opts []grpc.DialOption
-	// TODO(jaypipes): Don't hardcode this to WithInsecure
-	opts = append(opts, grpc.WithInsecure())
-	addr := fmt.Sprintf("%s:%d", apiConnectHost, apiConnectPort)
-	printIf(verbose, "connecting to runm-api service at %s\n", addr)
+	printIf(verbose, "connecting to runm-api at %s\n", addr)
 	conn, err := grpc.Dial(addr, opts...)
 	if err != nil {
 		fmt.Println(errConnect)

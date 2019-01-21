@@ -55,12 +55,12 @@ func init() {
 }
 
 func providerDelete(cmd *cobra.Command, args []string) {
-	conn := apiConnect()
+	conn := connect()
 	defer conn.Close()
 
 	client := pb.NewRunmAPIClient(conn)
 	req := &pb.ProviderDeleteRequest{
-		Session: apiGetSession(),
+		Session: getSession(),
 	}
 
 	// See providerDeleteUsage above that describes the two calling signatures

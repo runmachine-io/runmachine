@@ -31,12 +31,12 @@ func init() {
 }
 
 func providerList(cmd *cobra.Command, args []string) {
-	conn := apiConnect()
+	conn := connect()
 	defer conn.Close()
 
 	client := apipb.NewRunmAPIClient(conn)
 	req := &apipb.ProviderListRequest{
-		Session: apiGetSession(),
+		Session: getSession(),
 		Any:     buildProviderFilters(),
 	}
 	stream, err := client.ProviderList(context.Background(), req)

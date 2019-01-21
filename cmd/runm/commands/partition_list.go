@@ -67,12 +67,12 @@ func buildPartitionFilters() []*apipb.PartitionFilter {
 }
 
 func partitionList(cmd *cobra.Command, args []string) {
-	conn := apiConnect()
+	conn := connect()
 	defer conn.Close()
 
 	client := apipb.NewRunmAPIClient(conn)
 	req := &apipb.PartitionListRequest{
-		Session: apiGetSession(),
+		Session: getSession(),
 		Any:     buildPartitionFilters(),
 	}
 	stream, err := client.PartitionList(context.Background(), req)

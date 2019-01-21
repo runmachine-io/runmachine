@@ -56,7 +56,7 @@ if ! container_is_running "$METADATA_CONTAINER_NAME"; then
     inline_if_verbose "Starting runm-metadata container named $METADATA_CONTAINER_NAME... "
     docker run -d \
         --rm \
-        -p 10000:10000 \
+        -p 10002:10002 \
         --name $METADATA_CONTAINER_NAME \
         -e GSR_LOG_LEVEL=3 \
         -e GSR_ETCD_ENDPOINTS="http://$etcd_container_ip:2379" \
@@ -104,7 +104,7 @@ if ! container_is_running "$API_CONTAINER_NAME"; then
     inline_if_verbose "Starting runm-api container named $API_CONTAINER_NAME... "
     docker run -d \
         --rm \
-        -p 10002:10002 \
+        -p 10000:10000 \
         --name $API_CONTAINER_NAME \
         -e GSR_LOG_LEVEL=3 \
         -e GSR_ETCD_ENDPOINTS="http://$etcd_container_ip:2379" \

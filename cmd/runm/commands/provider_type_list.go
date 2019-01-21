@@ -60,12 +60,12 @@ func buildProviderTypeFilters() []*pb.ProviderTypeFilter {
 }
 
 func providerTypeList(cmd *cobra.Command, args []string) {
-	conn := apiConnect()
+	conn := connect()
 	defer conn.Close()
 
 	client := pb.NewRunmAPIClient(conn)
 	req := &pb.ProviderTypeListRequest{
-		Session: apiGetSession(),
+		Session: getSession(),
 		Any:     buildProviderTypeFilters(),
 	}
 	stream, err := client.ProviderTypeList(context.Background(), req)

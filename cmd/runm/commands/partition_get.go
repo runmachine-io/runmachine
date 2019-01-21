@@ -15,12 +15,12 @@ var partitionGetCommand = &cobra.Command{
 }
 
 func partitionGet(cmd *cobra.Command, args []string) {
-	conn := apiConnect()
+	conn := connect()
 	defer conn.Close()
 
 	client := apipb.NewRunmAPIClient(conn)
 
-	session := apiGetSession()
+	session := getSession()
 
 	req := &apipb.PartitionGetRequest{
 		Session: session,

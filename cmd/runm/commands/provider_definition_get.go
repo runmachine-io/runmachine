@@ -32,12 +32,12 @@ var providerDefinitionGetCommand = &cobra.Command{
 }
 
 func providerDefinitionGet(cmd *cobra.Command, args []string) {
-	conn := apiConnect()
+	conn := connect()
 	defer conn.Close()
 
 	client := pb.NewRunmAPIClient(conn)
 
-	session := apiGetSession()
+	session := getSession()
 
 	var filter *pb.ProviderDefinitionFilter
 

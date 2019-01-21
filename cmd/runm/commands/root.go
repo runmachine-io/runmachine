@@ -24,22 +24,19 @@ const (
 )
 
 const (
-	defaultConnectHost    = "localhost"
-	defaultConnectPort    = 10000
-	defaultAPIConnectPort = 10002
+	defaultConnectHost = "localhost"
+	defaultConnectPort = 10000
 )
 
 var (
-	quiet          bool
-	verbose        bool
-	connectHost    string
-	connectPort    int
-	apiConnectPort int
-	apiConnectHost string
-	authPartition  string
-	authUser       string
-	authProject    string
-	clientLog      Logger
+	quiet         bool
+	verbose       bool
+	connectHost   string
+	connectPort   int
+	authPartition string
+	authUser      string
+	authProject   string
+	clientLog     Logger
 )
 
 var RootCommand = &cobra.Command{
@@ -80,24 +77,6 @@ func addConnectFlags() {
 		"The port where the runmachine API can be found.",
 	)
 	RootCommand.PersistentFlags().StringVarP(
-		&apiConnectHost,
-		"api-host", "",
-		envutil.WithDefault(
-			"RUNM_API_HOST",
-			defaultConnectHost,
-		),
-		"The host where the runmachine API can be found.",
-	)
-	RootCommand.PersistentFlags().IntVarP(
-		&apiConnectPort,
-		"api-port", "",
-		envutil.WithDefaultInt(
-			"RUNM_API_PORT",
-			defaultAPIConnectPort,
-		),
-		"The port where the runmachine API can be found.",
-	)
-	RootCommand.PersistentFlags().StringVarP(
 		&authPartition,
 		"partition", "",
 		envutil.WithDefault(
@@ -130,7 +109,6 @@ func init() {
 	addConnectFlags()
 
 	RootCommand.AddCommand(helpEnvCommand)
-	RootCommand.AddCommand(bootstrapCommand)
 	RootCommand.AddCommand(partitionCommand)
 	RootCommand.AddCommand(providerCommand)
 	RootCommand.AddCommand(providerTypeCommand)

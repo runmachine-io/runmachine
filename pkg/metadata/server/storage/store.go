@@ -41,9 +41,6 @@ func New(log *logging.Logs, cfg *config.Config) (*Store, error) {
 		client: client,
 		kv:     etcd_namespace.NewKV(client.KV, cfg.EtcdKeyPrefix+_SERVICE_KEY),
 	}
-	if err = s.ensureBootstrap(); err != nil {
-		return nil, err
-	}
 	if err = s.ensureObjectTypes(); err != nil {
 		return nil, err
 	}

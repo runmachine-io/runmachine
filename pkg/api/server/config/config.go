@@ -16,7 +16,7 @@ import (
 const (
 	cfgPath                    = "/etc/runmachine/api"
 	defaultUseTLS              = false
-	defaultBindPort            = 10002
+	defaultBindPort            = 10000
 	defaultServiceName         = "runmachine-api"
 	defaultMetadataServiceName = "runmachine-metadata"
 	defaultResourceServiceName = "runmachine-resource"

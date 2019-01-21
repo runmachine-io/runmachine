@@ -19,7 +19,7 @@ import (
 const (
 	cfgPath                          = "/etc/runmachine/metadata"
 	defaultUseTLS                    = false
-	defaultBindPort                  = 10000
+	defaultBindPort                  = 10002
 	defaultServiceName               = "runmachine-metadata"
 	defaultEtcdEndpoints             = "http://127.0.0.1:2379"
 	defaultEtcdKeyPrefix             = "runm-metadata/"

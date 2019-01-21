@@ -29,12 +29,12 @@ func init() {
 }
 
 func partitionCreate(cmd *cobra.Command, args []string) {
-	conn := apiConnect()
+	conn := connect()
 	defer conn.Close()
 
 	client := pb.NewRunmAPIClient(conn)
 	req := &pb.CreateRequest{
-		Session: apiGetSession(),
+		Session: getSession(),
 		Format:  pb.PayloadFormat_YAML,
 		Payload: readInputDocumentOrExit(),
 	}

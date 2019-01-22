@@ -32,7 +32,10 @@ func (s *Server) ProviderDefinitionGet(
 	}
 
 	// copy metadata property permissions to API property permissions
-	apiPropPerms := make([]*pb.PropertyPermissions, len(odef.PropertyPermissions))
+	apiPropPerms := make(
+		[]*pb.PropertyPermissions,
+		len(odef.PropertyPermissions),
+	)
 	for x, metaPropPerms := range odef.PropertyPermissions {
 		apiPropKeyPerms := make(
 			[]*pb.PropertyPermission, len(metaPropPerms.Permissions),
@@ -185,7 +188,10 @@ func (s *Server) ProviderDefinitionSet(
 	}
 
 	// copy API property permissions to metadata property permissions
-	metaPropPerms := make([]*metapb.PropertyPermissions, len(odef.PropertyPermissions))
+	metaPropPerms := make(
+		[]*metapb.PropertyPermissions,
+		len(odef.PropertyPermissions),
+	)
 	for x, apiPropPerms := range odef.PropertyPermissions {
 		metaPropKeyPerms := make(
 			[]*metapb.PropertyPermission, len(apiPropPerms.Permissions),
@@ -207,7 +213,8 @@ func (s *Server) ProviderDefinitionSet(
 		Schema:              odef.Schema,
 		PropertyPermissions: metaPropPerms,
 	}
-	if _, err := s.providerDefinitionSet(req.Session, metadef, req.Partition); err != nil {
+	_, err := s.providerDefinitionSet(req.Session, metadef, req.Partition)
+	if err != nil {
 		s.log.ERR(
 			"failed setting object definition for runm.provider objects "+
 				"in partition '%s'",

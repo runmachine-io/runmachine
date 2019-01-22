@@ -136,10 +136,10 @@ func (s *Server) providerGetByUuid(
 	return apiProviderFromComponents(prec, obj), nil
 }
 
-// mergeProviderWithObject simply takes a resource service Provider and a
-// metadata Object and merges the object information into the API Provider's
-// generic object fields (like name, tags, properties, etc), returning an API
-// provider object from the combined data
+// apiProviderFromComponents takes a resource service Provider and a metadata
+// Object and merges the object information into the API Provider's generic
+// object fields (like name, tags, properties, etc), returning an API provider
+// object from the combined data
 func apiProviderFromComponents(
 	p *respb.Provider,
 	obj *metapb.Object,

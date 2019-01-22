@@ -38,14 +38,6 @@ service RunmMetadata {
     rpc object_type_list(ObjectTypeListRequest) returns (
         stream ObjectType) {}
 
-    // Returns information about a specific object definition
-    rpc object_definition_get(ObjectDefinitionGetRequest) returns (
-        ObjectDefinition) {}
-
-    // Set information about a specific object definition
-    rpc object_definition_set(ObjectDefinitionSetRequest) returns (
-        ObjectDefinitionSetResponse) {}
-
     // Returns information about a specific object
     rpc object_get(ObjectGetRequest) returns (Object) {}
 
@@ -75,6 +67,14 @@ service RunmMetadata {
     // Returns information about multiple provider types
     rpc provider_type_list(ProviderTypeListRequest) returns (
         stream ProviderType) {}
+
+    // Returns information about a single provider definition
+    rpc provider_definition_get(ProviderDefinitionGetRequest) returns (
+        ObjectDefinition) {}
+
+    // Set information about a specific provider definition
+    rpc provider_definition_set(ProviderDefinitionSetRequest) returns (
+        ObjectDefinitionSetResponse) {}
 }
 
 message DeleteResponse {
@@ -143,21 +143,6 @@ message ObjectDeleteRequest {
     repeated string uuids = 2;
 }
 
-message ObjectDefinitionGetRequest {
-    Session session = 1;
-    string partition = 2;
-    string object_type = 3;
-}
-
-message ObjectDefinitionSetRequest {
-    Session session = 1;
-    ObjectDefinition object_definition = 2;
-}
-
-message ObjectDefinitionSetResponse {
-    ObjectDefinition object_definition = 1;
-}
-
 message ObjectPropertiesSetRequest {
     Session session = 1;
     Object object = 2;
@@ -201,4 +186,26 @@ message ProviderTypeListRequest {
     // A set of filter expressions that are OR'd together when determining
     // matches
     repeated ProviderTypeFilter any = 3;
+}
+
+message ProviderDefinitionGetRequest {
+    Session session = 1;
+    // The UUID of the partition the object definition applies to, or empty
+    // string to return the global default object definition for this object
+    // type
+    string partition = 3;
+}
+
+message ProviderDefinitionSetRequest {
+    Session session = 1;
+    // The UUID of the partition the object definition applies to, or empty
+    // string to apply the object definition as the global default for this
+    // object type
+    string partition = 2;
+    // The newly-set object definition
+    ObjectDefinition object_definition = 50;
+}
+
+message ObjectDefinitionSetResponse {
+    ObjectDefinition object_definition = 1;
 }

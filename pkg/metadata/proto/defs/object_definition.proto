@@ -2,7 +2,6 @@ syntax = "proto3";
 
 package runmmeta;
 
-import "filter.proto";
 import "property.proto";
 
 // An object definition is used to constrain the properties of an object. Each
@@ -10,19 +9,8 @@ import "property.proto";
 // incoming data of a particular type of object, along with zero or more
 // structures describing access permissions on an object's properties.
 message ObjectDefinition {
-    // UUID of the partition this object definition has been created in
-    string partition = 1;
-    // String code of the object type the object definition applies to. e.g.
-    // "runm.machine"
-    string object_type = 2;
     // JSONSchema DRAFT-07 serialized string describing the object's schema
     string schema = 3;
     // Collection of access permissions applied to this object's properties
     repeated PropertyPermissions property_permissions = 50;
-}
-
-// Used in matching object definition records
-message ObjectDefinitionFilter {
-    UuidsFilter partition_filter = 1;
-    CodeFilter object_type_filter = 2;
 }

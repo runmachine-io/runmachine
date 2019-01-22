@@ -28,24 +28,3 @@ message ProviderFilter {
     // Type of the provider
     SearchFilter provider_type_filter = 3;
 }
-
-// Administrators can constrain the properties that may be set against a
-// provider by creating a ProviderDefinition
-message ProviderDefinition {
-    // UUID of the partition that providers constrained by this definition are
-    // in
-    string partition = 1;
-    // JSONSchema document describing the constraints and fields that a
-    // provider in this partition must conform to
-    string schema = 2;
-    // The set of permissions to apply on properties
-    repeated PropertyPermissions property_permissions = 50;
-}
-
-// Used in matching provider definition records
-message ProviderDefinitionFilter {
-    // UUID or human-readable name of the partition
-    SearchFilter partition_filter = 2;
-    // Type of the provider
-    SearchFilter provider_type_filter = 3;
-}

@@ -7,11 +7,11 @@ import (
 	pb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
 )
 
-// ObjectDefinitionGet looks up a object definition by partition, object type and
-// object key and returns a ObjectDefinition protobuf message.
-func (s *Server) ObjectDefinitionGet(
+// ProviderDefinitionGet looks up either the global default object definition
+// for providers or an object definition for providers in a specified partition
+func (s *Server) ProviderDefinitionGet(
 	ctx context.Context,
-	req *pb.ObjectDefinitionGetRequest,
+	req *pb.ProviderDefinitionGetRequest,
 ) (*pb.ObjectDefinition, error) {
 	if err := checkSession(req.Session); err != nil {
 		return nil, err
@@ -19,15 +19,13 @@ func (s *Server) ObjectDefinitionGet(
 
 	// TODO(jaypipes): AUTHZ check user can read object definitions
 
-	if req.Partition == "" {
-		return nil, ErrPartitionRequired
-	}
-	if req.ObjectType == "" {
-		return nil, ErrObjectTypeRequired
-	}
-
-	def, err := s.store.ObjectDefinitionGet(req.Partition, req.ObjectType)
+	def, err := s.store.ObjectDefinitionGet(
+		"runm.provider", req.Partition,
+	)
 	if err != nil {
+		if err == errors.ErrNotFound {
+			return nil, ErrNotFound
+		}
 		return nil, err
 	}
 
@@ -39,51 +37,37 @@ func (s *Server) ObjectDefinitionGet(
 // the ObjectDefinition.Partition to the partition's UUID if the Partition
 // field was a name.
 func (s *Server) validateObjectDefinitionSetRequest(
-	req *pb.ObjectDefinitionSetRequest,
+	req *pb.ProviderDefinitionSetRequest,
 ) error {
-	def := req.ObjectDefinition
-
-	// Validate the referred to type and partition actually exist
-	// TODO(jaypipes): AUTHZ check user can specify partition
-	part, err := s.store.PartitionGet(
-		// Look up by UUID *or* name...
-		&pb.PartitionFilter{
-			UuidFilter: &pb.UuidFilter{
-				Uuid: def.Partition,
+	if req.Partition != "" {
+		// Validate the referred to type and partition actually exist
+		// TODO(jaypipes): AUTHZ check user can specify partition
+		part, err := s.store.PartitionGet(
+			&pb.PartitionFilter{
+				UuidFilter: &pb.UuidFilter{
+					Uuid: req.Partition,
+				},
 			},
-			NameFilter: &pb.NameFilter{
-				Name: def.Partition,
-			},
-		},
-	)
-	if err != nil {
-		if err == errors.ErrNotFound {
-			return errPartitionNotFound(def.Partition)
+		)
+		if err != nil {
+			if err == errors.ErrNotFound {
+				return errPartitionNotFound(req.Partition)
+			}
+			// We don't want to leak internal implementation errors...
+			s.log.ERR("failed validating partition in provider definition set: %s", err)
+			return errors.ErrUnknown
 		}
-		// We don't want to leak internal implementation errors...
-		s.log.ERR("failed validating partition in object set: %s", err)
-		return errors.ErrUnknown
+		req.Partition = part.Uuid
 	}
-	def.Partition = part.Uuid
 
-	objType, err := s.store.ObjectTypeGet(def.ObjectType)
-	if err != nil {
-		if err == errors.ErrNotFound {
-			return errObjectTypeNotFound(def.ObjectType)
-		}
-		// We don't want to leak internal implementation errors...
-		s.log.ERR("failed validating object type in object set: %s", err)
-		return errors.ErrUnknown
-	}
-	def.ObjectType = objType.Code
 	return nil
 }
 
-// ObjectDefinitionSet receives an object definition to create or update and
+// ProviderDefinitionSet receives an object definition to create or update and
 // saves the object definition in backend storage
-func (s *Server) ObjectDefinitionSet(
+func (s *Server) ProviderDefinitionSet(
 	ctx context.Context,
-	req *pb.ObjectDefinitionSetRequest,
+	req *pb.ProviderDefinitionSetRequest,
 ) (*pb.ObjectDefinitionSetResponse, error) {
 	if err := checkSession(req.Session); err != nil {
 		return nil, err
@@ -96,12 +80,12 @@ func (s *Server) ObjectDefinitionSet(
 	}
 
 	def := req.ObjectDefinition
-	pk := def.Partition + ":" + def.ObjectType
+	objType := "runm.provider"
+	partUuid := req.Partition
+	pk := objType + ":" + partUuid
 
 	var existing *pb.ObjectDefinition
-	existing, err := s.store.ObjectDefinitionGet(
-		def.Partition, def.ObjectType,
-	)
+	existing, err := s.store.ObjectDefinitionGet(objType, partUuid)
 	if err != nil {
 		if err != errors.ErrNotFound {
 			s.log.ERR(
@@ -116,7 +100,8 @@ func (s *Server) ObjectDefinitionSet(
 	if existing == nil {
 		s.log.L3("creating new object definition '%s'...", pk)
 
-		if err := s.store.ObjectDefinitionCreate(def); err != nil {
+		err := s.store.ObjectDefinitionCreate(objType, partUuid, def)
+		if err != nil {
 			return nil, err
 		}
 		s.log.L1("created new object definition '%s'", pk)

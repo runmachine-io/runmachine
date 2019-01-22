@@ -75,6 +75,15 @@ at a sample key namespace layout.
 
 ```
 $ROOT
+  definitions/by-type/
+    runm.image/
+      default -> serialized ObjectDefinition message
+    runm.machine/
+      default -> serialized ObjectDefinition message
+    runm.provider/
+      default -> serialized ObjectDefinition message
+    runm.provider_group/
+      default -> serialized ObjectDefinition message
   partitions/
     by-name/
       us-east.example.com -> d3873f99a21f45f5bce156c1f8b84b03
@@ -100,11 +109,15 @@ $ROOT
 
 Above, you can see that `$ROOT` has four key namespaces, one called
 `types/`, one called `objects/by-uuid/` one called `partitions` and
-another called `property-definitions/by-uuid/`.
+another called `definitions/by-type/`.
 
 The `$ROOT/types/` key namespace has a set of key namespaces, each of which has
 a set of [valued keys](#Valued keys) describing the different types in the
 runmachine system.
+
+The `$ROOT/definitions/by-type/` key namespace has a set of key namespaces, one
+for each object type. These are the default object definitions that are used
+when an administrator hasn't set up object definitions specific to a partition.
 
 The `$ROOT/objects/by-uuid/` key namespace has a set of valued keys describing
 the objects known to the system.
@@ -181,11 +194,22 @@ contains indexes into object definitions by type.
 ```
 $DEFINITIONS (e.g. $ROOT/partitions/d79706e01fbd4e48aae89209061cdb71/definitions/)
   by-type/
-    runm.image -> serialized ObjectType message
-    runm.machine -> serialized ObjectType message
-    runm.provider -> serialized ObjectType message
-    runm.provider_group -> serialized ObjectType message
+    runm.image/
+      default -> serialized ObjectDefinition message
+    runm.machine/
+      default -> serialized ObjectDefinition message
+    runm.provider/
+      default -> serialized ObjectDefinition message
+      by-type/
+        runm.compute -> serialized ObjectDefinition message
+        runm.storage.block -> serialized ObjectDefinition message
+    runm.provider_group/
+      default -> serialized ObjectDefinition message
 ```
+
+The "default" object definition provides the default schema and permissions for
+objects of that type when an administrator **has overridden** a definition for
+that object type in the partition.
 
 ### The `$OBJECTS` key namespace
 

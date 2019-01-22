@@ -1,4 +1,3 @@
-partition: part0
 property_definitions:
   location.site:
     required: true

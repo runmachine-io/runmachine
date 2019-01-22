@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package runmapi;
 
+import "object_definition.proto";
 import "partition.proto";
 import "provider.proto";
 import "provider_type.proto";
@@ -30,11 +31,11 @@ service RunmAPI {
 
     // Returns information about a specific provider definition
     rpc provider_definition_get(ProviderDefinitionGetRequest) returns (
-        ProviderDefinition) {}
+        ObjectDefinition) {}
 
-    // Defines a schema for providers in a partition
-    rpc provider_definition_set(CreateRequest) returns (
-        ProviderDefinitionSetResponse) {}
+    // Defines a schema and permissions for properties on providers
+    rpc provider_definition_set(ProviderDefinitionSetRequest) returns (
+        ObjectDefinitionSetResponse) {}
 
     // Returns information about a specific provider
     rpc provider_get(ProviderGetRequest) returns (Provider) {}
@@ -97,12 +98,26 @@ message ProviderTypeListRequest {
 
 message ProviderDefinitionGetRequest {
     Session session = 1;
-    ProviderDefinitionFilter filter = 2;
+    // The UUID of the partition the object definition applies to, or empty
+    // string to return the global default object definition for this object
+    // type
+    string partition = 2;
 }
 
-message ProviderDefinitionSetResponse {
-    // The newly-created object
-    ProviderDefinition provider_definition = 1;
+message ProviderDefinitionSetRequest {
+    Session session = 1;
+    PayloadFormat format = 2;
+    // Raw bytes representing the new representation of the object. The server
+    // is responsible for unmarshaling this raw payload.
+    bytes payload = 3;
+    // The UUID of the partition the definition applies to, or empty string to
+    // set the global default definition for providers
+    string partition = 4;
+}
+
+message ObjectDefinitionSetResponse {
+    // The newly-set object definition
+    ObjectDefinition object_definition = 1;
 }
 
 message ProviderGetRequest {

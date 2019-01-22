@@ -16,6 +16,18 @@ var providerDefinitionSetCommand = &cobra.Command{
 }
 
 func setupProviderDefinitionSetFlags() {
+	providerDefinitionSetCommand.Flags().BoolVarP(
+		&cliProviderDefinitionGlobal,
+		"global", "g",
+		false,
+		"Set the global default definition for providers.",
+	)
+	providerDefinitionSetCommand.Flags().StringVarP(
+		&cliProviderDefinitionPartition,
+		"partition", "",
+		"",
+		"Identifier of partition to set an override provider definition for.",
+	)
 	providerDefinitionSetCommand.Flags().StringVarP(
 		&cliObjectDocPath,
 		"file", "f",
@@ -33,19 +45,33 @@ func providerDefinitionSet(cmd *cobra.Command, args []string) {
 	defer conn.Close()
 
 	client := pb.NewRunmAPIClient(conn)
-	req := &pb.CreateRequest{
-		Session: getSession(),
-		Format:  pb.PayloadFormat_YAML,
-		Payload: readInputDocumentOrExit(),
+	session := getSession()
+
+	var argPartition string
+	if cliProviderDefinitionGlobal {
+		argPartition = ""
+	} else {
+		if cliProviderDefinitionPartition == "" {
+			argPartition = session.Partition
+		} else {
+			argPartition = cliProviderDefinitionPartition
+		}
+	}
+
+	req := &pb.ProviderDefinitionSetRequest{
+		Session:   session,
+		Format:    pb.PayloadFormat_YAML,
+		Payload:   readInputDocumentOrExit(),
+		Partition: argPartition,
 	}
 
 	resp, err := client.ProviderDefinitionSet(context.Background(), req)
 	exitIfError(err)
-	obj := resp.ProviderDefinition
+	obj := resp.ObjectDefinition
 	if !quiet {
 		fmt.Printf("ok\n")
 		if verbose {
-			printProviderDefinition(obj)
+			printObjectDefinition(obj)
 		}
 	}
 }

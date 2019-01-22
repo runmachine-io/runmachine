@@ -213,7 +213,7 @@ func (s *Server) ProviderDefinitionSet(
 		Schema:              odef.Schema,
 		PropertyPermissions: metaPropPerms,
 	}
-	_, err := s.providerDefinitionSet(req.Session, metadef, req.Partition)
+	_, err = s.providerDefinitionSet(req.Session, metadef, req.Partition)
 	if err != nil {
 		s.log.ERR(
 			"failed setting object definition for runm.provider objects "+

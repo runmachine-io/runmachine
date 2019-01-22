@@ -57,8 +57,7 @@ func New(
 		Service: &gsr.Service{Name: cfg.ServiceName},
 		Address: addr,
 	}
-	err = registry.Register(&ep)
-	if err != nil {
+	if err = registry.Register(&ep); err != nil {
 		return nil, fmt.Errorf("failed to register %v with gsr: %v", ep, err)
 	}
 	log.L2(

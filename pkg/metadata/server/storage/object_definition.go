@@ -4,6 +4,7 @@ import (
 	etcd "github.com/coreos/etcd/clientv3"
 	"github.com/gogo/protobuf/proto"
 
+	apitypes "github.com/runmachine-io/runmachine/pkg/api/types"
 	"github.com/runmachine-io/runmachine/pkg/errors"
 	pb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
 )
@@ -22,6 +23,36 @@ func objectDefinitionKey(
 	}
 	return _PARTITIONS_KEY + partUuid + "/" +
 		_OBJECT_DEFINITIONS_BY_TYPE_KEY + objType + "/default"
+}
+
+// ensureDefaultProviderDefinition looks up the global default provider
+// definition and if not found, creates it
+func (s *Store) ensureDefaultProviderDefinition() error {
+
+	s.log.L3("ensuring default provider definition...")
+
+	if _, err := s.ObjectDefinitionGet("runm.provider", ""); err != nil {
+		if err == errors.ErrNotFound {
+			s.log.L3("default provider definition does not exist. creating...")
+			pdef := apitypes.DefaultProviderDefinition()
+			odef := &pb.ObjectDefinition{
+				Schema:              pdef.JSONSchemaString(),
+				PropertyPermissions: []*pb.PropertyPermissions{},
+			}
+
+			err := s.ObjectDefinitionCreate("runm.provider", "", odef)
+			if err != nil {
+				s.log.ERR("failed ensuring default provider definition: %s", err)
+				return err
+			}
+			s.log.L1("default provider definition created")
+			return nil
+		}
+		s.log.ERR("failed ensuring default provider definition: %s", err)
+		return err
+	}
+	s.log.L3("default provider definition exists")
+	return nil
 }
 
 // ObjectDefinitionGet returns an object definition given an

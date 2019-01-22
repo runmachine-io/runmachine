@@ -50,7 +50,7 @@ func printPropertyPermission(obj *pb.PropertyPermission) {
 
 func printObjectDefinition(obj *pb.ObjectDefinition) {
 	fmt.Printf("Schema:\n%s", obj.Schema)
-	if len(obj.PropertyPermissions) > 0 {
+	if obj.PropertyPermissions != nil && len(obj.PropertyPermissions) > 0 {
 		fmt.Printf("Property permissions:\n")
 		for _, propPerms := range obj.PropertyPermissions {
 			printPropertyPermissions(propPerms)

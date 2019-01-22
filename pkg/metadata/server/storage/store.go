@@ -47,6 +47,9 @@ func New(log *logging.Logs, cfg *config.Config) (*Store, error) {
 	if err = s.ensureProviderTypes(); err != nil {
 		return nil, err
 	}
+	if err = s.ensureDefaultProviderDefinition(); err != nil {
+		return nil, err
+	}
 	return s, nil
 }
 

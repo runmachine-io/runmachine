@@ -23,6 +23,9 @@ func (s *Server) ProviderDefinitionGet(
 		"runm.provider", req.Partition,
 	)
 	if err != nil {
+		if err == errors.ErrNotFound {
+			return nil, ErrNotFound
+		}
 		return nil, err
 	}
 

@@ -151,3 +151,7 @@ func (def *ProviderDefinition) JSONSchemaString() string {
 	}
 	return b.String()
 }
+
+func DefaultProviderDefinition() *ProviderDefinition {
+	return &ProviderDefinition{}
+}

@@ -7,10 +7,13 @@ import (
 	apitypes "github.com/runmachine-io/runmachine/pkg/api/types"
 	"github.com/runmachine-io/runmachine/pkg/errors"
 	pb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
+	"github.com/runmachine-io/runmachine/pkg/util"
 )
 
 const (
 	// The primary key index of object definitions
+	_OBJECT_DEFINITIONS_BY_UUID_KEY = "definitions/by-uuid/"
+	// A key namespace by object type
 	_OBJECT_DEFINITIONS_BY_TYPE_KEY = "definitions/by-type/"
 )
 
@@ -55,6 +58,29 @@ func (s *Store) ensureDefaultProviderDefinition() error {
 	return nil
 }
 
+// objectDefinitionGetUuidFromKey returns an object definition UUID given a
+// an object type and optional partition UUID
+func (s *Store) objectDefinitionGetUuidFromKey(
+	objType string,
+	partUuid string,
+) (string, error) {
+	ctx, cancel := s.requestCtx()
+	defer cancel()
+
+	key := objectDefinitionKey(objType, partUuid)
+
+	resp, err := s.kv.Get(ctx, key)
+	if err != nil {
+		s.log.ERR("error getting UUID at key %s: %v", key, err)
+		return "", err
+	}
+	if resp.Count == 0 {
+		return "", errors.ErrNotFound
+	}
+
+	return string(resp.Kvs[0].Value), nil
+}
+
 // ObjectDefinitionGet returns an object definition given an
 // object type and partition UUID. If the partition UUID is empty, returns the
 // global default object definition for that object type
@@ -62,16 +88,21 @@ func (s *Store) ObjectDefinitionGet(
 	objType string,
 	partUuid string,
 ) (*pb.ObjectDefinition, error) {
-	return s.objectDefinitionGetByKey(objectDefinitionKey(objType, partUuid))
+	uuid, err := s.objectDefinitionGetUuidFromKey(objType, partUuid)
+	if err != nil {
+		return nil, err
+	}
+	return s.objectDefinitionGetByUuid(uuid)
 }
 
-// objectDefinitionGetByKey returns an object definition given a storage key
-// for where the object definition can be found
-func (s *Store) objectDefinitionGetByKey(
-	key string,
+// ObjectDefinitionGetByUuid returns an object definition given a UUID.
+func (s *Store) objectDefinitionGetByUuid(
+	uuid string,
 ) (*pb.ObjectDefinition, error) {
 	ctx, cancel := s.requestCtx()
 	defer cancel()
+
+	key := _OBJECT_DEFINITIONS_BY_UUID_KEY + uuid
 
 	resp, err := s.kv.Get(ctx, key)
 	if err != nil {
@@ -101,28 +132,36 @@ func (s *Store) ObjectDefinitionCreate(
 	ctx, cancel := s.requestCtx()
 	defer cancel()
 
+	if def.Uuid == "" {
+		def.Uuid = util.NewNormalizedUuid()
+	} else {
+		def.Uuid = util.NormalizeUuid(def.Uuid)
+	}
+
 	value, err := proto.Marshal(def)
 	if err != nil {
 		return err
 	}
 
-	key := objectDefinitionKey(objType, partUuid)
+	typeKey := objectDefinitionKey(objType, partUuid)
+	uuidKey := _OBJECT_DEFINITIONS_BY_UUID_KEY + def.Uuid
 
 	// create the object definition using a transaction that ensures another
 	// thread hasn't created a object definition with the same key underneath
 	// us
 	onSuccess := []etcd.Op{
-		etcd.OpPut(key, string(value)),
+		etcd.OpPut(typeKey, def.Uuid),
+		etcd.OpPut(uuidKey, string(value)),
 	}
 	// Ensure the key doesn't yet exist
-	compare := etcd.Compare(etcd.Version(key), "=", 0)
+	compare := etcd.Compare(etcd.Version(typeKey), "=", 0)
 	resp, err := s.kv.Txn(ctx).If(compare).Then(onSuccess...).Commit()
 
 	if err != nil {
 		s.log.ERR("failed to create txn in etcd: %v", err)
 		return err
 	} else if resp.Succeeded == false {
-		s.log.L3("another thread already created key %s.", key)
+		s.log.L3("another thread already created key %s.", typeKey)
 		return errors.ErrDuplicate
 	}
 	return nil

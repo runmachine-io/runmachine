@@ -97,17 +97,12 @@ func (s *Server) ProviderDefinitionSet(
 			return nil, ErrUnknown
 		}
 	}
+	if err := s.store.ObjectDefinitionSet(objType, partUuid, def); err != nil {
+		return nil, err
+	}
 	if existing == nil {
-		s.log.L3("creating new object definition '%s'...", pk)
-
-		err := s.store.ObjectDefinitionCreate(objType, partUuid, def)
-		if err != nil {
-			return nil, err
-		}
 		s.log.L1("created new object definition '%s'", pk)
 	} else {
-		s.log.L3("updating object definition '%s'...", pk)
-		// TODO(jaypipes): Update the object definition...
 		s.log.L1("updated object definition '%s'", pk)
 	}
 

@@ -43,7 +43,7 @@ func (s *Store) ensureDefaultProviderDefinition() error {
 				PropertyPermissions: []*pb.PropertyPermissions{},
 			}
 
-			err := s.ObjectDefinitionCreate("runm.provider", "", odef)
+			err := s.ObjectDefinitionSet("runm.provider", "", odef)
 			if err != nil {
 				s.log.ERR("failed ensuring default provider definition: %s", err)
 				return err
@@ -120,11 +120,11 @@ func (s *Store) objectDefinitionGetByUuid(
 	return &obj, nil
 }
 
-// ObjectDefinitionCreate writes an object definition to backend storage for a
+// ObjectDefinitionSet replaces an object definition in backend storage for a
 // specified object type and (optional) partition UUID. If the supplid
-// partition UUID is empty, this method creates the default object definition
+// partition UUID is empty, this method replaces the default object definition
 // for that object type.
-func (s *Store) ObjectDefinitionCreate(
+func (s *Store) ObjectDefinitionSet(
 	objType string,
 	partUuid string,
 	def *pb.ObjectDefinition,
@@ -153,9 +153,9 @@ func (s *Store) ObjectDefinitionCreate(
 		etcd.OpPut(typeKey, def.Uuid),
 		etcd.OpPut(uuidKey, string(value)),
 	}
-	// Ensure the key doesn't yet exist
-	compare := etcd.Compare(etcd.Version(typeKey), "=", 0)
-	resp, err := s.kv.Txn(ctx).If(compare).Then(onSuccess...).Commit()
+	// TODO(jaypipes): Add in versioning check here
+	// compare := etcd.Compare(etcd.Version(uuidKey), "=", cmpVersion)
+	resp, err := s.kv.Txn(ctx).Then(onSuccess...).Commit()
 
 	if err != nil {
 		s.log.ERR("failed to create txn in etcd: %v", err)

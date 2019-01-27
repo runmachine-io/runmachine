@@ -83,6 +83,9 @@ func (s *Server) ProviderDefinitionSet(
 	objType := "runm.provider"
 	partUuid := req.Partition
 	pk := objType + ":" + partUuid
+	if partUuid == "" {
+		pk += "default"
+	}
 
 	var existing *pb.ObjectDefinition
 	existing, err := s.store.ObjectDefinitionGet(objType, partUuid)

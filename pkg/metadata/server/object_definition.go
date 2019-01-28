@@ -54,7 +54,10 @@ func (s *Server) validateObjectDefinitionSetRequest(
 				return errPartitionNotFound(req.Partition)
 			}
 			// We don't want to leak internal implementation errors...
-			s.log.ERR("failed validating partition in provider definition set: %s", err)
+			s.log.ERR(
+				"failed validating partition in object definition set: %s",
+				err,
+			)
 			return errors.ErrUnknown
 		}
 		req.Partition = part.Uuid

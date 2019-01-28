@@ -15,13 +15,22 @@ definition:
 
   runm provider definition get --global
 
-Alternately, to show the definition for providers in a specific partition, if
-an admin has overridden the definition for providers in that partition, use the
---partition CLI option:
+To show the definition for providers in a specific partition, if an admin has
+overridden the definition for providers in that partition, use the --partition
+CLI option:
 
   runm provider definition get --partition part0
 
-NOTE: Not specifying either --global or --partition CLI options will return the
+The --type CLI option can be used to return a provider definition that has been
+set for a specific provider type:
+
+  runm provider definition get --type "runm.compute"
+
+HINT: To see the list of valid provider types:
+
+  runm provider-type list
+
+NOTE: Specifying neither --global nor --partition CLI options will return the
 definition for providers in the user's session partition *or* the global
 default if no override definition for providers in that partition has been set.
 
@@ -29,6 +38,11 @@ In other words, running this command with no --global or --partition CLI option
 will show the exact definition that will be used to validate provider input
 data if the user calls the runm provider create command and the user's session
 partition is used for the supplied provider input data.
+
+The --type CLI option may be used together with either the --global or
+--partition CLI option. If neither the --global nor --partition CLI options are
+supplied and the --type CLI option is used, then the provider definition set
+for the user's session partition and the supplied provider type is returned.
 `
 )
 
@@ -51,6 +65,12 @@ func setupProviderDefinitionGetFlags() {
 		"partition", "",
 		"",
 		"Optional partition identifier.",
+	)
+	providerDefinitionGetCommand.Flags().StringVarP(
+		&cliProviderDefinitionType,
+		"type", "t",
+		"",
+		"Optional provider type.",
 	)
 }
 
@@ -82,8 +102,9 @@ func providerDefinitionGet(cmd *cobra.Command, args []string) {
 	obj, err := client.ProviderDefinitionGet(
 		context.Background(),
 		&pb.ProviderDefinitionGetRequest{
-			Session:   session,
-			Partition: argPartition,
+			Session:      session,
+			Partition:    argPartition,
+			ProviderType: cliProviderDefinitionType,
 		},
 	)
 	if errIsNotFound(err) {
@@ -93,8 +114,9 @@ func providerDefinitionGet(cmd *cobra.Command, args []string) {
 		obj, err = client.ProviderDefinitionGet(
 			context.Background(),
 			&pb.ProviderDefinitionGetRequest{
-				Session:   session,
-				Partition: "",
+				Session:      session,
+				Partition:    "",
+				ProviderType: cliProviderDefinitionType,
 			},
 		)
 		exitIfError(err)

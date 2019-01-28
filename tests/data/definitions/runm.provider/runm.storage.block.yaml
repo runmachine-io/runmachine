@@ -1,0 +1,24 @@
+property_definitions:
+  location.site:
+    required: true
+    permissions:
+      # Default to not allowing reads from anyone
+      - permission:
+      # Unless the user is an admin
+      - role: admin
+        permission: rw
+    schema:
+      type: string
+  vendor:
+    required: true
+    permissions:
+      # Default to allowing reads from anyone, no writes. Probably not a good
+      # idea in real world, but this is just for example purposes.
+      - permission: r
+      # Unless the user is an admin
+      - role: admin
+        permission: rw
+    schema:
+      enum:
+        - netapp
+        - scaleio

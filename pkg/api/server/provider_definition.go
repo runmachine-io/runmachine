@@ -26,7 +26,15 @@ func (s *Server) ProviderDefinitionGet(
 		}
 		partUuid = part.Uuid
 	}
-	odef, err := s.providerDefinitionGet(req.Session, partUuid)
+	ptCode := ""
+	if req.ProviderType != "" {
+		_, err := s.providerTypeGetByCode(req.Session, req.ProviderType)
+		if err != nil {
+			return nil, err
+		}
+		ptCode = req.ProviderType
+	}
+	odef, err := s.providerDefinitionGet(req.Session, partUuid, ptCode)
 	if err != nil {
 		return nil, err
 	}
@@ -86,6 +94,21 @@ func (s *Server) validateProviderDefinitionSetRequest(
 		}
 		partDisplay = "partition: '" + part.Uuid + "'"
 		req.Partition = part.Uuid
+	}
+
+	if req.ProviderType != "" {
+		_, err := s.providerTypeGetByCode(req.Session, req.ProviderType)
+		if err != nil {
+			if err == errors.ErrNotFound {
+				return nil, errProviderTypeNotFound(req.ProviderType)
+			}
+			s.log.ERR(
+				"failed checking provider definition's provider type: %s",
+				err,
+			)
+			return nil, ErrUnknown
+		}
+		partDisplay += " provider type: '" + req.ProviderType + "'"
 	}
 
 	propPerms := make([]*pb.PropertyPermissions, 0)
@@ -213,7 +236,9 @@ func (s *Server) ProviderDefinitionSet(
 		Schema:              odef.Schema,
 		PropertyPermissions: metaPropPerms,
 	}
-	_, err = s.providerDefinitionSet(req.Session, metadef, req.Partition)
+	_, err = s.providerDefinitionSet(
+		req.Session, metadef, req.Partition, req.ProviderType,
+	)
 	if err != nil {
 		s.log.ERR(
 			"failed setting object definition for runm.provider objects "+

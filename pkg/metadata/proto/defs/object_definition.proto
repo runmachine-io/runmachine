@@ -9,8 +9,9 @@ import "property.proto";
 // incoming data of a particular type of object, along with zero or more
 // structures describing access permissions on an object's properties.
 message ObjectDefinition {
+    string uuid = 1;
     // JSONSchema DRAFT-07 serialized string describing the object's schema
-    string schema = 3;
+    string schema = 2;
     // Collection of access permissions applied to this object's properties
     repeated PropertyPermissions property_permissions = 50;
 }

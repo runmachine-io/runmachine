@@ -7,6 +7,7 @@ import (
 var (
 	cliProviderDefinitionGlobal    bool
 	cliProviderDefinitionPartition string
+	cliProviderDefinitionType      string
 )
 
 var providerDefinitionCommand = &cobra.Command{

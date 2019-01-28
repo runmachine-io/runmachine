@@ -79,8 +79,13 @@ $ROOT
     by-type/
       runm.provider/
         default -> d296e062ef55443a8dd40369e2a3048d
+        by-type/
+          runm.compute -> c5e44b69fcd142dda035041df3967f11
+          runm.storage.block -> 291defcaae2e4656ae47aee877b9a9ef
     by-uuid/
+      291defcaae2e4656ae47aee877b9a9ef -> serialized ObjectDefinition message
       62026a2934c54df395ba44b0b398c808 -> serialized ObjectDefinition message
+      c5e44b69fcd142dda035041df3967f11 -> serialized ObjectDefinition message
       d133ac2327ae49e8a4d72a1b57e1ed0c -> serialized ObjectDefinition message
       d296e062ef55443a8dd40369e2a3048d -> serialized ObjectDefinition message
       f3823e51dbfd420f807f3a1daac674f0 -> serialized ObjectDefinition message

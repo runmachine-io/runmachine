@@ -17,15 +17,32 @@ const (
 	_OBJECT_DEFINITIONS_BY_TYPE_KEY = "definitions/by-type/"
 )
 
-func objectDefinitionKey(
-	objType string,
+func providerDefinitionKey(
 	partUuid string,
+	provType string,
 ) string {
 	if partUuid == "" {
-		return _OBJECT_DEFINITIONS_BY_TYPE_KEY + objType + "/default"
+		if provType == "" {
+			// The global default provider definition
+			return _OBJECT_DEFINITIONS_BY_TYPE_KEY + "runm.provider/default"
+		}
+		// The global default provider definition for a particular provider
+		// type
+		return _OBJECT_DEFINITIONS_BY_TYPE_KEY + "runm.provider/by-type/" +
+			provType
+	} else {
+		if provType == "" {
+			// The provider definition default override for the partition
+			return _PARTITIONS_KEY + partUuid + "/" +
+				_OBJECT_DEFINITIONS_BY_TYPE_KEY + "runm.provider/default"
+		} else {
+			// The provider definition override for the partition and specific
+			// provider type
+			return _PARTITIONS_KEY + partUuid + "/" +
+				_OBJECT_DEFINITIONS_BY_TYPE_KEY + "runm.provider/by-type/" +
+				provType
+		}
 	}
-	return _PARTITIONS_KEY + partUuid + "/" +
-		_OBJECT_DEFINITIONS_BY_TYPE_KEY + objType + "/default"
 }
 
 // ensureDefaultProviderDefinition looks up the global default provider
@@ -34,7 +51,7 @@ func (s *Store) ensureDefaultProviderDefinition() error {
 
 	s.log.L3("ensuring default provider definition...")
 
-	if _, err := s.ObjectDefinitionGet("runm.provider", ""); err != nil {
+	if _, err := s.ProviderDefinitionGet("", ""); err != nil {
 		if err == errors.ErrNotFound {
 			s.log.L3("default provider definition does not exist. creating...")
 			pdef := apitypes.DefaultProviderDefinition()
@@ -43,7 +60,7 @@ func (s *Store) ensureDefaultProviderDefinition() error {
 				PropertyPermissions: []*pb.PropertyPermissions{},
 			}
 
-			err := s.ObjectDefinitionSet("runm.provider", "", odef)
+			err := s.ProviderDefinitionSet("", "", odef)
 			if err != nil {
 				s.log.ERR("failed ensuring default provider definition: %s", err)
 				return err
@@ -59,15 +76,12 @@ func (s *Store) ensureDefaultProviderDefinition() error {
 }
 
 // objectDefinitionGetUuidFromKey returns an object definition UUID given a
-// an object type and optional partition UUID
+// a string key where a UUID is expected
 func (s *Store) objectDefinitionGetUuidFromKey(
-	objType string,
-	partUuid string,
+	key string,
 ) (string, error) {
 	ctx, cancel := s.requestCtx()
 	defer cancel()
-
-	key := objectDefinitionKey(objType, partUuid)
 
 	resp, err := s.kv.Get(ctx, key)
 	if err != nil {
@@ -81,14 +95,16 @@ func (s *Store) objectDefinitionGetUuidFromKey(
 	return string(resp.Kvs[0].Value), nil
 }
 
-// ObjectDefinitionGet returns an object definition given an
-// object type and partition UUID. If the partition UUID is empty, returns the
-// global default object definition for that object type
-func (s *Store) ObjectDefinitionGet(
-	objType string,
+// ProviderDefinitionGet returns an object definition given an partition UUID
+// and provider type. If the partition UUID is empty, returns the global
+// default object definition for that provider type. If the provider type is
+// empty, returns the global default or partition default for providers.
+func (s *Store) ProviderDefinitionGet(
 	partUuid string,
+	provType string,
 ) (*pb.ObjectDefinition, error) {
-	uuid, err := s.objectDefinitionGetUuidFromKey(objType, partUuid)
+	key := providerDefinitionKey(partUuid, provType)
+	uuid, err := s.objectDefinitionGetUuidFromKey(key)
 	if err != nil {
 		return nil, err
 	}
@@ -120,13 +136,15 @@ func (s *Store) objectDefinitionGetByUuid(
 	return &obj, nil
 }
 
-// ObjectDefinitionSet replaces an object definition in backend storage for a
-// specified object type and (optional) partition UUID. If the supplid
+// ProviderDefinitionSet replaces an object definition in backend storage for
+// an optional partition UUID and optional provider type. If the supplied
 // partition UUID is empty, this method replaces the default object definition
-// for that object type.
-func (s *Store) ObjectDefinitionSet(
-	objType string,
+// for the specified provider type. If the provider type is empty, this method
+// replaces the global default provider definition or the partition override
+// provider definition.
+func (s *Store) ProviderDefinitionSet(
 	partUuid string,
+	provType string,
 	def *pb.ObjectDefinition,
 ) error {
 	ctx, cancel := s.requestCtx()
@@ -143,14 +161,14 @@ func (s *Store) ObjectDefinitionSet(
 		return err
 	}
 
-	typeKey := objectDefinitionKey(objType, partUuid)
+	provDefKey := providerDefinitionKey(partUuid, provType)
 	uuidKey := _OBJECT_DEFINITIONS_BY_UUID_KEY + def.Uuid
 
 	// create the object definition using a transaction that ensures another
 	// thread hasn't created a object definition with the same key underneath
 	// us
 	onSuccess := []etcd.Op{
-		etcd.OpPut(typeKey, def.Uuid),
+		etcd.OpPut(provDefKey, def.Uuid),
 		etcd.OpPut(uuidKey, string(value)),
 	}
 	// TODO(jaypipes): Add in versioning check here
@@ -161,7 +179,7 @@ func (s *Store) ObjectDefinitionSet(
 		s.log.ERR("failed to create txn in etcd: %v", err)
 		return err
 	} else if resp.Succeeded == false {
-		s.log.L3("another thread already created key %s.", typeKey)
+		s.log.L3("another thread already created key %s.", provDefKey)
 		return errors.ErrDuplicate
 	}
 	return nil

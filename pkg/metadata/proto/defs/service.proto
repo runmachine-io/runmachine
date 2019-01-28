@@ -191,17 +191,24 @@ message ProviderTypeListRequest {
 message ProviderDefinitionGetRequest {
     Session session = 1;
     // The UUID of the partition the object definition applies to, or empty
-    // string to return the global default object definition for this object
-    // type
-    string partition = 3;
+    // string to return the global default object definition for providers
+    string partition = 2;
+    // The type of provider the object definition applies to, or empty string
+    // to return the object definition for the global or partition default for
+    // providers
+    string provider_type = 3;
 }
 
 message ProviderDefinitionSetRequest {
     Session session = 1;
     // The UUID of the partition the object definition applies to, or empty
-    // string to apply the object definition as the global default for this
-    // object type
+    // string to apply the object definition as the global default for
+    // providers
     string partition = 2;
+    // The type of provider the object definition applies to, or empty string
+    // to apply the object definition as the global or partition default for
+    // providers
+    string provider_type = 3;
     // The newly-set object definition
     ObjectDefinition object_definition = 50;
 }

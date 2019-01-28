@@ -22,8 +22,15 @@ for f in $FIXTURES_DIR/objects/partitions/*; do
     $SCRIPTS_DIR/runm.sh partition create -f tests/data/objects/partitions/$part_id
 done
 
-echo -n "creating provider definition  ... "
-$SCRIPTS_DIR/runm.sh provider definition set -f tests/data/definitions/runm.provider.yaml
+echo -n "creating runm.compute provider definition for partition part0 ... "
+$SCRIPTS_DIR/runm.sh provider definition set --partition part0 \
+    --type runm.compute \
+    -f tests/data/definitions/runm.provider/runm.compute.yaml
+
+echo -n "creating runm.storage.block provider definition for partition part0 ... "
+$SCRIPTS_DIR/runm.sh provider definition set --partition part0 \
+    --type runm.storage.block \
+    -f tests/data/definitions/runm.provider/runm.storage.block.yaml
 
 for f in $FIXTURES_DIR/objects/providers/*; do
     prov_id=$( basename "$f")

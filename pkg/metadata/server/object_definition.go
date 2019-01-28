@@ -19,8 +19,8 @@ func (s *Server) ProviderDefinitionGet(
 
 	// TODO(jaypipes): AUTHZ check user can read object definitions
 
-	def, err := s.store.ObjectDefinitionGet(
-		"runm.provider", req.Partition,
+	def, err := s.store.ProviderDefinitionGet(
+		req.Partition, req.ProviderType,
 	)
 	if err != nil {
 		if err == errors.ErrNotFound {
@@ -40,7 +40,7 @@ func (s *Server) validateObjectDefinitionSetRequest(
 	req *pb.ProviderDefinitionSetRequest,
 ) error {
 	if req.Partition != "" {
-		// Validate the referred to type and partition actually exist
+		// Validate the referred to partition actually exists
 		// TODO(jaypipes): AUTHZ check user can specify partition
 		part, err := s.store.PartitionGet(
 			&pb.PartitionFilter{
@@ -61,6 +61,22 @@ func (s *Server) validateObjectDefinitionSetRequest(
 			return errors.ErrUnknown
 		}
 		req.Partition = part.Uuid
+	}
+	if req.ProviderType != "" {
+		// Validate the referred to type actually exists
+		// TODO(jaypipes): AUTHZ check user can specify provider type
+		_, err := s.store.ProviderTypeGet(req.ProviderType)
+		if err != nil {
+			if err == errors.ErrNotFound {
+				return errProviderTypeNotFound(req.Partition)
+			}
+			// We don't want to leak internal implementation errors...
+			s.log.ERR(
+				"failed validating provider type in object definition set: %s",
+				err,
+			)
+			return errors.ErrUnknown
+		}
 	}
 
 	return nil
@@ -89,9 +105,14 @@ func (s *Server) ProviderDefinitionSet(
 	if partUuid == "" {
 		pk += "default"
 	}
+	if req.ProviderType != "" {
+		pk += ":" + req.ProviderType
+	}
 
 	var existing *pb.ObjectDefinition
-	existing, err := s.store.ObjectDefinitionGet(objType, partUuid)
+	existing, err := s.store.ProviderDefinitionGet(
+		partUuid, req.ProviderType,
+	)
 	if err != nil {
 		if err != errors.ErrNotFound {
 			s.log.ERR(
@@ -103,7 +124,8 @@ func (s *Server) ProviderDefinitionSet(
 			return nil, ErrUnknown
 		}
 	}
-	if err := s.store.ObjectDefinitionSet(objType, partUuid, def); err != nil {
+	err = s.store.ProviderDefinitionSet(partUuid, req.ProviderType, def)
+	if err != nil {
 		return nil, err
 	}
 	if existing == nil {

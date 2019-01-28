@@ -387,24 +387,22 @@ func (s *Server) objectsGetMatching(
 
 // providerDefinitionGet returns the object definition for providers. The
 // partition argument may be empty, which indicates to return the global
-// default definition for providers. If no such object definition could be
-// found, returns (nil, ErrNotFound)
+// default definition for providers.
+//
+// The providerType argument may also be empty, which indicates to return the
+// global or partition override for a provider definition, regardless of
+// provider type.
+//
+// If no such object definition could be found, returns (nil, ErrNotFound)
 func (s *Server) providerDefinitionGet(
 	sess *pb.Session,
 	partition string,
+	providerType string,
 ) (*metapb.ObjectDefinition, error) {
-	// Look up the partition's UUID
-	if partition != "" {
-		part, err := s.partitionGet(sess, partition)
-		if err != nil {
-			return nil, err
-		}
-		partition = part.Uuid
-	}
-
 	req := &metapb.ProviderDefinitionGetRequest{
-		Session:   metaSession(sess),
-		Partition: partition,
+		Session:      metaSession(sess),
+		Partition:    partition,
+		ProviderType: providerType,
 	}
 	mc, err := s.metaClient()
 	if err != nil {
@@ -423,11 +421,13 @@ func (s *Server) providerDefinitionSet(
 	sess *pb.Session,
 	def *metapb.ObjectDefinition,
 	partition string,
+	providerType string,
 ) (*metapb.ObjectDefinition, error) {
 	req := &metapb.ProviderDefinitionSetRequest{
 		Session:          metaSession(sess),
 		ObjectDefinition: def,
 		Partition:        partition,
+		ProviderType:     providerType,
 	}
 	mc, err := s.metaClient()
 	if err != nil {

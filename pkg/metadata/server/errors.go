@@ -129,3 +129,10 @@ func errObjectTypeNotFound(objectType string) error {
 		"Object type %s not found", objectType,
 	)
 }
+
+func errProviderTypeNotFound(providerType string) error {
+	return status.Errorf(
+		codes.FailedPrecondition,
+		"Provider type %s not found", providerType,
+	)
+}

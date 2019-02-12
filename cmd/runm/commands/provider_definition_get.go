@@ -47,7 +47,7 @@ for the user's session partition and the supplied provider type is returned.
 )
 
 var providerDefinitionGetCommand = &cobra.Command{
-	Use:   "get <search>",
+	Use:   "get",
 	Short: "Show information for a provider definition",
 	Run:   providerDefinitionGet,
 	Long:  usageProviderDefinitionGet,

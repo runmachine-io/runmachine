@@ -54,34 +54,68 @@ role or group that the user is acting as.
 
 An object is something that has all of the following characteristics:
 
+* It is of a specific [type](#object-type)
 * It has external human-readable name that is unique within either the
   [scope](#object-type-scope) of a partition or the combination of the
   partition and project
 * It has a globally-unique identifier (UUID)
-* It can have [properties](#property) associated with it
+* It has zero or more [attributes](#object-attribute)
+* It can have [properties](#object-property) associated with it
 * It can have [tags](#tag) associated with it
 
-## Object Type
+### Object Type
 
 In `runmachine` systems, objects all have a specific **object type**. An object
-type is a well-known code, such as `runm.machine` along with a description of
-what the type of object is used for.
+type is a well-known code, such as `runm.provider` or `runm.machine` along with
+a description of what the type of object is used for.
 
-# Object Type Scope
+#### Object Type Scope
 
 An object type is either *partition-scoped* or *project-scoped*.
 Partition-scoped objects have human-readable names that are guaranteed to be
 unique within a partition. Project-scoped objects have human-readable names
 that are unique within a partition and project combination.
 
-## Property
+### Object Attribute
 
-A *property* is simply a key/value pair.
+An object *attribute* is a fixed field of an object that is always guaranteed
+to exist for all objects of that object type.
 
-An [object](#object) may have zero or more properties associated with it.
+Object attributes are referenced directly by their name, as opposed to
+properties, which are referenced in an object's properties map.
+
+Examples of an object attribute would be a `runm.provider`'s `provider_type`
+attribute. All objects of type `runm.provider` are guaranteed to have an
+attribute called `provider_type`.
+
+### Object Property
+
+An *object property* is simply a key/value pair.
+
+All objects have an attribute called `properties` that is the *property map*
+containing all the object's properties.
 
 Properties may have a [property definition](#property-definition) that
-constrains the values for the property.
+constrains the values for that property, indicate whether the property is
+required for objects of a certain type, and which users are able to read or
+write the property.
+
+## Object Definition
+
+Each type of object in the `runmachine` system has an *object type definition*
+that constrains the structure and access control of objects of that type.
+
+An *object definition* contains information about:
+
+* the primary [attributes](#object-attribute) of that type of object, including
+  the data type of the attribute and whether or not the attribute is required
+* the keys and data types of [properties](#object-property) that may be set on
+  objects of that type
+* the access permissions that indicate who may read or write certain attributes
+  and properties on objects of that type
+
+Each type of object has a default object definition. These default object
+definitions may be overridden for a specific [partition](#partition).
 
 ## Tag
 
@@ -90,18 +124,6 @@ associated with them. There are no constraints placed on a tag's string value.
 Any user with read access to an object's partition (or project if the object is
 [project-scoped](#object-type-scope)) may view an object's tags. Any user with
 write access to the object may view the object's tags.
-
-## Object and Property Definition
-
-When creating or updating objects in the system, a user may associate one or
-more [properties](#properties) with that object. Administrators may set up
-constraints on the type and format of the values of these properties by setting
-a *property definition* for a specific partition, object type and property key
-combination.
-
-In setting a property's definition, the administrator can control the set of
-values that may be used for a particular property as well as define which
-groups of users may read or write the property.
 
 ## Machines
 

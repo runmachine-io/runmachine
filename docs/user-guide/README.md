@@ -30,63 +30,74 @@ The first step in using the `runm` client is to set a few environment variables
 
 TODO
 
-## Administering a project
+## Administering a partition
 
-### Controlling object metadata with property definitions
+### Viewing the default provider definition
 
-All objects in a `runmachine` system may be decorated with various pieces of
-information. Depending on the deployer's preferences and internal policies,
-administrators may wish to constrain the type and format of this information.
-Administrators may also wish to prevent certain parties from changing or even
-viewing specific pieces of information about objects.
+To view the default [object definition](../concepts.md#object-definition) for a
+[provider](../concepts.md#provider), use the `runm provider definition get`
+command. It has three convenient calling conventions.
 
-Administrators are able to constrain object information using [property
-definitions](../concepts.md#property-definition). A property definition may be
-created for any [object type](../concepts.md#object-type) and
-[property](../concepts.md#property) combination.
+`runm provider definition get --global` returns the global default object
+definition for providers.
 
-For example, let's suppose Alice is an administrator for a project called
-"Project X". Alice wants to ensure that every time a `runm`
-[machine](../concepts.md#machine) is created, that an "owner_email" property is
-set for the machine. Furthermore, she wants to ensure that the value of this
-"owner_email" property conforms to an internationalized email address.
+`runm provider definition get --partition $PARTITION` returns the object
+definition that has been overridden for providers in the specified
+`$PARTITION`, or an empty string if the object definition for providers has not
+been overridden for that partition.
 
-Alice would use the `runm property-definition set` command, passing in a YAML
-document that describes the schema and/or access permissions that should
-constrain the "owner_email" property of the `runm.machine` object type, like
-so:
+Finally, `runm provider definition get` with no CLI options returns the object
+definition that has been overridden *for the partition in user's session* OR
+the global default if no override has been set for that partition.
+
+Running `runm provider definition get` with no CLI options is the best way to
+see the object definition that would be used when creating a new provider and
+not passing in any partition information.
+
+### Modifying the definition of providers
+
+Administrators may wish to modify the default [object
+definition](../concepts.md#object-definition) for
+[providers](../concepts.md#provider) in a particular partition.
+
+A common reason for doing so would be to ensure a particular piece of location
+information (e.g. the site that a piece of hardware was physically in) is
+always set on a provider object.
+
+`runm provider definition set` is used to modify a provider definition.
+
+### Provider definition example
+
+Let's suppose Alice is an administrator for a partition called "part0".  Alice
+wants to ensure that every time a [provider](../concepts.md#provider) is
+created, that a "location.site" property is set for the machine. Furthermore,
+she wants to ensure that this property is only visible to administrators.
+
+Alice creates a file called "provider-def.yaml" with the following content:
+
+```yaml
+property_definitions:
+  location.site:
+    required: true
+    permissions:
+      # Default to not allowing reads from anyone
+      - permission:
+      # Unless the user is an admin
+      - role: admin
+        permission: rw
+    schema:
+      type: string
+```
+
+Alice then uses the `runm provider definition set` command to override the
+provider definition for partition "part0":
 
 ```
-cat <<EOF | runm property-definition set
-partition: part0
-type: runm.machine
-key: owner_email
-required: false
-schema:
-  type: string
-  format: idn-email
-  minLength: 5
-  maxLength: 255
-EOF
+runm provider definition set --partition part0 -f provider-def.yaml
 ```
 
-**NOTE**: Alternately, Alice could have used the `-f <FILE>` CLI option, like so:
-
-```
-$ cat runm.machine-owner_email.yaml
-partition: part0
-type: runm.machine
-key: owner_email
-required: false
-schema:
-  type: string
-  format: idn-email
-  minLength: 5
-  maxLength: 255
-$ runm property-definition set -f runm.machine-owner_email.yaml
-ok
-```
-
-After executing the `runm property-definition set` command, users attempting to
-create machine and not specifying a property called "owner_email" with a valid
-internationalized email address would receive a validation failure.
+After executing the `runm provider definition set` command, users attempting to
+create a provider in partition "part0" would be required to set the property
+with key "location.site" to a string value. Furthermore, non-administrator
+users would not be able to view the "location.site" property for any providers
+in partition "part0".

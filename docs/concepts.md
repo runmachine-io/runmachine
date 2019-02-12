@@ -125,38 +125,59 @@ Any user with read access to an object's partition (or project if the object is
 [project-scoped](#object-type-scope)) may view an object's tags. Any user with
 write access to the object may view the object's tags.
 
-## Machines
+## Machine
 
 TODO
 
-## Images
+## Image
 
 TODO
 
-## Providers
+## Provider
+
+A *provider* is an [object](#object) in a `runmachine` that describes something
+that provides resources.
+
+Providers have a set of [capabilities](#capability) and exposes one or more
+[inventories](#inventory) of [resources](#resource-type) that may be used by a
+[consumer](#consumer).
+
+Providers have a well-known provider type.
+
+### Provider type
+
+A category of [provider](#provider).
+
+Well-known provider types include:
+
+* `runm.compute`: A provider of compute resources (CPU, memory, local disk,
+  etc)
+* `runm.storage.block`: A provider of raw block storage
+
+## Provider Group
 
 TODO
 
-## Provider Groups
+## Capability
 
 TODO
 
-## Capabilities
+## Resource Type
 
 TODO
 
-## Resource Types
+## Inventory
 
 TODO
 
-## Inventories
+## Consumer
 
 TODO
 
-## Claims
+## Claim
 
 TODO
 
-## Allocations
+## Allocation
 
 TODO

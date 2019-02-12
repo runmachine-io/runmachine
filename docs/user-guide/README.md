@@ -32,7 +32,18 @@ TODO
 
 ## Administering a partition
 
-### Viewing the default provider definition
+### Provider definitions
+
+A provider definition constrains the attributes, properties, and access
+controls for [providers](../concepts.md#provider).
+
+There is always a global default provider definition.
+
+In addition to this global default provider definition, the definition of
+providers in a specific [partition](../concepts.md#partition) and/or having a
+specific [provider type](../concepts.md#provider-type) can be overridden.
+
+#### Viewing the default provider definition
 
 To view the default [object definition](../concepts.md#object-definition) for a
 [provider](../concepts.md#provider), use the `runm provider definition get`
@@ -46,6 +57,19 @@ definition that has been overridden for providers in the specified
 `$PARTITION`, or an empty string if the object definition for providers has not
 been overridden for that partition.
 
+`runm provider definition get --type $PROVIDER_TYPE` returns the object
+definition that has been overridden for providers having provider type
+`$PROVIDER_TYPE`. An empty string is returned if the object definition for
+providers of that provider type has not been overridden.
+
+The `--partition` and `--type` CLI options may be combined. For example, to
+view the object definition override for providers of provider type
+`runm.compute` in partition `part0`, you would execute:
+
+```
+runm provider definition get --type runm.compute --partition part0
+```
+
 Finally, `runm provider definition get` with no CLI options returns the object
 definition that has been overridden *for the partition in user's session* OR
 the global default if no override has been set for that partition.
@@ -54,7 +78,7 @@ Running `runm provider definition get` with no CLI options is the best way to
 see the object definition that would be used when creating a new provider and
 not passing in any partition information.
 
-### Modifying the definition of providers
+#### Modifying the definition of providers
 
 Administrators may wish to modify the default [object
 definition](../concepts.md#object-definition) for
@@ -66,7 +90,7 @@ always set on a provider object.
 
 `runm provider definition set` is used to modify a provider definition.
 
-### Provider definition example
+#### Provider definition example
 
 Let's suppose Alice is an administrator for a partition called "part0".  Alice
 wants to ensure that every time a [provider](../concepts.md#provider) is
@@ -101,3 +125,77 @@ create a provider in partition "part0" would be required to set the property
 with key "location.site" to a string value. Furthermore, non-administrator
 users would not be able to view the "location.site" property for any providers
 in partition "part0".
+
+Later, Alice decides that providers of type `runm.compute` should have some
+additional required properties that indicate which row, rack and position in
+the rack that the compute nodes are located.
+
+She creates a file called "runm.compute-provider-def.yaml" containing the
+following:
+
+```yaml
+property_definitions:
+  location.site:
+    required: true
+    permissions:
+      # Default to not allowing reads from anyone
+      - permission:
+      # Unless the user is an admin
+      - role: admin
+        permission: rw
+    schema:
+      type: string
+  location.row:
+    required: true
+    permissions:
+      # Default to not allowing reads from anyone
+      - permission:
+      # Unless the user is an admin
+      - role: admin
+        permission: rw
+    schema:
+      type: integer
+  location.rack:
+    required: true
+    permissions:
+      # Default to not allowing reads from anyone
+      - permission:
+      # Unless the user is an admin
+      - role: admin
+        permission: rw
+    schema:
+      type: integer
+  location.rack_position:
+    required: true
+    permissions:
+      # Default to not allowing reads from anyone
+      - permission:
+      # Unless the user is an admin
+      - role: admin
+        permission: rw
+    schema:
+      type: integer
+```
+
+and overrides the object definition for providers of type `runm.compute` in
+partition `part0` by issuing the following call:
+
+```
+runm provider definition set \
+  --type runm.compute \
+  --partition part0 \
+  -f runm.compute-provider-def.yaml
+```
+
+After doing so, compute node providers that are created using `runm provider
+create` in the partition "part0" will be required to have four properties
+containing location information:
+
+* `location.site` - a string
+* `location.row` - an integer
+* `location.rack` - an integer
+* `location.rack_position` - an integer
+
+In this way, Alice can have fine-grained control over what information is
+required to be stored for each type (and subtype) of object in the `runmachine`
+system.

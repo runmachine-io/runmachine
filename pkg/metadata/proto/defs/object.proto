@@ -52,4 +52,5 @@ message ObjectFilter {
     // The project the object must belong to, if the object type scope of this
     // object is PROJECT
     string project = 5;
+    PropertyFilter property_filter = 6;
 }

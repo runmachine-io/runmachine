@@ -16,7 +16,8 @@ type ObjectCondition struct {
 	UuidCondition       *UuidCondition
 	NameCondition       *NameCondition
 	ProjectCondition    string
-	// TODO(jaypipes): Add support for property and tag filters
+	PropertyCondition   *PropertyCondition
+	// TODO(jaypipes): Add support for tag filters
 }
 
 func (f *ObjectCondition) Matches(obj *pb.Object) bool {
@@ -37,6 +38,9 @@ func (f *ObjectCondition) Matches(obj *pb.Object) bool {
 			return false
 		}
 	}
+	if !f.PropertyCondition.Matches(obj) {
+		return false
+	}
 	return true
 }
 
@@ -45,6 +49,7 @@ func (f *ObjectCondition) IsEmpty() bool {
 		f.ObjectTypeCondition == nil &&
 		f.UuidCondition == nil &&
 		f.ProjectCondition == "" &&
+		f.PropertyCondition == nil &&
 		f.NameCondition == nil
 }
 
@@ -63,9 +68,20 @@ func (f *ObjectCondition) String() string {
 		attrMap["project"] = f.ProjectCondition
 	}
 	if f.NameCondition != nil {
-		attrMap["key"] = f.NameCondition.Name
+		attrMap["name"] = f.NameCondition.Name
 		attrMap["use_prefix"] = strconv.FormatBool(
 			f.NameCondition.Op == OP_GREATER_THAN_EQUAL,
+		)
+	}
+	if f.PropertyCondition != nil {
+		attrMap["properties"] = fmt.Sprintf(
+			"reqkeys=%s,reqitems=%s,anykeys=%s,anyitems=%s,forbidkeys=%s,forbiditems=%s",
+			f.PropertyCondition.RequireKeys,
+			f.PropertyCondition.RequireItems,
+			f.PropertyCondition.AnyKeys,
+			f.PropertyCondition.AnyItems,
+			f.PropertyCondition.ForbidKeys,
+			f.PropertyCondition.ForbidItems,
 		)
 	}
 	attrs := ""

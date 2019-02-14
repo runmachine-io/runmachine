@@ -258,9 +258,53 @@ func (s *Server) providersGetMatching(
 				// use the normalized partition UUIDs
 				partUuidsReqMap[x] = partUuids
 			}
+			if filter.PropertyFilter != nil {
+				propFilter := filter.PropertyFilter
+				// TODO(jaypipes): Once Issue #111 is done, this copying won't
+				// be necessary
+				metaPropFilter := &metapb.PropertyFilter{
+					RequireKeys: propFilter.RequireKeys,
+					AnyKeys:     propFilter.AnyKeys,
+					ForbidKeys:  propFilter.ForbidKeys,
+				}
+				if propFilter.RequireItems != nil {
+					numItems := len(propFilter.RequireItems)
+					items := make([]*metapb.Property, numItems)
+					for x, prop := range propFilter.RequireItems {
+						items[x] = &metapb.Property{
+							Key:   prop.Key,
+							Value: prop.Value,
+						}
+					}
+					metaPropFilter.RequireItems = items
+				}
+				if propFilter.AnyItems != nil {
+					numItems := len(propFilter.AnyItems)
+					items := make([]*metapb.Property, numItems)
+					for x, prop := range propFilter.AnyItems {
+						items[x] = &metapb.Property{
+							Key:   prop.Key,
+							Value: prop.Value,
+						}
+					}
+					metaPropFilter.AnyItems = items
+				}
+				if propFilter.ForbidItems != nil {
+					numItems := len(propFilter.ForbidItems)
+					items := make([]*metapb.Property, numItems)
+					for x, prop := range propFilter.ForbidItems {
+						items[x] = &metapb.Property{
+							Key:   prop.Key,
+							Value: prop.Value,
+						}
+					}
+					metaPropFilter.ForbidItems = items
+				}
+				mfil.PropertyFilter = metaPropFilter
+				primaryFiltered = true
+			}
 			mfils = append(mfils, mfil)
 		}
-
 	} else {
 		// Just get all provider objects from the metadata service
 		mfils = append(mfils, &metapb.ObjectFilter{

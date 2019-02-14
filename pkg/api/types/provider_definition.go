@@ -107,7 +107,7 @@ type ProviderDefinition struct {
 	// Named properties may have their values constrained by a property
 	// definition. The map key is the key of the property to apply the
 	// property definition to
-	PropertyDefinitions map[string]*PropertyDefinition `yaml:"property_definitions"`
+	PropertyDefinitions map[string]*PropertyDefinition `json:"property_definitions"`
 }
 
 // Validate returns an error if the definition is invalid, nil otherwise

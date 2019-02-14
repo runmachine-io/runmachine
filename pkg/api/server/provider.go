@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/ghodss/yaml"
 	"github.com/xeipuuv/gojsonschema"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	yaml "gopkg.in/yaml.v2"
 
 	pb "github.com/runmachine-io/runmachine/pkg/api/proto"
 	"github.com/runmachine-io/runmachine/pkg/api/types"

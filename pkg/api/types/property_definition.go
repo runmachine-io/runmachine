@@ -1,6 +1,7 @@
 package types
 
 import (
+	"encoding/json"
 	"fmt"
 )
 
@@ -71,11 +72,11 @@ var (
 type PropertyDefinition struct {
 	// JSONSchema property type document represented in YAML, dictating the
 	// constraints applied by this schema to the property's value
-	Schema *PropertySchema `yaml:"schema"`
+	Schema *PropertySchema `json:"schema"`
 	// Indicates the property is required for all objects of this object type
-	Required bool `yaml:"required"`
+	Required bool `json:"required"`
 	// Set of project/role specific permissions for the property
-	Permissions []*PropertyPermission `yaml:"permissions"`
+	Permissions []*PropertyPermission `json:"permissions"`
 }
 
 // Validate returns an error if the definition is invalid, nil otherwise
@@ -92,9 +93,9 @@ func (def *PropertyDefinition) Validate() error {
 // to read or write a property on an object
 type PropertyPermission struct {
 	// Optional project identifier to control access for
-	Project string `yaml:"project"`
+	Project string `json:"project,omitempty"`
 	// Optional role identifier to control access for
-	Role string `yaml:"role"`
+	Role string `json:"role,omitempty"`
 	// A string containing the permissions:
 	//
 	// "" indicates the project/role should have no read or write access to the
@@ -102,7 +103,7 @@ type PropertyPermission struct {
 	// "r" indicates the project/role should have read access
 	// "w" indicates the project/role should have write access
 	// "rw" indicates the project/role should have read and write access
-	Permission string `yaml:"permission"`
+	Permission string `json:"permission"`
 }
 
 // Validate returns an error if the permission is invalid, nil otherwise
@@ -139,17 +140,17 @@ func (perm *PropertyPermission) PermissionUint32() uint32 {
 	}
 }
 
-// NOTE(jaypipes): A type that can be represented in YAML as *either* a string
+// NOTE(jaypipes): A type that can be represented in JSON as *either* a string
 // *or* an array of strings, which is what JSONSchema's type field needs.
 // see: https://github.com/go-yaml/yaml/issues/100
 type StringArray []string
 
-func (a *StringArray) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (a *StringArray) UnmarshalJSON(b []byte) error {
 	var multi []string
-	err := unmarshal(&multi)
+	err := json.Unmarshal(b, &multi)
 	if err != nil {
 		var single string
-		err := unmarshal(&single)
+		err := json.Unmarshal(b, &single)
 		if err != nil {
 			return err
 		}
@@ -162,29 +163,29 @@ func (a *StringArray) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 type PropertySchema struct {
 	// May only be a JSON scalar type (string, integer, number, etc)
-	Types StringArray `yaml:"type"`
+	Types StringArray `json:"type"`
 	// Property value must be one of these enumerated list of values. If this
 	// exists in the schema document and no types are specified, type is
 	// assumed to be string
-	Enum []string `yaml:"enum"`
+	Enum []string `json:"enum,omitempty"`
 	// Indicates the property's value must be a multiple of this number. The
 	// property's type must be either "number" or "integer"
-	MultipleOf *uint `yaml:"multiple_of"`
+	MultipleOf *uint `json:"multiple_of,omitempty"`
 	// Indicates the property's numeric value must be greater than or equal to
 	// this number The property's type must be either "number" or "integer"
-	Minimum *int `yaml:"minimum"`
+	Minimum *int `json:"minimum,omitempty"`
 	// Indicates the property's numeric value must be less than or equal to
 	// this number The property's type must be either "number" or "integer"
-	Maximum *int `yaml:"maximum"`
+	Maximum *int `json:"maximum,omitempty"`
 	// Indicates the property's value must be a string and that string must
 	// have a length greater than or equal to this number
-	MinLength *uint `yaml:"min_length"`
+	MinLength *uint `json:"min_length,omitempty"`
 	// Indicates the property's value must be a string and that string must
 	// have a length less than or equal to this number
-	MaxLength *uint `yaml:"max_length"`
+	MaxLength *uint `json:"max_length,omitempty"`
 	// Indicates the property's value must be a string and must match this
 	// regex pattern
-	Pattern string `yaml:"pattern"`
+	Pattern string `json:"pattern,omitempty"`
 	// A pre-defined regex that will validate the incoming property value.
 	// Possible string values for "format" are:
 	//
@@ -202,7 +203,7 @@ type PropertySchema struct {
 	// * "iri"
 	// * "iri-reference"
 	// * "uri-template"
-	Format string `yaml:"format"`
+	Format string `json:"format"`
 }
 
 type propertySchemaWithKey struct {

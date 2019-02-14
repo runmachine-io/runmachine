@@ -3,7 +3,7 @@ package server
 import (
 	"context"
 
-	yaml "gopkg.in/yaml.v2"
+	"github.com/ghodss/yaml"
 
 	pb "github.com/runmachine-io/runmachine/pkg/api/proto"
 	"github.com/runmachine-io/runmachine/pkg/api/types"

@@ -3,8 +3,8 @@ package types_test
 import (
 	"testing"
 
+	"github.com/ghodss/yaml"
 	"github.com/stretchr/testify/assert"
-	yaml "gopkg.in/yaml.v2"
 
 	"github.com/runmachine-io/runmachine/pkg/api/types"
 )

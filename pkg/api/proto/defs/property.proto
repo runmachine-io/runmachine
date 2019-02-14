@@ -37,3 +37,25 @@ message PropertyPermissions {
     // Collection of access permissions applied to this property
     repeated PropertyPermission permissions = 50;
 }
+
+// Used in filtering objects having certain property keys, values or
+// combination of key/values (items)
+message PropertyFilter {
+    // All objects must collectively have ALL of the key/value pairs in this
+    // list
+    repeated Property require_items = 1;
+    // All objects must collectively have ALL of the keys in this list. Doesn't
+    // matter what the value of the property item is
+    repeated string require_keys = 2;
+    // No object may have ANY of the key/value pairs in this list
+    repeated Property forbid_items = 3;
+    // No object may have ANY of the keys in this list. Doesn't matter what the
+    // value of the property item is
+    repeated string forbid_keys = 4;
+    // At least one object must have AT LEAST ONE of the key/value pairs in
+    // this list
+    repeated Property any_items = 5;
+    // At least one object must have AT LEAST ONE of the keys in this list.
+    // Doesn't matter what the value of the property item is
+    repeated string any_keys = 6;
+}

@@ -167,7 +167,7 @@ func (s *Server) expandObjectFilter(
 	// partition filters, then go ahead and just return a single
 	// types.ObjectCondition with the search term and prefix indicator for the
 	// object.
-	if filter.NameFilter != nil || filter.UuidFilter != nil || filter.Project != "" {
+	if filter.NameFilter != nil || filter.UuidFilter != nil || filter.Project != "" || filter.PropertyFilter != nil {
 		if len(res) == 0 {
 			res = append(res, &conditions.ObjectCondition{})
 		}
@@ -188,6 +188,11 @@ func (s *Server) expandObjectFilter(
 						filter.NameFilter.Name,
 					)
 				}
+			}
+			if filter.PropertyFilter != nil {
+				pf.PropertyCondition = conditions.PropertyConditionFromFilter(
+					filter.PropertyFilter,
+				)
 			}
 			pf.ProjectCondition = filter.Project
 		}

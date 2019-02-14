@@ -2,7 +2,6 @@ package commands
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	pb "github.com/runmachine-io/runmachine/pkg/api/proto"
@@ -26,16 +25,19 @@ expressions to filter by. $field may be any of the following:
 - uuid: the UUID of the provider itself
 - name: name of the provider
 
+If $field is not one of the above, the filter will be done on a property with
+key $field, and the property's value should match $value. If the =$value part
+of the filter expression is missing, the filter will return any providers
+having a property with key $field regardless of the property's value.
+
 The $value should be an identifier or name for the $field. You can use an
-asterisk (*) to indicate a prefix match. For example, to list all providers of
-type "runm.compute" with names that start with the string "east", you would use
---filter "type=runm.compute name=east*"
+asterisk (*) to indicate a prefix match.
 
 Examples:
 
 Find all runm.compute providers starting with "db":
 
---filter "type=runm.image name=db*"
+--filter "type=runm.compute name=db*"
 
 Find all runm.compute providers OR runm.storage.block providers that are in a
 partition called part0:
@@ -46,6 +48,22 @@ partition called part0:
 Find a provider with a UUID of "f287341160ee4feba4012eb7f8125b82":
 
 --filter "uuid=f287341160ee4feba4012eb7f8125b82"
+
+Find all providers with the "location.site" property equal to "us-east":
+
+--filter "location.site=us-east"
+
+Find all providers having properties with both the "cpu.model" and "cpu.speed"
+property keys associated with it:
+
+--filter "cpu.model cpu.speed"
+
+Find all providers having a "cpu.model" property with a value of "Intel Core
+i7" OR providers having a "cpu.model" property with values beginning with the
+string "AMD":
+
+--filter 'cpu.model="Intel Core i7"' \
+--filter "cpu.model=AMD*"
 `
 )
 
@@ -71,13 +89,18 @@ func buildProviderFilters() []*pb.ProviderFilter {
 	for _, f := range cliFilters {
 		fieldExprs := strings.Fields(f)
 		filter := &pb.ProviderFilter{}
+		reqPropItems := make([]*pb.Property, 0)
+		reqPropKeys := make([]string, 0)
 		for _, fieldExpr := range fieldExprs {
 			kvs := strings.SplitN(fieldExpr, "=", 2)
-			if len(kvs) != 2 {
-				fmt.Fprintf(os.Stderr, errMsgFieldExprFormat, fieldExpr)
-				os.Exit(1)
-			}
 			field := kvs[0]
+			if len(kvs) == 1 {
+				// The user supplied something like --filter "cpu.model" which
+				// indicates to filter for objects that have a property with
+				// key "cpu.model" associated with it
+				reqPropKeys = append(reqPropKeys, field)
+				continue
+			}
 			value := kvs[1]
 			usePrefix := false
 			if strings.HasSuffix(value, "*") {
@@ -102,13 +125,17 @@ func buildProviderFilters() []*pb.ProviderFilter {
 					UsePrefix: usePrefix,
 				}
 			default:
-				fmt.Fprintf(
-					os.Stderr,
-					errMsgUnknownFieldInFieldExpr,
-					fieldExpr,
-					field,
+				// All other $fields are property key filters...
+				reqPropItems = append(
+					reqPropItems,
+					&pb.Property{Key: field, Value: value},
 				)
-				os.Exit(1)
+			}
+		}
+		if len(reqPropItems) > 0 || len(reqPropKeys) > 0 {
+			filter.PropertyFilter = &pb.PropertyFilter{
+				RequireItems: reqPropItems,
+				RequireKeys:  reqPropKeys,
 			}
 		}
 		filters = append(filters, filter)

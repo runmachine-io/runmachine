@@ -27,4 +27,6 @@ message ProviderFilter {
     SearchFilter partition_filter = 2;
     // Type of the provider
     SearchFilter provider_type_filter = 3;
+    // Filter on property keys, values or both
+    PropertyFilter property_filter = 4;
 }

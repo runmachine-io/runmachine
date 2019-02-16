@@ -502,8 +502,13 @@ func propertyValueString(v interface{}) string {
 	switch vt := v.(type) {
 	case string:
 		return v.(string)
-	case int:
-		return fmt.Sprintf("%s", v)
+	case int64:
+		return fmt.Sprintf("%d", v.(int64))
+	case float64:
+		// JSON unmarshaling apparently returns all numbers (including
+		// integers) as float64. So, I'm not entirely sure how to preserve
+		// actual floats (JSON number type)
+		return fmt.Sprintf("%d", int(v.(float64)))
 	default:
 		fmt.Printf("found unknown type for value: %s", vt)
 		return ""

@@ -45,8 +45,8 @@ service RunmMetadata {
     // Look up object by UUID
     rpc object_get_by_uuid(ObjectGetByUuidRequest) returns (Object) {}
 
-    // Returns information about a specific object
-    rpc object_get(ObjectGetRequest) returns (Object) {}
+    // Look up object by partition, object type, name and optional project
+    rpc object_get_by_name(ObjectGetByNameRequest) returns (Object) {}
 
     // Deletes one or more objectes
     rpc object_delete(ObjectDeleteRequest) returns (
@@ -132,9 +132,14 @@ message ObjectGetByUuidRequest {
     string uuid = 2;
 }
 
-message ObjectGetRequest {
+message ObjectGetByNameRequest {
     Session session = 1;
-    ObjectFilter filter = 2;
+    string partition_uuid = 2;
+    string object_type_code = 3;
+    // The project the object must belong to, if the object type scope of this
+    // object is PROJECT
+    string project = 4;
+    string name = 5;
 }
 
 message ObjectCreateRequest {

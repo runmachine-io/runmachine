@@ -228,7 +228,7 @@ func (s *Store) objectsGetMatching(
 					// type when no project was specified, so we'll do the
 					// less efficient range-scan sieve pattern to solve
 					// this cond
-					return s.objectsGetByProjectNameIndex(
+					return s.ObjectsGetByProjectNameIndex(
 						cond.PartitionCondition.Partition.Uuid,
 						cond.ObjectTypeCondition.ObjectType.Code,
 						cond.ProjectCondition,
@@ -237,7 +237,7 @@ func (s *Store) objectsGetMatching(
 					)
 				}
 			} else {
-				return s.objectsGetByNameIndex(
+				return s.ObjectsGetByNameIndex(
 					cond.PartitionCondition.Partition.Uuid,
 					cond.ObjectTypeCondition.ObjectType.Code,
 					cond.NameCondition.Name,
@@ -296,9 +296,9 @@ func (s *Store) ObjectGetByUuid(
 	return obj, nil
 }
 
-// objectsGetByProjectNameIndex returns Object messages that have a specified
+// ObjectsGetByProjectNameIndex returns Object messages that have a specified
 // project and name (with optional prefix) in the supplied partition.
-func (s *Store) objectsGetByProjectNameIndex(
+func (s *Store) ObjectsGetByProjectNameIndex(
 	partUuid string,
 	objTypeCode string,
 	project string,
@@ -346,9 +346,9 @@ func (s *Store) objectsGetByProjectNameIndex(
 	return res, nil
 }
 
-// objectsGetByNameIndex returns Object messages that have a specified name
+// ObjectsGetByNameIndex returns Object messages that have a specified name
 // (with optional prefix) in the supplied partition.
-func (s *Store) objectsGetByNameIndex(
+func (s *Store) ObjectsGetByNameIndex(
 	partUuid string,
 	objTypeCode string,
 	objName string,

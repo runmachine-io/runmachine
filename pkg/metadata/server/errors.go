@@ -94,9 +94,17 @@ var (
 		codes.FailedPrecondition,
 		"A code to search for is required.",
 	)
+	ErrObjectTypeCodeRequired = status.Errorf(
+		codes.FailedPrecondition,
+		"object type code is required.",
+	)
 	ErrBootstrapTokenRequired = status.Errorf(
 		codes.FailedPrecondition,
 		"bootstrap token is required.",
+	)
+	ErrPartitionUuidRequired = status.Errorf(
+		codes.FailedPrecondition,
+		"partition UUID is required.",
 	)
 	ErrPartitionNameRequired = status.Errorf(
 		codes.FailedPrecondition,

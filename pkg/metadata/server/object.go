@@ -67,77 +67,133 @@ func (s *Server) ObjectGetByUuid(
 		return nil, err
 	}
 
-	// Check that the object is in the user's Session partition and project,
-	// and if not, return ErrNotFound.
-	// TODO(jaypipes): Allow not checking this if the user is in a specific
-	// role -- i.e. an admin?
-	if obj.Partition != req.Session.Partition {
-		s.log.L3(
-			"found object with UUID '%s' but its partition '%s' did not "+
-				"match user's Session partition '%s'",
-			uuid, obj.Partition, req.Session.Partition,
-		)
-		return nil, ErrNotFound
-	}
-	// TODO(jaypipes): Make a simple cached utility for determining the scope
-	// of an object type by object type code
-	objType, err := s.store.ObjectTypeGetByCode(obj.ObjectType)
-	if err != nil {
+	if err = s.checkObjectOwnership(obj, req.Session); err != nil {
 		return nil, err
-	}
-	if objType.Scope == pb.ObjectTypeScope_PROJECT &&
-		obj.Project != req.Session.Project {
-		s.log.L3(
-			"found object with UUID '%s' but its project '%s' did not "+
-				"match user's Session project '%s'",
-			uuid, obj.Project, req.Session.Project,
-		)
-		return nil, ErrNotFound
 	}
 
 	return obj, nil
 }
 
-func (s *Server) ObjectGet(
-	ctx context.Context,
-	req *pb.ObjectGetRequest,
-) (*pb.Object, error) {
-	if err := s.checkSession(req.Session); err != nil {
-		return nil, err
-	}
-	if req.Filter == nil {
-		return nil, ErrObjectFilterRequired
-	}
-
-	pfs, err := s.expandObjectFilter(req.Session, req.Filter)
-	if err != nil {
-		if err == errors.ErrNotFound {
-			return nil, ErrNotFound
-		}
-		// We don't want to expose internal errors to the user, so just return
-		// an unknown error after logging it.
-		s.log.ERR(
-			"failed to retrieve object with search filter %s: %s",
-			req.Filter,
-			err,
+func (s *Server) checkObjectOwnership(
+	obj *pb.Object,
+	sess *pb.Session,
+) error {
+	// Check that the object is in the user's Session partition and project,
+	// and if not, return ErrNotFound.
+	// TODO(jaypipes): Allow not checking this if the user is in a specific
+	// role -- i.e. an admin?
+	if obj.Partition != sess.Partition {
+		s.log.L3(
+			"found object with UUID '%s' but its partition '%s' did not "+
+				"match user's Session partition '%s'",
+			obj.Uuid, obj.Partition, sess.Partition,
 		)
-		return nil, ErrUnknown
+		return ErrNotFound
 	}
-	if len(pfs) == 0 {
-		return nil, ErrFailedExpandObjectFilters
+	// TODO(jaypipes): Make a simple cached utility for determining the scope
+	// of an object type by object type code
+	objType, err := s.store.ObjectTypeGetByCode(obj.ObjectType)
+	if err != nil {
+		return err
+	}
+	if objType.Scope == pb.ObjectTypeScope_PROJECT &&
+		obj.Project != sess.Project {
+		s.log.L3(
+			"found object with UUID '%s' but its project '%s' did not "+
+				"match user's Session project '%s'",
+			obj.Uuid, obj.Project, sess.Project,
+		)
+		return ErrNotFound
+	}
+	return nil
+}
+
+func (s *Server) ObjectGetByName(
+	ctx context.Context,
+	req *pb.ObjectGetByNameRequest,
+) (*pb.Object, error) {
+	var err error
+	if err = s.checkSession(req.Session); err != nil {
+		return nil, err
 	}
 
-	objects, err := s.store.ObjectList(pfs)
+	name := req.Name
+	if name == "" {
+		return nil, ErrNameRequired
+	}
+
+	var objScope pb.ObjectTypeScope
+	objTypeCode := req.ObjectTypeCode
+	if objTypeCode == "" {
+		return nil, ErrObjectTypeCodeRequired
+	} else {
+		objType, err := s.store.ObjectTypeGetByCode(objTypeCode)
+		if err != nil {
+			if err == errors.ErrNotFound {
+				return nil, errObjectTypeNotFound(objTypeCode)
+			}
+			return nil, err
+		}
+		objScope = objType.Scope
+	}
+
+	partUuid := req.PartitionUuid
+	if partUuid == "" {
+		// We default to using the Session's partition if it isn't specified in
+		// the request payload. Note that checkSession() ensures that the
+		// request Session.Partition is a valid partition UUID.
+		partUuid = req.Session.Partition
+	} else {
+		_, err = s.store.PartitionGetByUuid(partUuid)
+		if err != nil {
+			if err == errors.ErrNotFound {
+				return nil, errPartitionNotFound(partUuid)
+			}
+			return nil, err
+		}
+	}
+
+	project := req.Project
+	if project == "" {
+		// We default to using the Session's project if it isn't specified in
+		// the request payload
+		project = req.Session.Project
+	}
+
+	var objs []*pb.Object
+	if objScope == pb.ObjectTypeScope_PROJECT {
+		objs, err = s.store.ObjectsGetByProjectNameIndex(
+			partUuid,
+			objTypeCode,
+			project,
+			name,
+			false,
+		)
+	} else {
+		objs, err = s.store.ObjectsGetByNameIndex(
+			partUuid,
+			objTypeCode,
+			name,
+			false,
+		)
+	}
+
 	if err != nil {
 		return nil, err
 	}
-	if len(objects) > 1 {
+	if len(objs) > 1 {
 		return nil, ErrMultipleRecordsFound
-	} else if len(objects) == 0 {
+	} else if len(objs) == 0 {
 		return nil, ErrNotFound
 	}
 
-	return objects[0], nil
+	obj := objs[0]
+
+	if err = s.checkObjectOwnership(obj, req.Session); err != nil {
+		return nil, err
+	}
+
+	return obj, nil
 }
 
 func (s *Server) ObjectList(

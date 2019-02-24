@@ -206,26 +206,16 @@ func (s *Server) uuidFromName(
 	objType string,
 	name string,
 ) (string, error) {
-	req := &metapb.ObjectGetRequest{
-		Session: metaSession(sess),
-		Filter: &metapb.ObjectFilter{
-			ObjectTypeFilter: &metapb.ObjectTypeFilter{
-				CodeFilter: &metapb.CodeFilter{
-					Code:      objType,
-					UsePrefix: false,
-				},
-			},
-			NameFilter: &metapb.NameFilter{
-				Name:      name,
-				UsePrefix: false,
-			},
-		},
+	req := &metapb.ObjectGetByNameRequest{
+		Session:        metaSession(sess),
+		ObjectTypeCode: objType,
+		Name:           name,
 	}
 	mc, err := s.metaClient()
 	if err != nil {
 		return "", err
 	}
-	rec, err := mc.ObjectGet(context.Background(), req)
+	rec, err := mc.ObjectGetByName(context.Background(), req)
 	if err != nil {
 		return "", err
 	}

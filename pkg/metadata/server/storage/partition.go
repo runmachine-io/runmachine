@@ -32,8 +32,9 @@ func (s *Store) kvPartition(partUuid string) etcd.KV {
 	return etcd_namespace.NewKV(s.kv, key)
 }
 
-// partitionGetByUuid returns a Partition protobuffer object with the supplied UUID
-func (s *Store) partitionGetByUuid(
+// PartitionGetByUuid returns a Partition protobuffer message with the supplied
+// UUID
+func (s *Store) PartitionGetByUuid(
 	uuid string,
 ) (*pb.Partition, error) {
 	ctx, cancel := s.requestCtx()
@@ -54,31 +55,14 @@ func (s *Store) partitionGetByUuid(
 	return obj, nil
 }
 
-// PartitionGet returns a Partition protobuffer message that has the UUID or
-// name of the supplied search string
-func (s *Store) PartitionGet(
-	filter *pb.PartitionFilter,
+// PartitionGetByName returns a Partition protobuffer message with the supplied
+// name
+func (s *Store) PartitionGetByName(
+	name string,
 ) (*pb.Partition, error) {
 	ctx, cancel := s.requestCtx()
 	defer cancel()
-
-	// TODO(jaypipes): This is going to be a common pattern (look up by UUID,
-	// fall back to looking up by name index and following the index pointer to
-	// the UUID data record. Look for a way to DRY this up
-
-	// First try looking up the partition by UUID. If not, match, then we try
-	// the by-name index...
-	if filter.UuidFilter != nil {
-		p, err := s.partitionGetByUuid(filter.UuidFilter.Uuid)
-		if p != nil {
-			return p, nil
-		}
-		if err != nil && err != errors.ErrNotFound {
-			return nil, err
-		}
-	}
-
-	byNameKey := _PARTITIONS_BY_NAME_KEY + filter.NameFilter.Name
+	byNameKey := _PARTITIONS_BY_NAME_KEY + name
 	resp, err := s.kv.Get(ctx, byNameKey)
 	if err != nil {
 		s.log.ERR("error getting key %s: %v", byNameKey, err)
@@ -88,7 +72,7 @@ func (s *Store) PartitionGet(
 		return nil, errors.ErrNotFound
 	}
 	partUuid := string(resp.Kvs[0].Value)
-	p, err := s.partitionGetByUuid(partUuid)
+	p, err := s.PartitionGetByUuid(partUuid)
 	if p != nil {
 		return p, nil
 	}
@@ -162,7 +146,7 @@ func (s *Store) PartitionList(
 	res := make([]*pb.Partition, len(uuids))
 	x := 0
 	for uuid := range uuids {
-		obj, err := s.partitionGetByUuid(uuid)
+		obj, err := s.PartitionGetByUuid(uuid)
 		if err != nil {
 			if err == errors.ErrNotFound {
 				continue

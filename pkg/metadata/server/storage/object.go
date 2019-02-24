@@ -151,7 +151,7 @@ func (s *Store) ObjectListWithReferences(
 	for x, obj := range objects {
 		part, ok := partitions[obj.Partition]
 		if !ok {
-			part, err = s.partitionGetByUuid(obj.Partition)
+			part, err = s.PartitionGetByUuid(obj.Partition)
 			if err != nil {
 				msg := fmt.Sprintf(
 					"failed to find partition %s while attempting to delete "+

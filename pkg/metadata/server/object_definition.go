@@ -13,7 +13,7 @@ func (s *Server) ProviderDefinitionGet(
 	ctx context.Context,
 	req *pb.ProviderDefinitionGetRequest,
 ) (*pb.ObjectDefinition, error) {
-	if err := checkSession(req.Session); err != nil {
+	if err := s.checkSession(req.Session); err != nil {
 		return nil, err
 	}
 
@@ -42,13 +42,7 @@ func (s *Server) validateObjectDefinitionSetRequest(
 	if req.Partition != "" {
 		// Validate the referred to partition actually exists
 		// TODO(jaypipes): AUTHZ check user can specify partition
-		part, err := s.store.PartitionGet(
-			&pb.PartitionFilter{
-				UuidFilter: &pb.UuidFilter{
-					Uuid: req.Partition,
-				},
-			},
-		)
+		_, err := s.store.PartitionGetByUuid(req.Partition)
 		if err != nil {
 			if err == errors.ErrNotFound {
 				return errPartitionNotFound(req.Partition)
@@ -60,7 +54,6 @@ func (s *Server) validateObjectDefinitionSetRequest(
 			)
 			return errors.ErrUnknown
 		}
-		req.Partition = part.Uuid
 	}
 	if req.ProviderType != "" {
 		// Validate the referred to type actually exists
@@ -88,7 +81,7 @@ func (s *Server) ProviderDefinitionSet(
 	ctx context.Context,
 	req *pb.ProviderDefinitionSetRequest,
 ) (*pb.ObjectDefinitionSetResponse, error) {
-	if err := checkSession(req.Session); err != nil {
+	if err := s.checkSession(req.Session); err != nil {
 		return nil, err
 	}
 

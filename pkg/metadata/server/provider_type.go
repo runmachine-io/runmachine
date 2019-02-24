@@ -11,7 +11,7 @@ func (s *Server) ProviderTypeGet(
 	ctx context.Context,
 	req *pb.ProviderTypeGetRequest,
 ) (*pb.ProviderType, error) {
-	if err := checkSession(req.Session); err != nil {
+	if err := s.checkSession(req.Session); err != nil {
 		return nil, err
 	}
 
@@ -39,7 +39,7 @@ func (s *Server) ProviderTypeList(
 	req *pb.ProviderTypeListRequest,
 	stream pb.RunmMetadata_ProviderTypeListServer,
 ) error {
-	if err := checkSession(req.Session); err != nil {
+	if err := s.checkSession(req.Session); err != nil {
 		return err
 	}
 

@@ -131,23 +131,20 @@ func (s *Server) partitionGetByUuid(
 	sess *pb.Session,
 	uuid string,
 ) (*pb.Partition, error) {
-	req := &metapb.PartitionGetRequest{
+	req := &metapb.PartitionGetByUuidRequest{
 		Session: metaSession(sess),
-		Filter: &metapb.PartitionFilter{
-			UuidFilter: &metapb.UuidFilter{
-				Uuid:      uuid,
-				UsePrefix: false,
-			},
-		},
+		Uuid:    uuid,
 	}
 	mc, err := s.metaClient()
 	if err != nil {
 		return nil, err
 	}
-	rec, err := mc.PartitionGet(context.Background(), req)
+	rec, err := mc.PartitionGetByUuid(context.Background(), req)
 	if err != nil {
 		return nil, err
 	}
+	// TODO(jaypipes): Use a single proto namespace so we don't always need to
+	// copy data like this...
 	return &pb.Partition{
 		Uuid: rec.Uuid,
 		Name: rec.Name,
@@ -160,23 +157,20 @@ func (s *Server) partitionGetByName(
 	sess *pb.Session,
 	name string,
 ) (*pb.Partition, error) {
-	req := &metapb.PartitionGetRequest{
+	req := &metapb.PartitionGetByNameRequest{
 		Session: metaSession(sess),
-		Filter: &metapb.PartitionFilter{
-			NameFilter: &metapb.NameFilter{
-				Name:      name,
-				UsePrefix: false,
-			},
-		},
+		Name:    name,
 	}
 	mc, err := s.metaClient()
 	if err != nil {
 		return nil, err
 	}
-	rec, err := mc.PartitionGet(context.Background(), req)
+	rec, err := mc.PartitionGetByName(context.Background(), req)
 	if err != nil {
 		return nil, err
 	}
+	// TODO(jaypipes): Use a single proto namespace so we don't always need to
+	// copy data like this...
 	return &pb.Partition{
 		Uuid: rec.Uuid,
 		Name: rec.Name,

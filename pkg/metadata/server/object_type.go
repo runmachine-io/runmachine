@@ -11,7 +11,7 @@ func (s *Server) ObjectTypeGet(
 	ctx context.Context,
 	req *pb.ObjectTypeGetRequest,
 ) (*pb.ObjectType, error) {
-	if err := checkSession(req.Session); err != nil {
+	if err := s.checkSession(req.Session); err != nil {
 		return nil, err
 	}
 
@@ -39,7 +39,7 @@ func (s *Server) ObjectTypeList(
 	req *pb.ObjectTypeListRequest,
 	stream pb.RunmMetadata_ObjectTypeListServer,
 ) error {
-	if err := checkSession(req.Session); err != nil {
+	if err := s.checkSession(req.Session); err != nil {
 		return err
 	}
 

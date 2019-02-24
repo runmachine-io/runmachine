@@ -12,17 +12,7 @@ import (
 func (s *Server) defaultObjectFilter(
 	session *pb.Session,
 ) (*conditions.ObjectCondition, error) {
-	p, err := s.store.PartitionGet(
-		// Look up by UUID *or* name...
-		&pb.PartitionFilter{
-			UuidFilter: &pb.UuidFilter{
-				Uuid: session.Partition,
-			},
-			NameFilter: &pb.NameFilter{
-				Name: session.Partition,
-			},
-		},
-	)
+	p, err := s.store.PartitionGetByUuid(session.Partition)
 	if err != nil {
 		if err == errors.ErrNotFound {
 			// Just return nil since clearly we can have no
@@ -83,23 +73,13 @@ func (s *Server) expandObjectFilter(
 	} else {
 		// By default, filter by the session's partition if the user didn't
 		// specify any filtering.
-		part, err := s.store.PartitionGet(
-			// Look up by UUID *or* name...
-			&pb.PartitionFilter{
-				UuidFilter: &pb.UuidFilter{
-					Uuid: session.Partition,
-				},
-				NameFilter: &pb.NameFilter{
-					Name: session.Partition,
-				},
-			},
-		)
+		part, err := s.store.PartitionGetByUuid(session.Partition)
 		if err != nil {
 			if err == errors.ErrNotFound {
 				// Just return nil since clearly we can have no
 				// property schemas matching an unknown partition
 				s.log.L3(
-					"'%s' listed objects with no filters "+
+					"'%s' listed objects with no partition filters "+
 						"and supplied unknown partition '%s' in the session",
 					session.User,
 					session.Partition,
@@ -242,7 +222,7 @@ func (s *Server) normalizeObjectFilters(
 		} else {
 			// The user asked for object types that don't exist, partitions
 			// that don't exist, etc.
-			return nil, nil
+			return nil, ErrFailedExpandObjectFilters
 		}
 	}
 	return res, nil

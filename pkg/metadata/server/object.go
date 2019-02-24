@@ -13,7 +13,7 @@ func (s *Server) ObjectDelete(
 	ctx context.Context,
 	req *pb.ObjectDeleteRequest,
 ) (*pb.DeleteResponse, error) {
-	if err := checkSession(req.Session); err != nil {
+	if err := s.checkSession(req.Session); err != nil {
 		return nil, err
 	}
 	if len(req.Uuids) == 0 {
@@ -54,7 +54,7 @@ func (s *Server) ObjectGet(
 	ctx context.Context,
 	req *pb.ObjectGetRequest,
 ) (*pb.Object, error) {
-	if err := checkSession(req.Session); err != nil {
+	if err := s.checkSession(req.Session); err != nil {
 		return nil, err
 	}
 	if req.Filter == nil {
@@ -96,7 +96,7 @@ func (s *Server) ObjectList(
 	req *pb.ObjectListRequest,
 	stream pb.RunmMetadata_ObjectListServer,
 ) error {
-	if err := checkSession(req.Session); err != nil {
+	if err := s.checkSession(req.Session); err != nil {
 		return err
 	}
 
@@ -133,17 +133,7 @@ func (s *Server) validateObjectCreateRequest(
 	}
 
 	// Validate the referred to type, partition and project actually exist
-	part, err := s.store.PartitionGet(
-		// Look up by UUID *or* name...
-		&pb.PartitionFilter{
-			UuidFilter: &pb.UuidFilter{
-				Uuid: obj.Partition,
-			},
-			NameFilter: &pb.NameFilter{
-				Name: obj.Partition,
-			},
-		},
-	)
+	part, err := s.store.PartitionGetByUuid(obj.Partition)
 	if err != nil {
 		if err == errors.ErrNotFound {
 			return nil, errPartitionNotFound(obj.Partition)
@@ -182,6 +172,9 @@ func (s *Server) ObjectCreate(
 	ctx context.Context,
 	req *pb.ObjectCreateRequest,
 ) (*pb.ObjectCreateResponse, error) {
+	if err := s.checkSession(req.Session); err != nil {
+		return nil, err
+	}
 	// TODO(jaypipes): AUTHZ check if user can write objects
 
 	input, err := s.validateObjectCreateRequest(req)

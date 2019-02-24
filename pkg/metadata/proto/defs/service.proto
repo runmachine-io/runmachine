@@ -42,6 +42,9 @@ service RunmMetadata {
     rpc object_type_list(ObjectTypeListRequest) returns (
         stream ObjectType) {}
 
+    // Look up object by UUID
+    rpc object_get_by_uuid(ObjectGetByUuidRequest) returns (Object) {}
+
     // Returns information about a specific object
     rpc object_get(ObjectGetRequest) returns (Object) {}
 
@@ -122,6 +125,11 @@ message ObjectTypeListRequest {
     // A set of filter expressions that are OR'd together when determining
     // matches
     repeated ObjectTypeFilter any = 3;
+}
+
+message ObjectGetByUuidRequest {
+    Session session = 1;
+    string uuid = 2;
 }
 
 message ObjectGetRequest {

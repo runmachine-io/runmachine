@@ -195,7 +195,7 @@ func (s *Store) objectsGetMatching(
 		// all we need to do is grab the object from the primary
 		// objects/by-uuid/ index and check that any other fields match the
 		// object's fields. If so, just return the UUID
-		obj, err := s.objectGetByUuid(cond.UuidCondition.Uuid)
+		obj, err := s.ObjectGetByUuid(cond.UuidCondition.Uuid)
 		if err != nil {
 			return nil, err
 		}
@@ -269,9 +269,9 @@ func (s *Store) objectsGetMatching(
 	return res, nil
 }
 
-// objectGetByUuid returns an Object protobuffer message with the supplied
+// ObjectGetByUuid returns an Object protobuffer message with the supplied
 // object UUID
-func (s *Store) objectGetByUuid(
+func (s *Store) ObjectGetByUuid(
 	uuid string,
 ) (*pb.Object, error) {
 	ctx, cancel := s.requestCtx()
@@ -336,7 +336,7 @@ func (s *Store) objectsGetByProjectNameIndex(
 	res := make([]*pb.Object, resp.Count)
 
 	for x, entry := range resp.Kvs {
-		obj, err := s.objectGetByUuid(string(entry.Value))
+		obj, err := s.ObjectGetByUuid(string(entry.Value))
 		if err != nil {
 			return nil, err
 		}
@@ -382,7 +382,7 @@ func (s *Store) objectsGetByNameIndex(
 	res := make([]*pb.Object, resp.Count)
 
 	for x, entry := range resp.Kvs {
-		obj, err := s.objectGetByUuid(string(entry.Value))
+		obj, err := s.ObjectGetByUuid(string(entry.Value))
 		if err != nil {
 			return nil, err
 		}

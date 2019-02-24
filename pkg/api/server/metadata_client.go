@@ -238,20 +238,15 @@ func (s *Server) objectFromUuid(
 	sess *pb.Session,
 	uuid string,
 ) (*metapb.Object, error) {
-	req := &metapb.ObjectGetRequest{
+	req := &metapb.ObjectGetByUuidRequest{
 		Session: metaSession(sess),
-		Filter: &metapb.ObjectFilter{
-			UuidFilter: &metapb.UuidFilter{
-				Uuid:      uuid,
-				UsePrefix: false,
-			},
-		},
+		Uuid:    uuid,
 	}
 	mc, err := s.metaClient()
 	if err != nil {
 		return nil, err
 	}
-	rec, err := mc.ObjectGet(context.Background(), req)
+	rec, err := mc.ObjectGetByUuid(context.Background(), req)
 	if err != nil {
 		return nil, err
 	}

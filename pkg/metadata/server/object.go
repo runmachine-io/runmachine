@@ -50,6 +50,54 @@ func (s *Server) ObjectDelete(
 	}, nil
 }
 
+func (s *Server) ObjectGetByUuid(
+	ctx context.Context,
+	req *pb.ObjectGetByUuidRequest,
+) (*pb.Object, error) {
+	if err := s.checkSession(req.Session); err != nil {
+		return nil, err
+	}
+	uuid := req.Uuid
+	if uuid == "" {
+		return nil, ErrUuidRequired
+	}
+
+	obj, err := s.store.ObjectGetByUuid(uuid)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check that the object is in the user's Session partition and project,
+	// and if not, return ErrNotFound.
+	// TODO(jaypipes): Allow not checking this if the user is in a specific
+	// role -- i.e. an admin?
+	if obj.Partition != req.Session.Partition {
+		s.log.L3(
+			"found object with UUID '%s' but its partition '%s' did not "+
+				"match user's Session partition '%s'",
+			uuid, obj.Partition, req.Session.Partition,
+		)
+		return nil, ErrNotFound
+	}
+	// TODO(jaypipes): Make a simple cached utility for determining the scope
+	// of an object type by object type code
+	objType, err := s.store.ObjectTypeGetByCode(obj.ObjectType)
+	if err != nil {
+		return nil, err
+	}
+	if objType.Scope == pb.ObjectTypeScope_PROJECT &&
+		obj.Project != req.Session.Project {
+		s.log.L3(
+			"found object with UUID '%s' but its project '%s' did not "+
+				"match user's Session project '%s'",
+			uuid, obj.Project, req.Session.Project,
+		)
+		return nil, ErrNotFound
+	}
+
+	return obj, nil
+}
+
 func (s *Server) ObjectGet(
 	ctx context.Context,
 	req *pb.ObjectGetRequest,

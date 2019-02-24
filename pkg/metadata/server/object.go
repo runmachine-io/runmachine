@@ -143,7 +143,7 @@ func (s *Server) validateObjectCreateRequest(
 		return nil, errors.ErrUnknown
 	}
 
-	objType, err := s.store.ObjectTypeGet(obj.ObjectType)
+	objType, err := s.store.ObjectTypeGetByCode(obj.ObjectType)
 	if err != nil {
 		if err == errors.ErrNotFound {
 			return nil, errObjectTypeNotFound(obj.ObjectType)

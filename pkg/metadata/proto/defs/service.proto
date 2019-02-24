@@ -35,7 +35,8 @@ service RunmMetadata {
         PartitionCreateResponse) {}
 
     // Returns information about a specific object type
-    rpc object_type_get(ObjectTypeGetRequest) returns (ObjectType) {}
+    rpc object_type_get_by_code(ObjectTypeGetByCodeRequest) returns (
+        ObjectType) {}
 
     // Returns information about multiple object types
     rpc object_type_list(ObjectTypeListRequest) returns (
@@ -110,9 +111,9 @@ message PartitionCreateResponse {
     Partition partition = 1;
 }
 
-message ObjectTypeGetRequest {
+message ObjectTypeGetByCodeRequest {
     Session session = 1;
-    ObjectTypeFilter filter = 2;
+    string code = 2;
 }
 
 message ObjectTypeListRequest {

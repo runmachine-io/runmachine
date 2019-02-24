@@ -7,18 +7,18 @@ import (
 	pb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
 )
 
-func (s *Server) ObjectTypeGet(
+func (s *Server) ObjectTypeGetByCode(
 	ctx context.Context,
-	req *pb.ObjectTypeGetRequest,
+	req *pb.ObjectTypeGetByCodeRequest,
 ) (*pb.ObjectType, error) {
 	if err := s.checkSession(req.Session); err != nil {
 		return nil, err
 	}
-
-	if req.Filter == nil || req.Filter.CodeFilter == nil || req.Filter.CodeFilter.Code == "" {
+	code := req.Code
+	if code == "" {
 		return nil, ErrCodeRequired
 	}
-	obj, err := s.store.ObjectTypeGet(req.Filter.CodeFilter.Code)
+	obj, err := s.store.ObjectTypeGetByCode(code)
 	if err != nil {
 		if err == errors.ErrNotFound {
 			return nil, ErrNotFound
@@ -27,7 +27,7 @@ func (s *Server) ObjectTypeGet(
 		// an unknown error after logging it.
 		s.log.ERR(
 			"failed to retrieve object type of %s: %s",
-			req.Filter.CodeFilter.Code,
+			code,
 			err,
 		)
 		return nil, ErrUnknown

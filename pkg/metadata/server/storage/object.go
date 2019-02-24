@@ -165,7 +165,7 @@ func (s *Store) ObjectListWithReferences(
 		}
 		ot, ok := objTypes[obj.ObjectType]
 		if !ok {
-			ot, err = s.ObjectTypeGet(obj.ObjectType)
+			ot, err = s.ObjectTypeGetByCode(obj.ObjectType)
 			if err != nil {
 				msg := fmt.Sprintf(
 					"failed to find object type %s while attempting to delete "+

@@ -85,7 +85,7 @@ func (s *Store) ensureObjectTypes() error {
 
 // ObjectTypeGet returns an ObjectType protobuffer object having the supplied
 // code
-func (s *Store) ObjectTypeGet(
+func (s *Store) ObjectTypeGetByCode(
 	code string,
 ) (*pb.ObjectType, error) {
 	ctx, cancel := s.requestCtx()

@@ -7,6 +7,8 @@ import (
 	pb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
 )
 
+// ObjectTypeGetByCode returns an ObjectType protobuffer message with the given
+// code. If no such object type could be found, returns ErrNotFound
 func (s *Server) ObjectTypeGetByCode(
 	ctx context.Context,
 	req *pb.ObjectTypeGetByCodeRequest,
@@ -27,14 +29,15 @@ func (s *Server) ObjectTypeGetByCode(
 		// an unknown error after logging it.
 		s.log.ERR(
 			"failed to retrieve object type of %s: %s",
-			code,
-			err,
+			code, err,
 		)
 		return nil, ErrUnknown
 	}
 	return obj, nil
 }
 
+// ObjectTypeList streams zero or more ObjectType protobuffer messages back to
+// the client that match any of the filters specified in the request payload
 func (s *Server) ObjectTypeList(
 	req *pb.ObjectTypeListRequest,
 	stream pb.RunmMetadata_ObjectTypeListServer,
@@ -42,7 +45,6 @@ func (s *Server) ObjectTypeList(
 	if err := s.checkSession(req.Session); err != nil {
 		return err
 	}
-
 	objs, err := s.store.ObjectTypeList(req.Any)
 	if err != nil {
 		return err

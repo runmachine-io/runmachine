@@ -32,11 +32,11 @@ func (s *Server) ProviderDefinitionGet(
 	return def, nil
 }
 
-// validateObjectDefinitionSetRequest ensures that the data the user sent in
+// validateProviderDefinitionSetRequest ensures that the data the user sent in
 // the request is valid. It translates any partition name into a UUID and sets
 // the ObjectDefinition.Partition to the partition's UUID if the Partition
 // field was a name.
-func (s *Server) validateObjectDefinitionSetRequest(
+func (s *Server) validateProviderDefinitionSetRequest(
 	req *pb.ProviderDefinitionSetRequest,
 ) error {
 	if req.Partition != "" {
@@ -58,7 +58,7 @@ func (s *Server) validateObjectDefinitionSetRequest(
 	if req.ProviderType != "" {
 		// Validate the referred to type actually exists
 		// TODO(jaypipes): AUTHZ check user can specify provider type
-		_, err := s.store.ProviderTypeGet(req.ProviderType)
+		_, err := s.store.ProviderTypeGetByCode(req.ProviderType)
 		if err != nil {
 			if err == errors.ErrNotFound {
 				return errProviderTypeNotFound(req.Partition)
@@ -87,7 +87,7 @@ func (s *Server) ProviderDefinitionSet(
 
 	// TODO(jaypipes): AUTHZ check for writing object definitions
 
-	if err := s.validateObjectDefinitionSetRequest(req); err != nil {
+	if err := s.validateProviderDefinitionSetRequest(req); err != nil {
 		return nil, err
 	}
 

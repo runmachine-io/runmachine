@@ -34,7 +34,7 @@ service RunmMetadata {
     rpc partition_create(PartitionCreateRequest) returns (
         PartitionCreateResponse) {}
 
-    // Returns information about a specific object type
+    // Look up object type by code
     rpc object_type_get_by_code(ObjectTypeGetByCodeRequest) returns (
         ObjectType) {}
 
@@ -68,8 +68,9 @@ service RunmMetadata {
     rpc object_properties_list(ObjectPropertiesListRequest) returns (
         stream Property) {}
 
-    // Returns information about a specific provider type
-    rpc provider_type_get(ProviderTypeGetRequest) returns (ProviderType) {}
+    // Look up provider type by code
+    rpc provider_type_get_by_code(ProviderTypeGetByCodeRequest) returns (
+        ProviderType) {}
 
     // Returns information about multiple provider types
     rpc provider_type_list(ProviderTypeListRequest) returns (
@@ -197,9 +198,9 @@ message ObjectPropertiesListRequest {
     SearchOptions options = 4;
 }
 
-message ProviderTypeGetRequest {
+message ProviderTypeGetByCodeRequest {
     Session session = 1;
-    ProviderTypeFilter filter = 2;
+    string code = 2;
 }
 
 message ProviderTypeListRequest {

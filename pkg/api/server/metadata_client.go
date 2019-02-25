@@ -262,20 +262,15 @@ func (s *Server) providerTypeGetByCode(
 	sess *pb.Session,
 	code string,
 ) (*pb.ProviderType, error) {
-	req := &metapb.ProviderTypeGetRequest{
+	req := &metapb.ProviderTypeGetByCodeRequest{
 		Session: metaSession(sess),
-		Filter: &metapb.ProviderTypeFilter{
-			CodeFilter: &metapb.CodeFilter{
-				Code:      code,
-				UsePrefix: false,
-			},
-		},
+		Code:    code,
 	}
 	mc, err := s.metaClient()
 	if err != nil {
 		return nil, err
 	}
-	rec, err := mc.ProviderTypeGet(context.Background(), req)
+	rec, err := mc.ProviderTypeGetByCode(context.Background(), req)
 	if err != nil {
 		return nil, err
 	}

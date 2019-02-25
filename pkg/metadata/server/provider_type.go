@@ -7,18 +7,20 @@ import (
 	pb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
 )
 
-func (s *Server) ProviderTypeGet(
+// ProviderTypeGetByCode returns an ProviderType protobuffer message with the
+// given code. If no such provider type could be found, returns ErrNotFound
+func (s *Server) ProviderTypeGetByCode(
 	ctx context.Context,
-	req *pb.ProviderTypeGetRequest,
+	req *pb.ProviderTypeGetByCodeRequest,
 ) (*pb.ProviderType, error) {
 	if err := s.checkSession(req.Session); err != nil {
 		return nil, err
 	}
-
-	if req.Filter == nil || req.Filter.CodeFilter == nil {
-		return nil, ErrCodeFilterRequired
+	code := req.Code
+	if code == "" {
+		return nil, ErrCodeRequired
 	}
-	obj, err := s.store.ProviderTypeGet(req.Filter.CodeFilter.Code)
+	obj, err := s.store.ProviderTypeGetByCode(code)
 	if err != nil {
 		if err == errors.ErrNotFound {
 			return nil, ErrNotFound
@@ -27,14 +29,15 @@ func (s *Server) ProviderTypeGet(
 		// an unknown error after logging it.
 		s.log.ERR(
 			"failed to retrieve provider type of %s: %s",
-			req.Filter.CodeFilter,
-			err,
+			code, err,
 		)
 		return nil, ErrUnknown
 	}
 	return obj, nil
 }
 
+// ProviderTypeList streams zero or more ProviderType protobuffer messages back
+// to the client that match any of the filters specified in the request payload
 func (s *Server) ProviderTypeList(
 	req *pb.ProviderTypeListRequest,
 	stream pb.RunmMetadata_ProviderTypeListServer,
@@ -42,7 +45,6 @@ func (s *Server) ProviderTypeList(
 	if err := s.checkSession(req.Session); err != nil {
 		return err
 	}
-
 	objs, err := s.store.ProviderTypeList(req.Any)
 	if err != nil {
 		return err

@@ -15,10 +15,11 @@ var (
 )
 
 type Server struct {
-	log      *logging.Logs
-	cfg      *config.Config
-	registry *gsr.Registry
-	store    *storage.Store
+	log         *logging.Logs
+	cfg         *config.Config
+	registry    *gsr.Registry
+	store       *storage.Store
+	objectTypes *ObjectTypeCache
 }
 
 func (s *Server) Close() {
@@ -72,9 +73,10 @@ func New(
 	)
 
 	return &Server{
-		log:      log,
-		cfg:      cfg,
-		registry: registry,
-		store:    store,
+		log:         log,
+		cfg:         cfg,
+		registry:    registry,
+		store:       store,
+		objectTypes: NewObjectTypeCache(log, store),
 	}, nil
 }

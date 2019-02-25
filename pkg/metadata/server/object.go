@@ -90,13 +90,8 @@ func (s *Server) checkObjectOwnership(
 		)
 		return ErrNotFound
 	}
-	// TODO(jaypipes): Make a simple cached utility for determining the scope
-	// of an object type by object type code
-	objType, err := s.store.ObjectTypeGetByCode(obj.ObjectType)
-	if err != nil {
-		return err
-	}
-	if objType.Scope == pb.ObjectTypeScope_PROJECT &&
+	objTypeScope := s.objectTypes.ScopeOf(obj.ObjectType)
+	if objTypeScope == pb.ObjectTypeScope_PROJECT &&
 		obj.Project != sess.Project {
 		s.log.L3(
 			"found object with UUID '%s' but its project '%s' did not "+

@@ -49,7 +49,7 @@ service RunmMetadata {
     rpc object_get_by_name(ObjectGetByNameRequest) returns (Object) {}
 
     // Deletes one or more objectes
-    rpc object_delete(ObjectDeleteRequest) returns (
+    rpc object_delete_by_uuids(ObjectDeleteByUuidsRequest) returns (
         DeleteResponse) {}
 
     // Create a new object
@@ -161,7 +161,7 @@ message ObjectListRequest {
     repeated ObjectFilter any = 3;
 }
 
-message ObjectDeleteRequest {
+message ObjectDeleteByUuidsRequest {
     Session session = 1;
     repeated string uuids = 2;
 }

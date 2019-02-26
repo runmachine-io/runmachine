@@ -311,7 +311,7 @@ func (s *Server) objectDelete(
 	sess *pb.Session,
 	uuids []string,
 ) error {
-	req := &metapb.ObjectDeleteRequest{
+	req := &metapb.ObjectDeleteByUuidsRequest{
 		Session: metaSession(sess),
 		Uuids:   uuids,
 	}
@@ -319,7 +319,7 @@ func (s *Server) objectDelete(
 	if err != nil {
 		return err
 	}
-	_, err = mc.ObjectDelete(context.Background(), req)
+	_, err = mc.ObjectDeleteByUuids(context.Background(), req)
 	if err != nil {
 		return err
 	}

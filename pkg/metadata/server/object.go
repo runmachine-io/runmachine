@@ -9,9 +9,11 @@ import (
 	"github.com/runmachine-io/runmachine/pkg/metadata/types"
 )
 
-func (s *Server) ObjectDelete(
+// ObjectDeleteByUuids accepts a payload with one or more UUIDs and deletes the
+// objects with those UUIDs, returning the number of objects that were deleted
+func (s *Server) ObjectDeleteByUuids(
 	ctx context.Context,
-	req *pb.ObjectDeleteRequest,
+	req *pb.ObjectDeleteByUuidsRequest,
 ) (*pb.DeleteResponse, error) {
 	if err := s.checkSession(req.Session); err != nil {
 		return nil, err
@@ -20,14 +22,12 @@ func (s *Server) ObjectDelete(
 		return nil, ErrAtLeastOneUuidRequired
 	}
 
-	// TODO(jaypipes): Have a single filter for a list of UUIDs...
-	conds := make([]*conditions.ObjectCondition, len(req.Uuids))
-	for x, uuid := range req.Uuids {
-		conds[x] = &conditions.ObjectCondition{
-			UuidCondition: conditions.UuidEqual(uuid),
-		}
+	cond := &conditions.ObjectCondition{
+		UuidsCondition: conditions.UuidIn(req.Uuids),
 	}
-	owrs, err := s.store.ObjectListWithReferences(conds)
+	owrs, err := s.store.ObjectListWithReferences(
+		[]*conditions.ObjectCondition{cond},
+	)
 	if err != nil {
 		return nil, err
 	}

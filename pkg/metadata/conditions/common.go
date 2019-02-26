@@ -9,4 +9,6 @@ const (
 	OP_GREATER_THAN_EQUAL    = 3
 	OP_LESSER_THAN           = 4
 	OP_LESSER_THAN_EQUAL     = 5
+	OP_IN                    = 6
+	OP_NOT_IN                = 7
 )

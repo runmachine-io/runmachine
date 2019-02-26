@@ -14,6 +14,7 @@ type ObjectCondition struct {
 	PartitionCondition  *PartitionCondition
 	ObjectTypeCondition *ObjectTypeCondition
 	UuidCondition       *UuidCondition
+	UuidsCondition      *UuidsCondition
 	NameCondition       *NameCondition
 	ProjectCondition    string
 	PropertyCondition   *PropertyCondition
@@ -22,6 +23,9 @@ type ObjectCondition struct {
 
 func (f *ObjectCondition) Matches(obj *pb.Object) bool {
 	if !f.UuidCondition.Matches(obj) {
+		return false
+	}
+	if !f.UuidsCondition.Matches(obj) {
 		return false
 	}
 	if !f.PartitionCondition.Matches(obj) {
@@ -48,6 +52,7 @@ func (f *ObjectCondition) IsEmpty() bool {
 	return f.PartitionCondition == nil &&
 		f.ObjectTypeCondition == nil &&
 		f.UuidCondition == nil &&
+		f.UuidsCondition == nil &&
 		f.ProjectCondition == "" &&
 		f.PropertyCondition == nil &&
 		f.NameCondition == nil
@@ -63,6 +68,9 @@ func (f *ObjectCondition) String() string {
 	}
 	if f.UuidCondition != nil {
 		attrMap["uuid"] = f.UuidCondition.Uuid
+	}
+	if f.UuidsCondition != nil {
+		attrMap["uuids"] = fmt.Sprintf("%s", f.UuidsCondition.Uuids)
 	}
 	if f.ProjectCondition != "" {
 		attrMap["project"] = f.ProjectCondition

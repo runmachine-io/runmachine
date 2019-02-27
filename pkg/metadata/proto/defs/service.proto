@@ -2,8 +2,6 @@ syntax = "proto3";
 
 package runmmeta;
 
-import "error.proto";
-import "property.proto";
 import "object.proto";
 import "object_definition.proto";
 import "object_type.proto";
@@ -59,14 +57,6 @@ service RunmMetadata {
     // Returns information about multiple objects
     rpc object_list(ObjectListRequest) returns (
         stream Object) {}
-
-    // Add, remove or modify properties from an object
-    rpc object_properties_set(ObjectPropertiesSetRequest) returns (
-        ObjectPropertiesSetResponse) {}
-
-    // Returns property items for an object
-    rpc object_properties_list(ObjectPropertiesListRequest) returns (
-        stream Property) {}
 
     // Look up provider type by code
     rpc provider_type_get_by_code(ProviderTypeGetByCodeRequest) returns (
@@ -164,38 +154,6 @@ message ObjectListRequest {
 message ObjectDeleteByUuidsRequest {
     Session session = 1;
     repeated string uuids = 2;
-}
-
-message ObjectPropertiesSetRequest {
-    Session session = 1;
-    Object object = 2;
-    repeated Property add = 3;
-    repeated Property remove = 4;
-    repeated Property modify = 5;
-}
-
-message ObjectPropertiesSetResponse {
-    repeated Error errors = 1;
-    Object object = 2;
-    uint64 num_added = 3;
-    uint64 num_removed = 4;
-    uint64 num_modified = 5;
-}
-
-message ObjectPropertiesListFilters {
-    // Used when searching for items with one or more keys, regardless of value
-    repeated string keys = 1;
-    // Used when searching for items with one or more values, regardless of key
-    repeated string values = 2;
-    // Used when searching for specific key/value pairs
-    repeated Property properties = 3;
-}
-
-message ObjectPropertiesListRequest {
-    Session session = 1;
-    Object object = 2;
-    ObjectPropertiesListFilters filters = 3;
-    SearchOptions options = 4;
 }
 
 message ProviderTypeGetByCodeRequest {

@@ -302,17 +302,3 @@ func (s *Server) ObjectCreate(
 		Object: changed.Object,
 	}, nil
 }
-
-func (s *Server) ObjectPropertiesList(
-	req *pb.ObjectPropertiesListRequest,
-	stream pb.RunmMetadata_ObjectPropertiesListServer,
-) error {
-	return nil
-}
-
-func (s *Server) ObjectPropertiesSet(
-	ctx context.Context,
-	req *pb.ObjectPropertiesSetRequest,
-) (*pb.ObjectPropertiesSetResponse, error) {
-	return nil, nil
-}

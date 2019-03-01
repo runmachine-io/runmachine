@@ -2,8 +2,6 @@ syntax = "proto3";
 
 package runmmeta;
 
-import "error.proto";
-import "property.proto";
 import "object.proto";
 import "object_definition.proto";
 import "object_type.proto";
@@ -20,8 +18,11 @@ import "session.proto";
 // administrator may create object definitions which dictate the required
 // format or type of an object's property's values.
 service RunmMetadata {
-    // Returns information about a specific partition
-    rpc partition_get(PartitionGetRequest) returns (Partition) {}
+    // Looks up partition by UUID
+    rpc partition_get_by_uuid(PartitionGetByUuidRequest) returns (Partition) {}
+
+    // Look up partition by name
+    rpc partition_get_by_name(PartitionGetByNameRequest) returns (Partition) {}
 
     // Returns information about multiple partitions
     rpc partition_list(PartitionListRequest) returns (
@@ -31,18 +32,22 @@ service RunmMetadata {
     rpc partition_create(PartitionCreateRequest) returns (
         PartitionCreateResponse) {}
 
-    // Returns information about a specific object type
-    rpc object_type_get(ObjectTypeGetRequest) returns (ObjectType) {}
+    // Look up object type by code
+    rpc object_type_get_by_code(ObjectTypeGetByCodeRequest) returns (
+        ObjectType) {}
 
     // Returns information about multiple object types
     rpc object_type_list(ObjectTypeListRequest) returns (
         stream ObjectType) {}
 
-    // Returns information about a specific object
-    rpc object_get(ObjectGetRequest) returns (Object) {}
+    // Look up object by UUID
+    rpc object_get_by_uuid(ObjectGetByUuidRequest) returns (Object) {}
+
+    // Look up object by partition, object type, name and optional project
+    rpc object_get_by_name(ObjectGetByNameRequest) returns (Object) {}
 
     // Deletes one or more objectes
-    rpc object_delete(ObjectDeleteRequest) returns (
+    rpc object_delete_by_uuids(ObjectDeleteByUuidsRequest) returns (
         DeleteResponse) {}
 
     // Create a new object
@@ -53,23 +58,32 @@ service RunmMetadata {
     rpc object_list(ObjectListRequest) returns (
         stream Object) {}
 
-    // Add, remove or modify properties from an object
-    rpc object_properties_set(ObjectPropertiesSetRequest) returns (
-        ObjectPropertiesSetResponse) {}
-
-    // Returns property items for an object
-    rpc object_properties_list(ObjectPropertiesListRequest) returns (
-        stream Property) {}
-
-    // Returns information about a specific provider type
-    rpc provider_type_get(ProviderTypeGetRequest) returns (ProviderType) {}
+    // Look up provider type by code
+    rpc provider_type_get_by_code(ProviderTypeGetByCodeRequest) returns (
+        ProviderType) {}
 
     // Returns information about multiple provider types
     rpc provider_type_list(ProviderTypeListRequest) returns (
         stream ProviderType) {}
 
-    // Returns information about a single provider definition
-    rpc provider_definition_get(ProviderDefinitionGetRequest) returns (
+    // Look up the global provider definition default
+    rpc provider_definition_get_global_default(
+        ProviderDefinitionGetGlobalDefaultRequest) returns (
+        ObjectDefinition) {}
+
+    // Look up the default provider definition for a partition
+    rpc provider_definition_get_by_partition(
+        ProviderDefinitionGetByPartitionRequest) returns (
+        ObjectDefinition) {}
+
+    // Look up the provider definition for a provider type
+    rpc provider_definition_get_by_type(
+        ProviderDefinitionGetByTypeRequest) returns (
+        ObjectDefinition) {}
+
+    // Look up the provider definition for a partition and provider type
+    rpc provider_definition_get_by_partition_and_type(
+        ProviderDefinitionGetByPartitionAndTypeRequest) returns (
         ObjectDefinition) {}
 
     // Set information about a specific provider definition
@@ -81,9 +95,14 @@ message DeleteResponse {
     uint64 num_deleted = 2;
 }
 
-message PartitionGetRequest {
+message PartitionGetByUuidRequest {
     Session session = 1;
-    PartitionFilter filter = 2;
+    string uuid = 2;
+}
+
+message PartitionGetByNameRequest {
+    Session session = 1;
+    string name = 2;
 }
 
 message PartitionListRequest {
@@ -102,9 +121,9 @@ message PartitionCreateResponse {
     Partition partition = 1;
 }
 
-message ObjectTypeGetRequest {
+message ObjectTypeGetByCodeRequest {
     Session session = 1;
-    ObjectTypeFilter filter = 2;
+    string code = 2;
 }
 
 message ObjectTypeListRequest {
@@ -115,9 +134,19 @@ message ObjectTypeListRequest {
     repeated ObjectTypeFilter any = 3;
 }
 
-message ObjectGetRequest {
+message ObjectGetByUuidRequest {
     Session session = 1;
-    ObjectFilter filter = 2;
+    string uuid = 2;
+}
+
+message ObjectGetByNameRequest {
+    Session session = 1;
+    string partition_uuid = 2;
+    string object_type_code = 3;
+    // The project the object must belong to, if the object type scope of this
+    // object is PROJECT
+    string project = 4;
+    string name = 5;
 }
 
 message ObjectCreateRequest {
@@ -138,46 +167,14 @@ message ObjectListRequest {
     repeated ObjectFilter any = 3;
 }
 
-message ObjectDeleteRequest {
+message ObjectDeleteByUuidsRequest {
     Session session = 1;
     repeated string uuids = 2;
 }
 
-message ObjectPropertiesSetRequest {
+message ProviderTypeGetByCodeRequest {
     Session session = 1;
-    Object object = 2;
-    repeated Property add = 3;
-    repeated Property remove = 4;
-    repeated Property modify = 5;
-}
-
-message ObjectPropertiesSetResponse {
-    repeated Error errors = 1;
-    Object object = 2;
-    uint64 num_added = 3;
-    uint64 num_removed = 4;
-    uint64 num_modified = 5;
-}
-
-message ObjectPropertiesListFilters {
-    // Used when searching for items with one or more keys, regardless of value
-    repeated string keys = 1;
-    // Used when searching for items with one or more values, regardless of key
-    repeated string values = 2;
-    // Used when searching for specific key/value pairs
-    repeated Property properties = 3;
-}
-
-message ObjectPropertiesListRequest {
-    Session session = 1;
-    Object object = 2;
-    ObjectPropertiesListFilters filters = 3;
-    SearchOptions options = 4;
-}
-
-message ProviderTypeGetRequest {
-    Session session = 1;
-    ProviderTypeFilter filter = 2;
+    string code = 2;
 }
 
 message ProviderTypeListRequest {
@@ -188,15 +185,28 @@ message ProviderTypeListRequest {
     repeated ProviderTypeFilter any = 3;
 }
 
-message ProviderDefinitionGetRequest {
+message ProviderDefinitionGetGlobalDefaultRequest {
     Session session = 1;
-    // The UUID of the partition the object definition applies to, or empty
-    // string to return the global default object definition for providers
-    string partition = 2;
-    // The type of provider the object definition applies to, or empty string
-    // to return the object definition for the global or partition default for
-    // providers
-    string provider_type = 3;
+}
+
+message ProviderDefinitionGetByPartitionRequest {
+    Session session = 1;
+    // The UUID of the partition the object definition applies to
+    string partition_uuid = 2;
+}
+
+message ProviderDefinitionGetByTypeRequest {
+    Session session = 1;
+    // The type of provider the object definition applies to
+    string provider_type_code = 2;
+}
+
+message ProviderDefinitionGetByPartitionAndTypeRequest {
+    Session session = 1;
+    // The UUID of the partition the object definition applies to
+    string partition_uuid = 2;
+    // The type of provider the object definition applies to
+    string provider_type_code = 3;
 }
 
 message ProviderDefinitionSetRequest {
@@ -204,11 +214,11 @@ message ProviderDefinitionSetRequest {
     // The UUID of the partition the object definition applies to, or empty
     // string to apply the object definition as the global default for
     // providers
-    string partition = 2;
+    string partition_uuid = 2;
     // The type of provider the object definition applies to, or empty string
     // to apply the object definition as the global or partition default for
     // providers
-    string provider_type = 3;
+    string provider_type_code = 3;
     // The newly-set object definition
     ObjectDefinition object_definition = 50;
 }

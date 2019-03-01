@@ -7,18 +7,20 @@ import (
 	pb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
 )
 
-func (s *Server) ObjectTypeGet(
+// ObjectTypeGetByCode returns an ObjectType protobuffer message with the given
+// code. If no such object type could be found, returns ErrNotFound
+func (s *Server) ObjectTypeGetByCode(
 	ctx context.Context,
-	req *pb.ObjectTypeGetRequest,
+	req *pb.ObjectTypeGetByCodeRequest,
 ) (*pb.ObjectType, error) {
-	if err := checkSession(req.Session); err != nil {
+	if err := s.checkSession(req.Session); err != nil {
 		return nil, err
 	}
-
-	if req.Filter == nil || req.Filter.CodeFilter == nil || req.Filter.CodeFilter.Code == "" {
+	code := req.Code
+	if code == "" {
 		return nil, ErrCodeRequired
 	}
-	obj, err := s.store.ObjectTypeGet(req.Filter.CodeFilter.Code)
+	obj, err := s.store.ObjectTypeGetByCode(code)
 	if err != nil {
 		if err == errors.ErrNotFound {
 			return nil, ErrNotFound
@@ -27,22 +29,22 @@ func (s *Server) ObjectTypeGet(
 		// an unknown error after logging it.
 		s.log.ERR(
 			"failed to retrieve object type of %s: %s",
-			req.Filter.CodeFilter.Code,
-			err,
+			code, err,
 		)
 		return nil, ErrUnknown
 	}
 	return obj, nil
 }
 
+// ObjectTypeList streams zero or more ObjectType protobuffer messages back to
+// the client that match any of the filters specified in the request payload
 func (s *Server) ObjectTypeList(
 	req *pb.ObjectTypeListRequest,
 	stream pb.RunmMetadata_ObjectTypeListServer,
 ) error {
-	if err := checkSession(req.Session); err != nil {
+	if err := s.checkSession(req.Session); err != nil {
 		return err
 	}
-
 	objs, err := s.store.ObjectTypeList(req.Any)
 	if err != nil {
 		return err

@@ -54,6 +54,14 @@ var (
 		codes.FailedPrecondition,
 		"unknown partition.",
 	)
+	ErrNameRequired = status.Errorf(
+		codes.FailedPrecondition,
+		"name is required.",
+	)
+	ErrUuidRequired = status.Errorf(
+		codes.FailedPrecondition,
+		"UUID is required.",
+	)
 	ErrPartitionRequired = status.Errorf(
 		codes.FailedPrecondition,
 		"partition is required.",
@@ -86,13 +94,25 @@ var (
 		codes.FailedPrecondition,
 		"A code to search for is required.",
 	)
+	ErrObjectTypeCodeRequired = status.Errorf(
+		codes.FailedPrecondition,
+		"object type code is required.",
+	)
 	ErrBootstrapTokenRequired = status.Errorf(
 		codes.FailedPrecondition,
 		"bootstrap token is required.",
 	)
+	ErrPartitionUuidRequired = status.Errorf(
+		codes.FailedPrecondition,
+		"partition UUID is required.",
+	)
 	ErrPartitionNameRequired = status.Errorf(
 		codes.FailedPrecondition,
 		"partition name is required.",
+	)
+	ErrProviderTypeCodeRequired = status.Errorf(
+		codes.FailedPrecondition,
+		"provider type code is required.",
 	)
 	ErrAtLeastOneUuidRequired = status.Errorf(
 		codes.FailedPrecondition,
@@ -134,5 +154,12 @@ func errProviderTypeNotFound(providerType string) error {
 	return status.Errorf(
 		codes.FailedPrecondition,
 		"Provider type %s not found", providerType,
+	)
+}
+
+func errSessionUnknownPartition(partition string) error {
+	return status.Errorf(
+		codes.FailedPrecondition,
+		"Unknown partition '%s' specified in session", partition,
 	)
 }

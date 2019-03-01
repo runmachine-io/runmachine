@@ -5,22 +5,23 @@ import (
 
 	"github.com/runmachine-io/runmachine/pkg/errors"
 	pb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
+	"github.com/runmachine-io/runmachine/pkg/util"
 )
 
-// PartitionGet looks up a partition by UUID or name and returns a Partition
-// protobuf message.
-func (s *Server) PartitionGet(
+// PartitionGetByUuid looks up a partition by UUID and returns a Partition
+// protobuf message. If no such partition was found, returns ErrNotFound.
+func (s *Server) PartitionGetByUuid(
 	ctx context.Context,
-	req *pb.PartitionGetRequest,
+	req *pb.PartitionGetByUuidRequest,
 ) (*pb.Partition, error) {
-	if req.Filter == nil {
-		return nil, ErrSearchRequired
-	} else {
-		if req.Filter.UuidFilter == nil && req.Filter.NameFilter == nil {
-			return nil, ErrSearchRequired
-		}
+	if err := s.checkSession(req.Session); err != nil {
+		return nil, err
 	}
-	obj, err := s.store.PartitionGet(req.Filter)
+	uuid := req.Uuid
+	if uuid == "" || !util.IsUuidLike(uuid) {
+		return nil, ErrUuidRequired
+	}
+	obj, err := s.store.PartitionGetByUuid(util.NormalizeUuid(uuid))
 	if err != nil {
 		if err == errors.ErrNotFound {
 			return nil, ErrNotFound
@@ -28,8 +29,37 @@ func (s *Server) PartitionGet(
 		// We don't want to expose internal errors to the user, so just return
 		// an unknown error after logging it.
 		s.log.ERR(
-			"failed to retrieve partition with filter %s: %s",
-			req.Filter, err,
+			"failed to retrieve partition with UUID '%s': %s",
+			uuid, err,
+		)
+		return nil, ErrUnknown
+	}
+	return obj, nil
+}
+
+// PartitionGetByName looks up a partition by name and returns a Partition
+// protobuf message. If no such partition was found, returns ErrNotFound.
+func (s *Server) PartitionGetByName(
+	ctx context.Context,
+	req *pb.PartitionGetByNameRequest,
+) (*pb.Partition, error) {
+	if err := s.checkSession(req.Session); err != nil {
+		return nil, err
+	}
+	name := req.Name
+	if name == "" {
+		return nil, ErrNameRequired
+	}
+	obj, err := s.store.PartitionGetByName(name)
+	if err != nil {
+		if err == errors.ErrNotFound {
+			return nil, ErrNotFound
+		}
+		// We don't want to expose internal errors to the user, so just return
+		// an unknown error after logging it.
+		s.log.ERR(
+			"failed to retrieve partition with name '%s': %s",
+			name, err,
 		)
 		return nil, ErrUnknown
 	}
@@ -42,6 +72,9 @@ func (s *Server) PartitionList(
 	req *pb.PartitionListRequest,
 	stream pb.RunmMetadata_PartitionListServer,
 ) error {
+	if err := s.checkSession(req.Session); err != nil {
+		return err
+	}
 	objs, err := s.store.PartitionList(req.Any)
 	if err != nil {
 		return err

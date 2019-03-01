@@ -74,9 +74,9 @@ func (s *Store) ensureProviderTypes() error {
 	return nil
 }
 
-// ProviderTypeGet returns an ProviderType protobuffer message having the
+// ProviderTypeGetByCode returns an ProviderType protobuffer message having the
 // supplied code
-func (s *Store) ProviderTypeGet(
+func (s *Store) ProviderTypeGetByCode(
 	code string,
 ) (*pb.ProviderType, error) {
 	ctx, cancel := s.requestCtx()

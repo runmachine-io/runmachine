@@ -9,25 +9,25 @@ import (
 	"github.com/runmachine-io/runmachine/pkg/metadata/types"
 )
 
-func (s *Server) ObjectDelete(
+// ObjectDeleteByUuids accepts a payload with one or more UUIDs and deletes the
+// objects with those UUIDs, returning the number of objects that were deleted
+func (s *Server) ObjectDeleteByUuids(
 	ctx context.Context,
-	req *pb.ObjectDeleteRequest,
+	req *pb.ObjectDeleteByUuidsRequest,
 ) (*pb.DeleteResponse, error) {
-	if err := checkSession(req.Session); err != nil {
+	if err := s.checkSession(req.Session); err != nil {
 		return nil, err
 	}
 	if len(req.Uuids) == 0 {
 		return nil, ErrAtLeastOneUuidRequired
 	}
 
-	// TODO(jaypipes): Have a single filter for a list of UUIDs...
-	conds := make([]*conditions.ObjectCondition, len(req.Uuids))
-	for x, uuid := range req.Uuids {
-		conds[x] = &conditions.ObjectCondition{
-			UuidCondition: conditions.UuidEqual(uuid),
-		}
+	cond := &conditions.ObjectCondition{
+		UuidsCondition: conditions.UuidIn(req.Uuids),
 	}
-	owrs, err := s.store.ObjectListWithReferences(conds)
+	owrs, err := s.store.ObjectListWithReferences(
+		[]*conditions.ObjectCondition{cond},
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -50,53 +50,152 @@ func (s *Server) ObjectDelete(
 	}, nil
 }
 
-func (s *Server) ObjectGet(
+func (s *Server) ObjectGetByUuid(
 	ctx context.Context,
-	req *pb.ObjectGetRequest,
+	req *pb.ObjectGetByUuidRequest,
 ) (*pb.Object, error) {
-	if err := checkSession(req.Session); err != nil {
+	if err := s.checkSession(req.Session); err != nil {
 		return nil, err
 	}
-	if req.Filter == nil {
-		return nil, ErrObjectFilterRequired
+	uuid := req.Uuid
+	if uuid == "" {
+		return nil, ErrUuidRequired
 	}
 
-	pfs, err := s.expandObjectFilter(req.Session, req.Filter)
+	obj, err := s.store.ObjectGetByUuid(uuid)
 	if err != nil {
-		if err == errors.ErrNotFound {
-			return nil, ErrNotFound
-		}
-		// We don't want to expose internal errors to the user, so just return
-		// an unknown error after logging it.
-		s.log.ERR(
-			"failed to retrieve object with search filter %s: %s",
-			req.Filter,
-			err,
+		return nil, err
+	}
+
+	if err = s.checkObjectOwnership(obj, req.Session); err != nil {
+		return nil, err
+	}
+
+	return obj, nil
+}
+
+func (s *Server) checkObjectOwnership(
+	obj *pb.Object,
+	sess *pb.Session,
+) error {
+	// Check that the object is in the user's Session partition and project,
+	// and if not, return ErrNotFound.
+	// TODO(jaypipes): Allow not checking this if the user is in a specific
+	// role -- i.e. an admin?
+	if obj.Partition != sess.Partition {
+		s.log.L3(
+			"found object with UUID '%s' but its partition '%s' did not "+
+				"match user's Session partition '%s'",
+			obj.Uuid, obj.Partition, sess.Partition,
 		)
-		return nil, ErrUnknown
+		return ErrNotFound
 	}
-	if len(pfs) == 0 {
-		return nil, ErrFailedExpandObjectFilters
+	objTypeScope := s.objectTypes.ScopeOf(obj.ObjectType)
+	if objTypeScope == pb.ObjectTypeScope_PROJECT &&
+		obj.Project != sess.Project {
+		s.log.L3(
+			"found object with UUID '%s' but its project '%s' did not "+
+				"match user's Session project '%s'",
+			obj.Uuid, obj.Project, sess.Project,
+		)
+		return ErrNotFound
+	}
+	return nil
+}
+
+func (s *Server) ObjectGetByName(
+	ctx context.Context,
+	req *pb.ObjectGetByNameRequest,
+) (*pb.Object, error) {
+	var err error
+	if err = s.checkSession(req.Session); err != nil {
+		return nil, err
 	}
 
-	objects, err := s.store.ObjectList(pfs)
+	name := req.Name
+	if name == "" {
+		return nil, ErrNameRequired
+	}
+
+	var objScope pb.ObjectTypeScope
+	objTypeCode := req.ObjectTypeCode
+	if objTypeCode == "" {
+		return nil, ErrObjectTypeCodeRequired
+	} else {
+		objType, err := s.store.ObjectTypeGetByCode(objTypeCode)
+		if err != nil {
+			if err == errors.ErrNotFound {
+				return nil, errObjectTypeNotFound(objTypeCode)
+			}
+			return nil, err
+		}
+		objScope = objType.Scope
+	}
+
+	partUuid := req.PartitionUuid
+	if partUuid == "" {
+		// We default to using the Session's partition if it isn't specified in
+		// the request payload. Note that checkSession() ensures that the
+		// request Session.Partition is a valid partition UUID.
+		partUuid = req.Session.Partition
+	} else {
+		_, err = s.store.PartitionGetByUuid(partUuid)
+		if err != nil {
+			if err == errors.ErrNotFound {
+				return nil, errPartitionNotFound(partUuid)
+			}
+			return nil, err
+		}
+	}
+
+	project := req.Project
+	if project == "" {
+		// We default to using the Session's project if it isn't specified in
+		// the request payload
+		project = req.Session.Project
+	}
+
+	var objs []*pb.Object
+	if objScope == pb.ObjectTypeScope_PROJECT {
+		objs, err = s.store.ObjectsGetByProjectNameIndex(
+			partUuid,
+			objTypeCode,
+			project,
+			name,
+			false,
+		)
+	} else {
+		objs, err = s.store.ObjectsGetByNameIndex(
+			partUuid,
+			objTypeCode,
+			name,
+			false,
+		)
+	}
+
 	if err != nil {
 		return nil, err
 	}
-	if len(objects) > 1 {
+	if len(objs) > 1 {
 		return nil, ErrMultipleRecordsFound
-	} else if len(objects) == 0 {
+	} else if len(objs) == 0 {
 		return nil, ErrNotFound
 	}
 
-	return objects[0], nil
+	obj := objs[0]
+
+	if err = s.checkObjectOwnership(obj, req.Session); err != nil {
+		return nil, err
+	}
+
+	return obj, nil
 }
 
 func (s *Server) ObjectList(
 	req *pb.ObjectListRequest,
 	stream pb.RunmMetadata_ObjectListServer,
 ) error {
-	if err := checkSession(req.Session); err != nil {
+	if err := s.checkSession(req.Session); err != nil {
 		return err
 	}
 
@@ -133,17 +232,7 @@ func (s *Server) validateObjectCreateRequest(
 	}
 
 	// Validate the referred to type, partition and project actually exist
-	part, err := s.store.PartitionGet(
-		// Look up by UUID *or* name...
-		&pb.PartitionFilter{
-			UuidFilter: &pb.UuidFilter{
-				Uuid: obj.Partition,
-			},
-			NameFilter: &pb.NameFilter{
-				Name: obj.Partition,
-			},
-		},
-	)
+	part, err := s.store.PartitionGetByUuid(obj.Partition)
 	if err != nil {
 		if err == errors.ErrNotFound {
 			return nil, errPartitionNotFound(obj.Partition)
@@ -153,7 +242,7 @@ func (s *Server) validateObjectCreateRequest(
 		return nil, errors.ErrUnknown
 	}
 
-	objType, err := s.store.ObjectTypeGet(obj.ObjectType)
+	objType, err := s.store.ObjectTypeGetByCode(obj.ObjectType)
 	if err != nil {
 		if err == errors.ErrNotFound {
 			return nil, errObjectTypeNotFound(obj.ObjectType)
@@ -182,6 +271,9 @@ func (s *Server) ObjectCreate(
 	ctx context.Context,
 	req *pb.ObjectCreateRequest,
 ) (*pb.ObjectCreateResponse, error) {
+	if err := s.checkSession(req.Session); err != nil {
+		return nil, err
+	}
 	// TODO(jaypipes): AUTHZ check if user can write objects
 
 	input, err := s.validateObjectCreateRequest(req)
@@ -209,18 +301,4 @@ func (s *Server) ObjectCreate(
 	return &pb.ObjectCreateResponse{
 		Object: changed.Object,
 	}, nil
-}
-
-func (s *Server) ObjectPropertiesList(
-	req *pb.ObjectPropertiesListRequest,
-	stream pb.RunmMetadata_ObjectPropertiesListServer,
-) error {
-	return nil
-}
-
-func (s *Server) ObjectPropertiesSet(
-	ctx context.Context,
-	req *pb.ObjectPropertiesSetRequest,
-) (*pb.ObjectPropertiesSetResponse, error) {
-	return nil, nil
 }

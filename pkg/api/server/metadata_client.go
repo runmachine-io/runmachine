@@ -131,23 +131,20 @@ func (s *Server) partitionGetByUuid(
 	sess *pb.Session,
 	uuid string,
 ) (*pb.Partition, error) {
-	req := &metapb.PartitionGetRequest{
+	req := &metapb.PartitionGetByUuidRequest{
 		Session: metaSession(sess),
-		Filter: &metapb.PartitionFilter{
-			UuidFilter: &metapb.UuidFilter{
-				Uuid:      uuid,
-				UsePrefix: false,
-			},
-		},
+		Uuid:    uuid,
 	}
 	mc, err := s.metaClient()
 	if err != nil {
 		return nil, err
 	}
-	rec, err := mc.PartitionGet(context.Background(), req)
+	rec, err := mc.PartitionGetByUuid(context.Background(), req)
 	if err != nil {
 		return nil, err
 	}
+	// TODO(jaypipes): Use a single proto namespace so we don't always need to
+	// copy data like this...
 	return &pb.Partition{
 		Uuid: rec.Uuid,
 		Name: rec.Name,
@@ -160,23 +157,20 @@ func (s *Server) partitionGetByName(
 	sess *pb.Session,
 	name string,
 ) (*pb.Partition, error) {
-	req := &metapb.PartitionGetRequest{
+	req := &metapb.PartitionGetByNameRequest{
 		Session: metaSession(sess),
-		Filter: &metapb.PartitionFilter{
-			NameFilter: &metapb.NameFilter{
-				Name:      name,
-				UsePrefix: false,
-			},
-		},
+		Name:    name,
 	}
 	mc, err := s.metaClient()
 	if err != nil {
 		return nil, err
 	}
-	rec, err := mc.PartitionGet(context.Background(), req)
+	rec, err := mc.PartitionGetByName(context.Background(), req)
 	if err != nil {
 		return nil, err
 	}
+	// TODO(jaypipes): Use a single proto namespace so we don't always need to
+	// copy data like this...
 	return &pb.Partition{
 		Uuid: rec.Uuid,
 		Name: rec.Name,
@@ -212,26 +206,16 @@ func (s *Server) uuidFromName(
 	objType string,
 	name string,
 ) (string, error) {
-	req := &metapb.ObjectGetRequest{
-		Session: metaSession(sess),
-		Filter: &metapb.ObjectFilter{
-			ObjectTypeFilter: &metapb.ObjectTypeFilter{
-				CodeFilter: &metapb.CodeFilter{
-					Code:      objType,
-					UsePrefix: false,
-				},
-			},
-			NameFilter: &metapb.NameFilter{
-				Name:      name,
-				UsePrefix: false,
-			},
-		},
+	req := &metapb.ObjectGetByNameRequest{
+		Session:        metaSession(sess),
+		ObjectTypeCode: objType,
+		Name:           name,
 	}
 	mc, err := s.metaClient()
 	if err != nil {
 		return "", err
 	}
-	rec, err := mc.ObjectGet(context.Background(), req)
+	rec, err := mc.ObjectGetByName(context.Background(), req)
 	if err != nil {
 		return "", err
 	}
@@ -244,20 +228,15 @@ func (s *Server) objectFromUuid(
 	sess *pb.Session,
 	uuid string,
 ) (*metapb.Object, error) {
-	req := &metapb.ObjectGetRequest{
+	req := &metapb.ObjectGetByUuidRequest{
 		Session: metaSession(sess),
-		Filter: &metapb.ObjectFilter{
-			UuidFilter: &metapb.UuidFilter{
-				Uuid:      uuid,
-				UsePrefix: false,
-			},
-		},
+		Uuid:    uuid,
 	}
 	mc, err := s.metaClient()
 	if err != nil {
 		return nil, err
 	}
-	rec, err := mc.ObjectGet(context.Background(), req)
+	rec, err := mc.ObjectGetByUuid(context.Background(), req)
 	if err != nil {
 		return nil, err
 	}
@@ -283,20 +262,15 @@ func (s *Server) providerTypeGetByCode(
 	sess *pb.Session,
 	code string,
 ) (*pb.ProviderType, error) {
-	req := &metapb.ProviderTypeGetRequest{
+	req := &metapb.ProviderTypeGetByCodeRequest{
 		Session: metaSession(sess),
-		Filter: &metapb.ProviderTypeFilter{
-			CodeFilter: &metapb.CodeFilter{
-				Code:      code,
-				UsePrefix: false,
-			},
-		},
+		Code:    code,
 	}
 	mc, err := s.metaClient()
 	if err != nil {
 		return nil, err
 	}
-	rec, err := mc.ProviderTypeGet(context.Background(), req)
+	rec, err := mc.ProviderTypeGetByCode(context.Background(), req)
 	if err != nil {
 		return nil, err
 	}
@@ -337,7 +311,7 @@ func (s *Server) objectDelete(
 	sess *pb.Session,
 	uuids []string,
 ) error {
-	req := &metapb.ObjectDeleteRequest{
+	req := &metapb.ObjectDeleteByUuidsRequest{
 		Session: metaSession(sess),
 		Uuids:   uuids,
 	}
@@ -345,7 +319,7 @@ func (s *Server) objectDelete(
 	if err != nil {
 		return err
 	}
-	_, err = mc.ObjectDelete(context.Background(), req)
+	_, err = mc.ObjectDeleteByUuids(context.Background(), req)
 	if err != nil {
 		return err
 	}
@@ -383,59 +357,4 @@ func (s *Server) objectsGetMatching(
 		msgs = append(msgs, msg)
 	}
 	return msgs, nil
-}
-
-// providerDefinitionGet returns the object definition for providers. The
-// partition argument may be empty, which indicates to return the global
-// default definition for providers.
-//
-// The providerType argument may also be empty, which indicates to return the
-// global or partition override for a provider definition, regardless of
-// provider type.
-//
-// If no such object definition could be found, returns (nil, ErrNotFound)
-func (s *Server) providerDefinitionGet(
-	sess *pb.Session,
-	partition string,
-	providerType string,
-) (*metapb.ObjectDefinition, error) {
-	req := &metapb.ProviderDefinitionGetRequest{
-		Session:      metaSession(sess),
-		Partition:    partition,
-		ProviderType: providerType,
-	}
-	mc, err := s.metaClient()
-	if err != nil {
-		return nil, err
-	}
-	def, err := mc.ProviderDefinitionGet(context.Background(), req)
-	if err != nil {
-		return nil, err
-	}
-	return def, nil
-}
-
-// providerDefinitionSet takes an object definition and saves it in the metadata
-// service, returning the saved object definition
-func (s *Server) providerDefinitionSet(
-	sess *pb.Session,
-	def *metapb.ObjectDefinition,
-	partition string,
-	providerType string,
-) (*metapb.ObjectDefinition, error) {
-	req := &metapb.ProviderDefinitionSetRequest{
-		Session:          metaSession(sess),
-		ObjectDefinition: def,
-		Partition:        partition,
-		ProviderType:     providerType,
-	}
-	mc, err := s.metaClient()
-	if err != nil {
-		return nil, err
-	}
-	resp, err := mc.ProviderDefinitionSet(context.Background(), req)
-	if err != nil {
-		return nil, err
-	}
-	return resp.ObjectDefinition, nil
 }

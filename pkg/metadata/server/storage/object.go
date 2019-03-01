@@ -151,7 +151,7 @@ func (s *Store) ObjectListWithReferences(
 	for x, obj := range objects {
 		part, ok := partitions[obj.Partition]
 		if !ok {
-			part, err = s.partitionGetByUuid(obj.Partition)
+			part, err = s.PartitionGetByUuid(obj.Partition)
 			if err != nil {
 				msg := fmt.Sprintf(
 					"failed to find partition %s while attempting to delete "+
@@ -165,7 +165,7 @@ func (s *Store) ObjectListWithReferences(
 		}
 		ot, ok := objTypes[obj.ObjectType]
 		if !ok {
-			ot, err = s.ObjectTypeGet(obj.ObjectType)
+			ot, err = s.ObjectTypeGetByCode(obj.ObjectType)
 			if err != nil {
 				msg := fmt.Sprintf(
 					"failed to find object type %s while attempting to delete "+
@@ -195,7 +195,7 @@ func (s *Store) objectsGetMatching(
 		// all we need to do is grab the object from the primary
 		// objects/by-uuid/ index and check that any other fields match the
 		// object's fields. If so, just return the UUID
-		obj, err := s.objectGetByUuid(cond.UuidCondition.Uuid)
+		obj, err := s.ObjectGetByUuid(cond.UuidCondition.Uuid)
 		if err != nil {
 			return nil, err
 		}
@@ -228,7 +228,7 @@ func (s *Store) objectsGetMatching(
 					// type when no project was specified, so we'll do the
 					// less efficient range-scan sieve pattern to solve
 					// this cond
-					return s.objectsGetByProjectNameIndex(
+					return s.ObjectsGetByProjectNameIndex(
 						cond.PartitionCondition.Partition.Uuid,
 						cond.ObjectTypeCondition.ObjectType.Code,
 						cond.ProjectCondition,
@@ -237,7 +237,7 @@ func (s *Store) objectsGetMatching(
 					)
 				}
 			} else {
-				return s.objectsGetByNameIndex(
+				return s.ObjectsGetByNameIndex(
 					cond.PartitionCondition.Partition.Uuid,
 					cond.ObjectTypeCondition.ObjectType.Code,
 					cond.NameCondition.Name,
@@ -269,9 +269,9 @@ func (s *Store) objectsGetMatching(
 	return res, nil
 }
 
-// objectGetByUuid returns an Object protobuffer message with the supplied
+// ObjectGetByUuid returns an Object protobuffer message with the supplied
 // object UUID
-func (s *Store) objectGetByUuid(
+func (s *Store) ObjectGetByUuid(
 	uuid string,
 ) (*pb.Object, error) {
 	ctx, cancel := s.requestCtx()
@@ -296,9 +296,9 @@ func (s *Store) objectGetByUuid(
 	return obj, nil
 }
 
-// objectsGetByProjectNameIndex returns Object messages that have a specified
+// ObjectsGetByProjectNameIndex returns Object messages that have a specified
 // project and name (with optional prefix) in the supplied partition.
-func (s *Store) objectsGetByProjectNameIndex(
+func (s *Store) ObjectsGetByProjectNameIndex(
 	partUuid string,
 	objTypeCode string,
 	project string,
@@ -336,7 +336,7 @@ func (s *Store) objectsGetByProjectNameIndex(
 	res := make([]*pb.Object, resp.Count)
 
 	for x, entry := range resp.Kvs {
-		obj, err := s.objectGetByUuid(string(entry.Value))
+		obj, err := s.ObjectGetByUuid(string(entry.Value))
 		if err != nil {
 			return nil, err
 		}
@@ -346,9 +346,9 @@ func (s *Store) objectsGetByProjectNameIndex(
 	return res, nil
 }
 
-// objectsGetByNameIndex returns Object messages that have a specified name
+// ObjectsGetByNameIndex returns Object messages that have a specified name
 // (with optional prefix) in the supplied partition.
-func (s *Store) objectsGetByNameIndex(
+func (s *Store) ObjectsGetByNameIndex(
 	partUuid string,
 	objTypeCode string,
 	objName string,
@@ -382,7 +382,7 @@ func (s *Store) objectsGetByNameIndex(
 	res := make([]*pb.Object, resp.Count)
 
 	for x, entry := range resp.Kvs {
-		obj, err := s.objectGetByUuid(string(entry.Value))
+		obj, err := s.ObjectGetByUuid(string(entry.Value))
 		if err != nil {
 			return nil, err
 		}

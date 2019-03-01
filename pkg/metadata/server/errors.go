@@ -110,6 +110,10 @@ var (
 		codes.FailedPrecondition,
 		"partition name is required.",
 	)
+	ErrProviderTypeCodeRequired = status.Errorf(
+		codes.FailedPrecondition,
+		"provider type code is required.",
+	)
 	ErrAtLeastOneUuidRequired = status.Errorf(
 		codes.FailedPrecondition,
 		"at least one UUID is required.",

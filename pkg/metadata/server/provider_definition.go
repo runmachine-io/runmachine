@@ -7,21 +7,159 @@ import (
 	pb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
 )
 
-// ProviderDefinitionGet looks up either the global default object definition
-// for providers or an object definition for providers in a specified partition
-func (s *Server) ProviderDefinitionGet(
+// ProviderDefinitionGetGlobalDefault looks up the global default object
+// definition for providers
+func (s *Server) ProviderDefinitionGetGlobalDefault(
 	ctx context.Context,
-	req *pb.ProviderDefinitionGetRequest,
+	req *pb.ProviderDefinitionGetGlobalDefaultRequest,
 ) (*pb.ObjectDefinition, error) {
 	if err := s.checkSession(req.Session); err != nil {
 		return nil, err
 	}
 
-	// TODO(jaypipes): AUTHZ check user can read object definitions
+	def, err := s.store.ProviderDefinitionGet("", "")
+	if err != nil {
+		if err == errors.ErrNotFound {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
 
-	def, err := s.store.ProviderDefinitionGet(
-		req.Partition, req.ProviderType,
-	)
+	return def, nil
+}
+
+// ProviderDefinitionGetByPartition looks up object definition for providers in
+// a specified partition. This object definition is used for providers when no
+// definition override has been set for that particular provider type in the
+// partition.
+func (s *Server) ProviderDefinitionGetByPartition(
+	ctx context.Context,
+	req *pb.ProviderDefinitionGetByPartitionRequest,
+) (*pb.ObjectDefinition, error) {
+	if err := s.checkSession(req.Session); err != nil {
+		return nil, err
+	}
+
+	partUuid := req.PartitionUuid
+	if partUuid == "" {
+		return nil, ErrPartitionUuidRequired
+	}
+	// Validate the referred to partition actually exists
+	// TODO(jaypipes): AUTHZ check user can specify partition
+	_, err := s.store.PartitionGetByUuid(partUuid)
+	if err != nil {
+		if err == errors.ErrNotFound {
+			return nil, errPartitionNotFound(partUuid)
+		}
+		// We don't want to leak internal implementation errors...
+		s.log.ERR(
+			"failed validating partition in object definition set: %s",
+			err,
+		)
+		return nil, errors.ErrUnknown
+	}
+
+	def, err := s.store.ProviderDefinitionGet(partUuid, "")
+	if err != nil {
+		if err == errors.ErrNotFound {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+
+	return def, nil
+}
+
+// ProviderDefinitionGetByType looks up object definition for providers in
+// having a specified provider type.
+func (s *Server) ProviderDefinitionGetByType(
+	ctx context.Context,
+	req *pb.ProviderDefinitionGetByTypeRequest,
+) (*pb.ObjectDefinition, error) {
+	if err := s.checkSession(req.Session); err != nil {
+		return nil, err
+	}
+
+	provTypeCode := req.ProviderTypeCode
+	if provTypeCode == "" {
+		return nil, ErrProviderTypeCodeRequired
+	}
+
+	// Validate the referred to provider type actually exists
+
+	_, err := s.store.ProviderTypeGetByCode(provTypeCode)
+	if err != nil {
+		if err == errors.ErrNotFound {
+			return nil, errProviderTypeNotFound(provTypeCode)
+		}
+		// We don't want to leak internal implementation errors...
+		s.log.ERR(
+			"failed validating provider type in object definition set: %s",
+			err,
+		)
+		return nil, errors.ErrUnknown
+	}
+
+	def, err := s.store.ProviderDefinitionGet("", provTypeCode)
+	if err != nil {
+		if err == errors.ErrNotFound {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+
+	return def, nil
+}
+
+// ProviderDefinitionGetByPartitionAndType looks up object definition for
+// providers in a specified partition and having a specified provider type.
+func (s *Server) ProviderDefinitionGetByPartitionAndType(
+	ctx context.Context,
+	req *pb.ProviderDefinitionGetByPartitionAndTypeRequest,
+) (*pb.ObjectDefinition, error) {
+	if err := s.checkSession(req.Session); err != nil {
+		return nil, err
+	}
+
+	partUuid := req.PartitionUuid
+	if partUuid == "" {
+		return nil, ErrPartitionUuidRequired
+	}
+
+	provTypeCode := req.ProviderTypeCode
+	if provTypeCode == "" {
+		return nil, ErrProviderTypeCodeRequired
+	}
+
+	// Validate the referred to partition and provider type actually exists
+	// TODO(jaypipes): AUTHZ check user can specify partition
+	_, err := s.store.PartitionGetByUuid(partUuid)
+	if err != nil {
+		if err == errors.ErrNotFound {
+			return nil, errPartitionNotFound(partUuid)
+		}
+		// We don't want to leak internal implementation errors...
+		s.log.ERR(
+			"failed validating partition in object definition set: %s",
+			err,
+		)
+		return nil, errors.ErrUnknown
+	}
+
+	_, err = s.store.ProviderTypeGetByCode(provTypeCode)
+	if err != nil {
+		if err == errors.ErrNotFound {
+			return nil, errProviderTypeNotFound(provTypeCode)
+		}
+		// We don't want to leak internal implementation errors...
+		s.log.ERR(
+			"failed validating provider type in object definition set: %s",
+			err,
+		)
+		return nil, errors.ErrUnknown
+	}
+
+	def, err := s.store.ProviderDefinitionGet(partUuid, provTypeCode)
 	if err != nil {
 		if err == errors.ErrNotFound {
 			return nil, ErrNotFound
@@ -39,13 +177,14 @@ func (s *Server) ProviderDefinitionGet(
 func (s *Server) validateProviderDefinitionSetRequest(
 	req *pb.ProviderDefinitionSetRequest,
 ) error {
-	if req.Partition != "" {
+	partUuid := req.PartitionUuid
+	if partUuid != "" {
 		// Validate the referred to partition actually exists
 		// TODO(jaypipes): AUTHZ check user can specify partition
-		_, err := s.store.PartitionGetByUuid(req.Partition)
+		_, err := s.store.PartitionGetByUuid(partUuid)
 		if err != nil {
 			if err == errors.ErrNotFound {
-				return errPartitionNotFound(req.Partition)
+				return errPartitionNotFound(partUuid)
 			}
 			// We don't want to leak internal implementation errors...
 			s.log.ERR(
@@ -55,13 +194,14 @@ func (s *Server) validateProviderDefinitionSetRequest(
 			return errors.ErrUnknown
 		}
 	}
-	if req.ProviderType != "" {
+	provTypeCode := req.ProviderTypeCode
+	if provTypeCode != "" {
 		// Validate the referred to type actually exists
 		// TODO(jaypipes): AUTHZ check user can specify provider type
-		_, err := s.store.ProviderTypeGetByCode(req.ProviderType)
+		_, err := s.store.ProviderTypeGetByCode(provTypeCode)
 		if err != nil {
 			if err == errors.ErrNotFound {
-				return errProviderTypeNotFound(req.Partition)
+				return errProviderTypeNotFound(provTypeCode)
 			}
 			// We don't want to leak internal implementation errors...
 			s.log.ERR(
@@ -93,19 +233,18 @@ func (s *Server) ProviderDefinitionSet(
 
 	def := req.ObjectDefinition
 	objType := "runm.provider"
-	partUuid := req.Partition
+	partUuid := req.PartitionUuid
+	provTypeCode := req.ProviderTypeCode
 	pk := objType + ":" + partUuid
 	if partUuid == "" {
 		pk += "default"
 	}
-	if req.ProviderType != "" {
-		pk += ":" + req.ProviderType
+	if provTypeCode != "" {
+		pk += ":" + provTypeCode
 	}
 
 	var existing *pb.ObjectDefinition
-	existing, err := s.store.ProviderDefinitionGet(
-		partUuid, req.ProviderType,
-	)
+	existing, err := s.store.ProviderDefinitionGet(partUuid, provTypeCode)
 	if err != nil {
 		if err != errors.ErrNotFound {
 			s.log.ERR(
@@ -117,7 +256,7 @@ func (s *Server) ProviderDefinitionSet(
 			return nil, ErrUnknown
 		}
 	}
-	err = s.store.ProviderDefinitionSet(partUuid, req.ProviderType, def)
+	err = s.store.ProviderDefinitionSet(partUuid, provTypeCode, def)
 	if err != nil {
 		return nil, err
 	}

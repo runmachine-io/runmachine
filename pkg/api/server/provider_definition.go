@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/ghodss/yaml"
 
@@ -34,12 +35,44 @@ func (s *Server) ProviderDefinitionGet(
 		}
 		ptCode = req.ProviderType
 	}
-	odef, err := s.providerDefinitionGet(req.Session, partUuid, ptCode)
-	if err != nil {
-		return nil, err
+
+	var err error
+	var odef *metapb.ObjectDefinition
+	if partUuid != "" {
+		if ptCode != "" {
+			odef, err = s.providerDefinitionGetByPartitionAndType(
+				req.Session, partUuid, ptCode,
+			)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			odef, err = s.providerDefinitionGetByPartition(
+				req.Session, partUuid,
+			)
+			if err != nil {
+				return nil, err
+			}
+		}
+	} else {
+		if ptCode != "" {
+			odef, err = s.providerDefinitionGetByType(
+				req.Session, ptCode,
+			)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			odef, err = s.providerDefinitionGetGlobalDefault(req.Session)
+			if err != nil {
+				return nil, err
+			}
+		}
 	}
 
 	// copy metadata property permissions to API property permissions
+	// TODO(jaypipes): This will not be necessary when Issue #111 is done and
+	// we have a single protobuffer namespace
 	apiPropPerms := make(
 		[]*pb.PropertyPermissions,
 		len(odef.PropertyPermissions),
@@ -251,4 +284,213 @@ func (s *Server) ProviderDefinitionSet(
 	return &pb.ObjectDefinitionSetResponse{
 		ObjectDefinition: odef,
 	}, nil
+}
+
+// providerDefinitionGetGlobalDefault returns the global default object
+// definition for providers.
+//
+// If no such object definition could be found, returns (nil, ErrNotFound)
+func (s *Server) providerDefinitionGetGlobalDefault(
+	sess *pb.Session,
+) (*metapb.ObjectDefinition, error) {
+	req := &metapb.ProviderDefinitionGetGlobalDefaultRequest{
+		Session: metaSession(sess),
+	}
+	mc, err := s.metaClient()
+	if err != nil {
+		return nil, err
+	}
+	def, err := mc.ProviderDefinitionGetGlobalDefault(
+		context.Background(), req,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return def, nil
+}
+
+// providerDefinitionGetByPartition returns the object definition for providers
+// that has been set as the override for a supplied partition.
+//
+// If no such object definition could be found, returns (nil, ErrNotFound)
+func (s *Server) providerDefinitionGetByPartition(
+	sess *pb.Session,
+	partUuid string,
+) (*metapb.ObjectDefinition, error) {
+	req := &metapb.ProviderDefinitionGetByPartitionRequest{
+		Session:       metaSession(sess),
+		PartitionUuid: partUuid,
+	}
+	mc, err := s.metaClient()
+	if err != nil {
+		return nil, err
+	}
+	def, err := mc.ProviderDefinitionGetByPartition(
+		context.Background(), req,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return def, nil
+}
+
+// providerDefinitionGetByType returns the object definition for providers that
+// has been overridden for the supplied provider type.
+//
+// If no such object definition could be found, returns (nil, ErrNotFound)
+func (s *Server) providerDefinitionGetByType(
+	sess *pb.Session,
+	provTypeCode string,
+) (*metapb.ObjectDefinition, error) {
+	req := &metapb.ProviderDefinitionGetByTypeRequest{
+		Session:          metaSession(sess),
+		ProviderTypeCode: provTypeCode,
+	}
+	mc, err := s.metaClient()
+	if err != nil {
+		return nil, err
+	}
+	def, err := mc.ProviderDefinitionGetByType(
+		context.Background(), req,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return def, nil
+}
+
+// providerDefinitionGetByPartitionAndType returns the object definition for
+// providers that has been overridden for the supplied partition and provider
+// type.
+//
+// If no such object definition could be found, returns (nil, ErrNotFound)
+func (s *Server) providerDefinitionGetByPartitionAndType(
+	sess *pb.Session,
+	partUuid string,
+	provTypeCode string,
+) (*metapb.ObjectDefinition, error) {
+	req := &metapb.ProviderDefinitionGetByPartitionAndTypeRequest{
+		Session:          metaSession(sess),
+		PartitionUuid:    partUuid,
+		ProviderTypeCode: provTypeCode,
+	}
+	mc, err := s.metaClient()
+	if err != nil {
+		return nil, err
+	}
+	def, err := mc.ProviderDefinitionGetByPartitionAndType(
+		context.Background(), req,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return def, nil
+}
+
+// providerDefinitionGetMostExplicit returns the object definition that would
+// be applied for the supplied partition and provider type.
+//
+// If a provider definition override has been set for the partition and
+// provider type, that object definition will be returned, otherwise...
+//
+// If a provider definition override has been set for the partition but not the
+// provider type, that object definition will be returned, otherwise...
+//
+// If a provider definition override has been set for the provider type but not
+// the partition, that object definition will be returned, otherwise...
+//
+// If no overrides for partition or provider type have been set, this will return the global default provider definition.
+func (s *Server) providerDefinitionGetMostExplicit(
+	sess *pb.Session,
+	partUuid string,
+	provTypeCode string,
+) (*metapb.ObjectDefinition, error) {
+	if partUuid == "" {
+		return nil, fmt.Errorf("partUuid parameter must not be empty")
+	}
+	if provTypeCode == "" {
+		return nil, fmt.Errorf("provTypeCode parameter must not be empty")
+	}
+	mc, err := s.metaClient()
+	if err != nil {
+		return nil, err
+	}
+
+	// OK, first look to see if there's an override for the partition +
+	// provider type
+	pptreq := &metapb.ProviderDefinitionGetByPartitionAndTypeRequest{
+		Session:          metaSession(sess),
+		PartitionUuid:    partUuid,
+		ProviderTypeCode: provTypeCode,
+	}
+	def, err := mc.ProviderDefinitionGetByPartitionAndType(
+		context.Background(), pptreq,
+	)
+	if err != nil {
+		if err != errors.ErrNotFound {
+			return nil, err
+		}
+	} else {
+		return def, nil
+	}
+
+	// We fell through here if there was no partition + provider type override.
+	// Next check to see if there's a partition (with no provider type)
+	// override.
+	preq := &metapb.ProviderDefinitionGetByPartitionRequest{
+		Session:       metaSession(sess),
+		PartitionUuid: partUuid,
+	}
+	def, err = mc.ProviderDefinitionGetByPartition(context.Background(), preq)
+	if err != nil {
+		if err != errors.ErrNotFound {
+			return nil, err
+		}
+	} else {
+		return def, nil
+	}
+
+	// We fell through here if there was no partition + provider type override
+	// and no partition-only override. Next check to see if there's a provider
+	// type (no partition) override.
+	ptreq := &metapb.ProviderDefinitionGetByTypeRequest{
+		Session:          metaSession(sess),
+		ProviderTypeCode: provTypeCode,
+	}
+	def, err = mc.ProviderDefinitionGetByType(context.Background(), ptreq)
+	if err != nil {
+		if err != errors.ErrNotFound {
+			return nil, err
+		}
+	} else {
+		return def, nil
+	}
+
+	// Nothing found... fall back on the global default provider definition
+	return s.providerDefinitionGetGlobalDefault(sess)
+}
+
+// providerDefinitionSet takes an object definition and saves it in the metadata
+// service, returning the saved object definition
+func (s *Server) providerDefinitionSet(
+	sess *pb.Session,
+	def *metapb.ObjectDefinition,
+	partUuid string,
+	provTypeCode string,
+) (*metapb.ObjectDefinition, error) {
+	req := &metapb.ProviderDefinitionSetRequest{
+		Session:          metaSession(sess),
+		ObjectDefinition: def,
+		PartitionUuid:    partUuid,
+		ProviderTypeCode: provTypeCode,
+	}
+	mc, err := s.metaClient()
+	if err != nil {
+		return nil, err
+	}
+	resp, err := mc.ProviderDefinitionSet(context.Background(), req)
+	if err != nil {
+		return nil, err
+	}
+	return resp.ObjectDefinition, nil
 }

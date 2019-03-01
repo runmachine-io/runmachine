@@ -460,7 +460,9 @@ func (s *Server) validateProviderCreateRequest(
 	if err != nil {
 		return nil, err
 	}
-	odef, err := s.providerDefinitionGet(req.Session, partUuid, ptCode)
+	odef, err := s.providerDefinitionGetMostExplicit(
+		req.Session, partUuid, ptCode,
+	)
 	if err != nil {
 		return nil, err
 	}

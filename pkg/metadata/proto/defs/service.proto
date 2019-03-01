@@ -66,8 +66,24 @@ service RunmMetadata {
     rpc provider_type_list(ProviderTypeListRequest) returns (
         stream ProviderType) {}
 
-    // Returns information about a single provider definition
-    rpc provider_definition_get(ProviderDefinitionGetRequest) returns (
+    // Look up the global provider definition default
+    rpc provider_definition_get_global_default(
+        ProviderDefinitionGetGlobalDefaultRequest) returns (
+        ObjectDefinition) {}
+
+    // Look up the default provider definition for a partition
+    rpc provider_definition_get_by_partition(
+        ProviderDefinitionGetByPartitionRequest) returns (
+        ObjectDefinition) {}
+
+    // Look up the provider definition for a provider type
+    rpc provider_definition_get_by_type(
+        ProviderDefinitionGetByTypeRequest) returns (
+        ObjectDefinition) {}
+
+    // Look up the provider definition for a partition and provider type
+    rpc provider_definition_get_by_partition_and_type(
+        ProviderDefinitionGetByPartitionAndTypeRequest) returns (
         ObjectDefinition) {}
 
     // Set information about a specific provider definition
@@ -169,15 +185,28 @@ message ProviderTypeListRequest {
     repeated ProviderTypeFilter any = 3;
 }
 
-message ProviderDefinitionGetRequest {
+message ProviderDefinitionGetGlobalDefaultRequest {
     Session session = 1;
-    // The UUID of the partition the object definition applies to, or empty
-    // string to return the global default object definition for providers
-    string partition = 2;
-    // The type of provider the object definition applies to, or empty string
-    // to return the object definition for the global or partition default for
-    // providers
-    string provider_type = 3;
+}
+
+message ProviderDefinitionGetByPartitionRequest {
+    Session session = 1;
+    // The UUID of the partition the object definition applies to
+    string partition_uuid = 2;
+}
+
+message ProviderDefinitionGetByTypeRequest {
+    Session session = 1;
+    // The type of provider the object definition applies to
+    string provider_type_code = 2;
+}
+
+message ProviderDefinitionGetByPartitionAndTypeRequest {
+    Session session = 1;
+    // The UUID of the partition the object definition applies to
+    string partition_uuid = 2;
+    // The type of provider the object definition applies to
+    string provider_type_code = 3;
 }
 
 message ProviderDefinitionSetRequest {
@@ -185,11 +214,11 @@ message ProviderDefinitionSetRequest {
     // The UUID of the partition the object definition applies to, or empty
     // string to apply the object definition as the global default for
     // providers
-    string partition = 2;
+    string partition_uuid = 2;
     // The type of provider the object definition applies to, or empty string
     // to apply the object definition as the global or partition default for
     // providers
-    string provider_type = 3;
+    string provider_type_code = 3;
     // The newly-set object definition
     ObjectDefinition object_definition = 50;
 }

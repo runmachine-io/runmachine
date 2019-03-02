@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/runmachine-io/runmachine/pkg/errors"
-	pb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
 	"github.com/runmachine-io/runmachine/pkg/util"
+	pb "github.com/runmachine-io/runmachine/proto"
 )
 
 // PartitionGetByUuid looks up a partition by UUID and returns a Partition

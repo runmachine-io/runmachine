@@ -9,7 +9,7 @@ import (
 	pb "github.com/runmachine-io/runmachine/pkg/api/proto"
 	"github.com/runmachine-io/runmachine/pkg/api/types"
 	"github.com/runmachine-io/runmachine/pkg/errors"
-	metapb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
+	metapb "github.com/runmachine-io/runmachine/proto"
 )
 
 // ProviderDefinitionGet looks up a provider definition by partition UUID or

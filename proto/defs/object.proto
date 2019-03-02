@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package runmmeta;
+package runm;
 
 import "filter.proto";
 import "object_type.proto";

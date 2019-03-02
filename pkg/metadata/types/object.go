@@ -1,7 +1,7 @@
 package types
 
 import (
-	pb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
+	pb "github.com/runmachine-io/runmachine/proto"
 )
 
 type ObjectMatcher interface {

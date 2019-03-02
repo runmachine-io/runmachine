@@ -3,7 +3,7 @@ package server
 import (
 	"github.com/runmachine-io/runmachine/pkg/errors"
 	"github.com/runmachine-io/runmachine/pkg/metadata/conditions"
-	pb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
+	pb "github.com/runmachine-io/runmachine/proto"
 )
 
 // defaultObjectFilter returns the default partition object filter if the user

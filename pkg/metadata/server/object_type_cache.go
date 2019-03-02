@@ -2,8 +2,8 @@ package server
 
 import (
 	"github.com/runmachine-io/runmachine/pkg/logging"
-	pb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
 	"github.com/runmachine-io/runmachine/pkg/metadata/server/storage"
+	pb "github.com/runmachine-io/runmachine/proto"
 )
 
 // ObjectTypeCache is a simple cache of object type messages that are very

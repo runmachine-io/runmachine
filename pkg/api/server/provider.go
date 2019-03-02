@@ -14,9 +14,9 @@ import (
 	pb "github.com/runmachine-io/runmachine/pkg/api/proto"
 	"github.com/runmachine-io/runmachine/pkg/api/types"
 	"github.com/runmachine-io/runmachine/pkg/errors"
-	metapb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
 	respb "github.com/runmachine-io/runmachine/pkg/resource/proto"
 	"github.com/runmachine-io/runmachine/pkg/util"
+	metapb "github.com/runmachine-io/runmachine/proto"
 )
 
 // ProviderDelete removes one or more providers from backend storage along with

@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package runmmeta;
+package runm;
 
 // Types of permissions for actions that may be taken with runm
 enum Permission {

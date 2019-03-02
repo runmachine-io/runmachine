@@ -10,7 +10,7 @@ import (
 
 	pb "github.com/runmachine-io/runmachine/pkg/api/proto"
 	"github.com/runmachine-io/runmachine/pkg/api/types"
-	metapb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
+	metapb "github.com/runmachine-io/runmachine/proto"
 )
 
 // PartitionGet looks up a partition by UUID or name and returns a Partition

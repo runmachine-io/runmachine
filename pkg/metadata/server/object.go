@@ -5,8 +5,8 @@ import (
 
 	"github.com/runmachine-io/runmachine/pkg/errors"
 	"github.com/runmachine-io/runmachine/pkg/metadata/conditions"
-	pb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
 	"github.com/runmachine-io/runmachine/pkg/metadata/types"
+	pb "github.com/runmachine-io/runmachine/proto"
 )
 
 // ObjectDeleteByUuids accepts a payload with one or more UUIDs and deletes the

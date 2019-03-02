@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package runmmeta;
+package runm;
 
 message Property {
     string key = 1;

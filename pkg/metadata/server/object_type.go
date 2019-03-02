@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/runmachine-io/runmachine/pkg/errors"
-	pb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
+	pb "github.com/runmachine-io/runmachine/proto"
 )
 
 // ObjectTypeGetByCode returns an ObjectType protobuffer message with the given

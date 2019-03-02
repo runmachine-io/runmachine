@@ -5,7 +5,7 @@ import (
 	"io"
 
 	pb "github.com/runmachine-io/runmachine/pkg/api/proto"
-	metapb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
+	metapb "github.com/runmachine-io/runmachine/proto"
 )
 
 // ProviderTypeGet looks up a provider type by code and returns a ProviderType

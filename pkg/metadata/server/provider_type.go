@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/runmachine-io/runmachine/pkg/errors"
-	pb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
+	pb "github.com/runmachine-io/runmachine/proto"
 )
 
 // ProviderTypeGetByCode returns an ProviderType protobuffer message with the

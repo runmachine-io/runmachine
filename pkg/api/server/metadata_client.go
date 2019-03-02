@@ -6,8 +6,8 @@ import (
 	"io"
 
 	pb "github.com/runmachine-io/runmachine/pkg/api/proto"
-	metapb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
 	"github.com/runmachine-io/runmachine/pkg/util"
+	metapb "github.com/runmachine-io/runmachine/proto"
 	"google.golang.org/grpc"
 )
 

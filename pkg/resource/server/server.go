@@ -6,9 +6,9 @@ import (
 	"github.com/jaypipes/gsr"
 
 	"github.com/runmachine-io/runmachine/pkg/logging"
-	metapb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
 	"github.com/runmachine-io/runmachine/pkg/resource/server/config"
 	"github.com/runmachine-io/runmachine/pkg/resource/server/storage"
+	metapb "github.com/runmachine-io/runmachine/proto"
 )
 
 var (

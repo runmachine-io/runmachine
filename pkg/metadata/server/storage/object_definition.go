@@ -6,8 +6,8 @@ import (
 
 	apitypes "github.com/runmachine-io/runmachine/pkg/api/types"
 	"github.com/runmachine-io/runmachine/pkg/errors"
-	pb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
 	"github.com/runmachine-io/runmachine/pkg/util"
+	pb "github.com/runmachine-io/runmachine/proto"
 )
 
 const (

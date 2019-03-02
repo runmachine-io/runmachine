@@ -105,25 +105,3 @@ func (s *Server) providerCreate(
 	prov.Generation = resp.Provider.Generation
 	return nil
 }
-
-// providerDelete deletes the provider records from the resource service having
-// any of the supplied UUIDs
-func (s *Server) providerDelete(
-	sess *apipb.Session,
-	uuids []string,
-) error {
-	req := &pb.ProviderDeleteRequest{
-		Session: resSession(sess),
-		Uuids:   uuids,
-	}
-	rc, err := s.resClient()
-	_, err = rc.ProviderDelete(context.Background(), req)
-	if err != nil {
-		s.log.ERR(
-			"failed deleting providers with UUIDs (%s) in resource service: %s",
-			uuids, err,
-		)
-		return err
-	}
-	return nil
-}

@@ -65,9 +65,12 @@ func (s *Server) ProviderCreate(
 	}, nil
 }
 
-func (s *Server) ProviderDelete(
+// ProviderDeleteByUuids deletes any provider from backend storage that matches
+// any supplied UUID, returning a response that indicates the number of
+// providers that were deleted
+func (s *Server) ProviderDeleteByUuids(
 	ctx context.Context,
-	req *pb.ProviderDeleteRequest,
+	req *pb.ProviderDeleteByUuidsRequest,
 ) (*pb.DeleteResponse, error) {
 	if len(req.Uuids) == 0 {
 		return nil, ErrAtLeastOneUuidRequired

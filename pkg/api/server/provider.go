@@ -41,7 +41,7 @@ func (s *Server) ProviderDelete(
 	// TODO(jaypipes): Archive the provider information?
 
 	// Delete the provider from the resource service
-	if err = s.providerDelete(req.Session, uuids); err != nil {
+	if err = s.providerDeleteByUuids(req.Session, uuids); err != nil {
 		return nil, err
 	}
 
@@ -57,6 +57,28 @@ func (s *Server) ProviderDelete(
 	return &apipb.DeleteResponse{
 		NumDeleted: uint64(len(provs)),
 	}, nil
+}
+
+// providerDeleteByUuids deletes the provider records from the resource service
+// having any of the supplied UUIDs
+func (s *Server) providerDeleteByUuids(
+	sess *apipb.Session,
+	uuids []string,
+) error {
+	req := &pb.ProviderDeleteByUuidsRequest{
+		Session: resSession(sess),
+		Uuids:   uuids,
+	}
+	rc, err := s.resClient()
+	_, err = rc.ProviderDeleteByUuids(context.Background(), req)
+	if err != nil {
+		s.log.ERR(
+			"failed deleting providers with UUIDs (%s) in resource service: %s",
+			uuids, err,
+		)
+		return err
+	}
+	return nil
 }
 
 func isValidSingleProviderFilter(f *apipb.ProviderFilter) bool {

@@ -7,11 +7,11 @@ import (
 	pb "github.com/runmachine-io/runmachine/proto"
 )
 
-// ProviderGet looks up a provider by UUID and returns a Provider
+// ProviderGetByUuid looks up a provider by UUID and returns a Provider
 // protobuf message.
-func (s *Server) ProviderGet(
+func (s *Server) ProviderGetByUuid(
 	ctx context.Context,
-	req *pb.ProviderGetRequest,
+	req *pb.ProviderGetByUuidRequest,
 ) (*pb.Provider, error) {
 	if req.Uuid == "" {
 		return nil, ErrUuidRequired

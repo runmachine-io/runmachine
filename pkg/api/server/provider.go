@@ -95,7 +95,7 @@ func (s *Server) providerGetByUuid(
 	uuid string,
 ) (*apipb.Provider, error) {
 	// Grab the provider record from the resource service
-	req := &pb.ProviderGetRequest{
+	req := &pb.ProviderGetByUuidRequest{
 		Session: resSession(sess),
 		Uuid:    uuid,
 	}
@@ -103,7 +103,7 @@ func (s *Server) providerGetByUuid(
 	if err != nil {
 		return nil, err
 	}
-	prec, err := rc.ProviderGet(context.Background(), req)
+	prec, err := rc.ProviderGetByUuid(context.Background(), req)
 	if err != nil {
 		if s, ok := status.FromError(err); ok {
 			if s.Code() == codes.NotFound {

@@ -11,8 +11,8 @@ import "session.proto";
 // resource providers, the transactional claims of resources, basic scheduling
 // and reservations.
 service RunmResource {
-    // Returns information about a specific provider
-    rpc provider_get(ProviderGetRequest) returns (Provider) {}
+    // Look up a provider by UUID
+    rpc provider_get_by_uuid(ProviderGetByUuidRequest) returns (Provider) {}
 
     // Returns information about multiple providers
     rpc provider_list(ProviderListRequest) returns (stream Provider) {}
@@ -26,7 +26,7 @@ service RunmResource {
         DeleteResponse) {}
 }
 
-message ProviderGetRequest {
+message ProviderGetByUuidRequest {
     Session session = 1;
     string uuid = 2;
 }

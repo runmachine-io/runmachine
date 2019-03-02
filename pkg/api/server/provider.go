@@ -11,20 +11,19 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	pb "github.com/runmachine-io/runmachine/pkg/api/proto"
+	apipb "github.com/runmachine-io/runmachine/pkg/api/proto"
 	"github.com/runmachine-io/runmachine/pkg/api/types"
 	"github.com/runmachine-io/runmachine/pkg/errors"
-	respb "github.com/runmachine-io/runmachine/pkg/resource/proto"
 	"github.com/runmachine-io/runmachine/pkg/util"
-	metapb "github.com/runmachine-io/runmachine/proto"
+	pb "github.com/runmachine-io/runmachine/proto"
 )
 
 // ProviderDelete removes one or more providers from backend storage along with
 // their associated object metadata in the metadata service.
 func (s *Server) ProviderDelete(
 	ctx context.Context,
-	req *pb.ProviderDeleteRequest,
-) (*pb.DeleteResponse, error) {
+	req *apipb.ProviderDeleteRequest,
+) (*apipb.DeleteResponse, error) {
 	if len(req.Any) == 0 {
 		return nil, ErrAtLeastOneProviderFilterRequired
 	}
@@ -55,12 +54,12 @@ func (s *Server) ProviderDelete(
 
 	// TODO(jaypipes): Send an event notification
 
-	return &pb.DeleteResponse{
+	return &apipb.DeleteResponse{
 		NumDeleted: uint64(len(provs)),
 	}, nil
 }
 
-func isValidSingleProviderFilter(f *pb.ProviderFilter) bool {
+func isValidSingleProviderFilter(f *apipb.ProviderFilter) bool {
 	return f != nil && f.PrimaryFilter != nil && f.PrimaryFilter.Search != ""
 }
 
@@ -68,8 +67,8 @@ func isValidSingleProviderFilter(f *pb.ProviderFilter) bool {
 // protobuf message.
 func (s *Server) ProviderGet(
 	ctx context.Context,
-	req *pb.ProviderGetRequest,
-) (*pb.Provider, error) {
+	req *apipb.ProviderGetRequest,
+) (*apipb.Provider, error) {
 	if !isValidSingleProviderFilter(req.Filter) {
 		return nil, ErrSearchRequired
 	}
@@ -92,11 +91,11 @@ func (s *Server) ProviderGet(
 // providerGetByUuid returns a provider matching the supplied UUID key. If no
 // such provider could be found, returns (nil, ErrNotFound)
 func (s *Server) providerGetByUuid(
-	sess *pb.Session,
+	sess *apipb.Session,
 	uuid string,
-) (*pb.Provider, error) {
+) (*apipb.Provider, error) {
 	// Grab the provider record from the resource service
-	req := &respb.ProviderGetRequest{
+	req := &pb.ProviderGetRequest{
 		Session: resSession(sess),
 		Uuid:    uuid,
 	}
@@ -141,19 +140,19 @@ func (s *Server) providerGetByUuid(
 // object fields (like name, tags, properties, etc), returning an API provider
 // object from the combined data
 func apiProviderFromComponents(
-	p *respb.Provider,
-	obj *metapb.Object,
-) *pb.Provider {
+	p *pb.Provider,
+	obj *pb.Object,
+) *apipb.Provider {
 	// Copy object properties to the returned Provider result
-	props := make([]*pb.Property, len(obj.Properties))
+	props := make([]*apipb.Property, len(obj.Properties))
 	for x, oProp := range obj.Properties {
-		props[x] = &pb.Property{
+		props[x] = &apipb.Property{
 			Key:   oProp.Key,
 			Value: oProp.Value,
 		}
 	}
 
-	return &pb.Provider{
+	return &apipb.Provider{
 		Partition:    p.Partition,
 		ProviderType: p.ProviderType,
 		Name:         obj.Name,
@@ -167,8 +166,8 @@ func apiProviderFromComponents(
 // ProviderList streams zero or more Provider objects back to the client that
 // match a set of optional filters
 func (s *Server) ProviderList(
-	req *pb.ProviderListRequest,
-	stream pb.RunmAPI_ProviderListServer,
+	req *apipb.ProviderListRequest,
+	stream apipb.RunmAPI_ProviderListServer,
 ) error {
 	provs, err := s.providersGetMatching(req.Session, req.Any)
 	if err != nil {
@@ -185,11 +184,11 @@ func (s *Server) ProviderList(
 // providersGetMatching returns a slice of pointers to API Provider messages
 // matching any of a set of API ProviderFilter messages.
 func (s *Server) providersGetMatching(
-	sess *pb.Session,
-	any []*pb.ProviderFilter,
-) ([]*pb.Provider, error) {
-	res := make([]*pb.Provider, 0)
-	mfils := make([]*metapb.ObjectFilter, 0)
+	sess *apipb.Session,
+	any []*apipb.ProviderFilter,
+) ([]*apipb.Provider, error) {
+	res := make([]*apipb.Provider, 0)
+	mfils := make([]*pb.ObjectFilter, 0)
 	// If the user specified one or more UUIDs or names in the incoming API
 	// provider filters, the metadata service will have already handled the
 	// translation/lookup to UUIDs, so we can pass the returned object's UUIDs
@@ -208,9 +207,9 @@ func (s *Server) providersGetMatching(
 		// Transform the supplied generic filters into the more specific
 		// UuidFilter or NameFilter objects accepted by the metadata service
 		for x, filter := range any {
-			mfil := &metapb.ObjectFilter{
-				ObjectTypeFilter: &metapb.ObjectTypeFilter{
-					CodeFilter: &metapb.CodeFilter{
+			mfil := &pb.ObjectFilter{
+				ObjectTypeFilter: &pb.ObjectTypeFilter{
+					CodeFilter: &pb.CodeFilter{
 						Code:      "runm.provider",
 						UsePrefix: false,
 					},
@@ -218,11 +217,11 @@ func (s *Server) providersGetMatching(
 			}
 			if filter.PrimaryFilter != nil {
 				if util.IsUuidLike(filter.PrimaryFilter.Search) {
-					mfil.UuidFilter = &metapb.UuidFilter{
+					mfil.UuidFilter = &pb.UuidFilter{
 						Uuid: filter.PrimaryFilter.Search,
 					}
 				} else {
-					mfil.NameFilter = &metapb.NameFilter{
+					mfil.NameFilter = &pb.NameFilter{
 						Name:      filter.PrimaryFilter.Search,
 						UsePrefix: filter.PrimaryFilter.UsePrefix,
 					}
@@ -251,7 +250,7 @@ func (s *Server) providersGetMatching(
 				for x, partObj := range partObjs {
 					partUuids[x] = partObj.Uuid
 				}
-				mfil.PartitionFilter = &metapb.UuidsFilter{
+				mfil.PartitionFilter = &pb.UuidsFilter{
 					Uuids: partUuids,
 				}
 				// Save in our cache so that the request service filters can
@@ -262,16 +261,16 @@ func (s *Server) providersGetMatching(
 				propFilter := filter.PropertyFilter
 				// TODO(jaypipes): Once Issue #111 is done, this copying won't
 				// be necessary
-				metaPropFilter := &metapb.PropertyFilter{
+				metaPropFilter := &pb.PropertyFilter{
 					RequireKeys: propFilter.RequireKeys,
 					AnyKeys:     propFilter.AnyKeys,
 					ForbidKeys:  propFilter.ForbidKeys,
 				}
 				if propFilter.RequireItems != nil {
 					numItems := len(propFilter.RequireItems)
-					items := make([]*metapb.Property, numItems)
+					items := make([]*pb.Property, numItems)
 					for x, prop := range propFilter.RequireItems {
-						items[x] = &metapb.Property{
+						items[x] = &pb.Property{
 							Key:   prop.Key,
 							Value: prop.Value,
 						}
@@ -280,9 +279,9 @@ func (s *Server) providersGetMatching(
 				}
 				if propFilter.AnyItems != nil {
 					numItems := len(propFilter.AnyItems)
-					items := make([]*metapb.Property, numItems)
+					items := make([]*pb.Property, numItems)
 					for x, prop := range propFilter.AnyItems {
-						items[x] = &metapb.Property{
+						items[x] = &pb.Property{
 							Key:   prop.Key,
 							Value: prop.Value,
 						}
@@ -291,9 +290,9 @@ func (s *Server) providersGetMatching(
 				}
 				if propFilter.ForbidItems != nil {
 					numItems := len(propFilter.ForbidItems)
-					items := make([]*metapb.Property, numItems)
+					items := make([]*pb.Property, numItems)
 					for x, prop := range propFilter.ForbidItems {
-						items[x] = &metapb.Property{
+						items[x] = &pb.Property{
 							Key:   prop.Key,
 							Value: prop.Value,
 						}
@@ -307,9 +306,9 @@ func (s *Server) providersGetMatching(
 		}
 	} else {
 		// Just get all provider objects from the metadata service
-		mfils = append(mfils, &metapb.ObjectFilter{
-			ObjectTypeFilter: &metapb.ObjectTypeFilter{
-				CodeFilter: &metapb.CodeFilter{
+		mfils = append(mfils, &pb.ObjectFilter{
+			ObjectTypeFilter: &pb.ObjectTypeFilter{
+				CodeFilter: &pb.CodeFilter{
 					Code:      "runm.provider",
 					UsePrefix: false,
 				},
@@ -337,7 +336,7 @@ func (s *Server) providersGetMatching(
 		return res, nil
 	}
 
-	objMap := make(map[string]*metapb.Object, len(objs))
+	objMap := make(map[string]*pb.Object, len(objs))
 	for _, obj := range objs {
 		objMap[obj.Uuid] = obj
 	}
@@ -352,16 +351,16 @@ func (s *Server) providersGetMatching(
 		}
 	}
 
-	// Create a set of respb.ProviderFilter objects and grab provider-specific
+	// Create a set of pb.ProviderFilter objects and grab provider-specific
 	// information from the runm-resource service. For now, we only supply
 	// filters to the resource service's ProviderList API call if there were
 	// filters passed to the API service's ProviderList API call.
-	rfils := make([]*respb.ProviderFilter, 0)
+	rfils := make([]*pb.ProviderFilter, 0)
 	if len(any) > 0 {
 		for x, f := range any {
-			rfil := &respb.ProviderFilter{}
+			rfil := &pb.ProviderFilter{}
 			if f.PartitionFilter != nil {
-				rfil.PartitionFilter = &respb.UuidFilter{
+				rfil.PartitionFilter = &pb.UuidsFilter{
 					Uuids: partUuidsReqMap[x],
 				}
 			}
@@ -370,12 +369,12 @@ func (s *Server) providersGetMatching(
 				// types into a []string{} of provider type codes by calling
 				// the ProviderTypeList metadata service API. For now, just
 				// pass in the Search term as an exact match...
-				rfil.ProviderTypeFilter = &respb.CodeFilter{
+				rfil.ProviderTypeFilter = &pb.CodesFilter{
 					Codes: []string{f.ProviderTypeFilter.Search},
 				}
 			}
 			if primaryFiltered {
-				rfil.UuidFilter = &respb.UuidFilter{
+				rfil.UuidFilter = &pb.UuidsFilter{
 					Uuids: uuids,
 				}
 			}
@@ -390,7 +389,7 @@ func (s *Server) providersGetMatching(
 	if err != nil {
 		return nil, err
 	}
-	req := &respb.ProviderListRequest{
+	req := &pb.ProviderListRequest{
 		Session: resSession(sess),
 		Any:     rfils,
 	}
@@ -427,8 +426,8 @@ func (s *Server) providersGetMatching(
 // request payload can be unmarshal'd properly into YAML, contains all relevant
 // fields and meets things like property meta validation checks.
 func (s *Server) validateProviderCreateRequest(
-	req *pb.CreateRequest,
-) (*pb.Provider, error) {
+	req *apipb.CreateRequest,
+) (*apipb.Provider, error) {
 	var input types.Provider
 	if err := yaml.Unmarshal(req.Payload, &input); err != nil {
 		return nil, err
@@ -480,17 +479,17 @@ func (s *Server) validateProviderCreateRequest(
 		return nil, fmt.Errorf(msg)
 	}
 
-	props := make([]*pb.Property, 0)
+	props := make([]*apipb.Property, 0)
 	if input.Properties != nil {
 		for key, val := range input.Properties {
-			props = append(props, &pb.Property{
+			props = append(props, &apipb.Property{
 				Key:   key,
 				Value: propertyValueString(val),
 			})
 		}
 	}
 
-	return &pb.Provider{
+	return &apipb.Provider{
 		Partition:    partUuid,
 		ProviderType: ptCode,
 		Name:         input.Name,
@@ -519,8 +518,8 @@ func propertyValueString(v interface{}) string {
 
 func (s *Server) ProviderCreate(
 	ctx context.Context,
-	req *pb.CreateRequest,
-) (*pb.ProviderCreateResponse, error) {
+	req *apipb.CreateRequest,
+) (*apipb.ProviderCreateResponse, error) {
 	// TODO(jaypipes): AUTHZ check if user can write objects
 
 	p, err := s.validateProviderCreateRequest(req)
@@ -534,7 +533,7 @@ func (s *Server) ProviderCreate(
 	)
 
 	// First save the object in the metadata service
-	obj := &metapb.Object{
+	obj := &pb.Object{
 		Partition:  p.Partition,
 		ObjectType: "runm.provider",
 		Uuid:       p.Uuid,
@@ -542,9 +541,9 @@ func (s *Server) ProviderCreate(
 		Tags:       p.Tags,
 	}
 	if len(p.Properties) > 0 {
-		props := make([]*metapb.Property, len(p.Properties))
+		props := make([]*pb.Property, len(p.Properties))
 		for x, prop := range p.Properties {
-			props[x] = &metapb.Property{
+			props[x] = &pb.Property{
 				Key:   prop.Key,
 				Value: prop.Value,
 			}
@@ -567,7 +566,7 @@ func (s *Server) ProviderCreate(
 		p.Uuid, p.Partition, p.Name,
 	)
 
-	return &pb.ProviderCreateResponse{
+	return &apipb.ProviderCreateResponse{
 		Provider: p,
 	}, nil
 }

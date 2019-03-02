@@ -8,15 +8,15 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	pb "github.com/runmachine-io/runmachine/pkg/api/proto"
+	apipb "github.com/runmachine-io/runmachine/pkg/api/proto"
 	"github.com/runmachine-io/runmachine/pkg/errors"
-	respb "github.com/runmachine-io/runmachine/pkg/resource/proto"
+	pb "github.com/runmachine-io/runmachine/proto"
 )
 
 // metaSession transforms an API protobuffer Session message into a metadata
 // service protobuffer Session message
-func resSession(sess *pb.Session) *respb.Session {
-	return &respb.Session{
+func resSession(sess *apipb.Session) *pb.Session {
+	return &pb.Session{
 		User:      sess.User,
 		Project:   sess.Project,
 		Partition: sess.Partition,
@@ -39,7 +39,7 @@ func (s *Server) resConnect(addr string) (*grpc.ClientConn, error) {
 // endpoint using the gsr service registry, connect to that endpoint, and if
 // successful, return a constructed gRPC client to the resource service at that
 // endpoint.
-func (s *Server) resClient() (respb.RunmResourceClient, error) {
+func (s *Server) resClient() (pb.RunmResourceClient, error) {
 	if s.resclient != nil {
 		return s.resclient, nil
 	}
@@ -66,7 +66,7 @@ func (s *Server) resClient() (respb.RunmResourceClient, error) {
 		s.log.ERR(msg)
 		return nil, fmt.Errorf(msg)
 	}
-	s.resclient = respb.NewRunmResourceClient(conn)
+	s.resclient = pb.NewRunmResourceClient(conn)
 	s.log.L2("connected to resource service at %s", addr)
 	return s.resclient, nil
 }
@@ -76,15 +76,15 @@ func (s *Server) resClient() (respb.RunmResourceClient, error) {
 // object may have fields updated on it when creation is successful (such as
 // the provider's generation)
 func (s *Server) providerCreate(
-	sess *pb.Session,
-	prov *pb.Provider,
+	sess *apipb.Session,
+	prov *apipb.Provider,
 ) error {
-	p := &respb.Provider{
+	p := &pb.Provider{
 		Uuid:         prov.Uuid,
 		Partition:    prov.Partition,
 		ProviderType: prov.ProviderType,
 	}
-	req := &respb.ProviderCreateRequest{
+	req := &pb.ProviderCreateRequest{
 		Session:  resSession(sess),
 		Provider: p,
 	}
@@ -109,10 +109,10 @@ func (s *Server) providerCreate(
 // providerDelete deletes the provider records from the resource service having
 // any of the supplied UUIDs
 func (s *Server) providerDelete(
-	sess *pb.Session,
+	sess *apipb.Session,
 	uuids []string,
 ) error {
-	req := &respb.ProviderDeleteRequest{
+	req := &pb.ProviderDeleteRequest{
 		Session: resSession(sess),
 		Uuids:   uuids,
 	}

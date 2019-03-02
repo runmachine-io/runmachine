@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package runmresource;
+package runm;
 
 import "capability.proto";
 import "distance.proto";
@@ -36,7 +36,7 @@ message Provider {
 
 // Used in matching provider records
 message ProviderFilter {
-    UuidFilter uuid_filter = 1;
-    UuidFilter partition_filter = 2;
-    CodeFilter provider_type_filter = 3;
+    UuidsFilter uuid_filter = 1;
+    UuidsFilter partition_filter = 2;
+    CodesFilter provider_type_filter = 3;
 }

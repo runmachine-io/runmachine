@@ -1,7 +1,8 @@
 syntax = "proto3";
 
-package runmresource;
+package runm;
 
+import "common.proto";
 import "provider.proto";
 import "search.proto";
 import "session.proto";
@@ -23,10 +24,6 @@ service RunmResource {
     // Deletes providers by UUID
     rpc provider_delete(ProviderDeleteRequest) returns (
         DeleteResponse) {}
-}
-
-message DeleteResponse {
-    uint64 num_deleted = 2;
 }
 
 message ProviderGetRequest {

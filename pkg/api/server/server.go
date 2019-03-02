@@ -7,8 +7,7 @@ import (
 
 	"github.com/runmachine-io/runmachine/pkg/api/server/config"
 	"github.com/runmachine-io/runmachine/pkg/logging"
-	respb "github.com/runmachine-io/runmachine/pkg/resource/proto"
-	metapb "github.com/runmachine-io/runmachine/proto"
+	pb "github.com/runmachine-io/runmachine/proto"
 )
 
 var (
@@ -19,8 +18,8 @@ type Server struct {
 	log        *logging.Logs
 	cfg        *config.Config
 	registry   *gsr.Registry
-	metaclient metapb.RunmMetadataClient
-	resclient  respb.RunmResourceClient
+	metaclient pb.RunmMetadataClient
+	resclient  pb.RunmResourceClient
 }
 
 func (s *Server) Close() {

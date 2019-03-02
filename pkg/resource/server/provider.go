@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/runmachine-io/runmachine/pkg/errors"
-	pb "github.com/runmachine-io/runmachine/pkg/resource/proto"
+	pb "github.com/runmachine-io/runmachine/proto"
 )
 
 // ProviderGet looks up a provider by UUID and returns a Provider

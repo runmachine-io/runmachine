@@ -21,3 +21,8 @@ message CodeFilter {
     string code = 1;
     bool use_prefix = 2;
 }
+
+// The object must have one of the codes
+message CodesFilter {
+    repeated string codes = 1;
+}

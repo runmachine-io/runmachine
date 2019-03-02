@@ -1,8 +1,0 @@
-syntax = "proto3";
-
-package runmresource;
-
-message Property {
-    string key = 1;
-    string value = 2;
-}

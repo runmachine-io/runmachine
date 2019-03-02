@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package runm;
 
+import "common.proto";
 import "object.proto";
 import "object_definition.proto";
 import "object_type.proto";
@@ -89,10 +90,6 @@ service RunmMetadata {
     // Set information about a specific provider definition
     rpc provider_definition_set(ProviderDefinitionSetRequest) returns (
         ObjectDefinitionSetResponse) {}
-}
-
-message DeleteResponse {
-    uint64 num_deleted = 2;
 }
 
 message PartitionGetByUuidRequest {

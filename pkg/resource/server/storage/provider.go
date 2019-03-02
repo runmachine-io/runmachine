@@ -5,9 +5,10 @@ import (
 	"log"
 
 	"github.com/go-sql-driver/mysql"
+
 	"github.com/runmachine-io/runmachine/pkg/errors"
-	pb "github.com/runmachine-io/runmachine/pkg/resource/proto"
 	"github.com/runmachine-io/runmachine/pkg/util"
+	pb "github.com/runmachine-io/runmachine/proto"
 )
 
 type ProviderRecord struct {

@@ -149,8 +149,10 @@ func printProvider(obj *pb.Provider) {
 	fmt.Printf("UUID:          %s\n", obj.Uuid)
 	fmt.Printf("Name:          %s\n", obj.Name)
 	fmt.Printf("Generation:    %d\n", obj.Generation)
-	if obj.ParentUuid != "" {
-		fmt.Printf("Parent:        %s\n", obj.ParentUuid)
+	if obj.Parent != nil {
+		if obj.Parent.Uuid != "" {
+			fmt.Printf("Parent:        %s\n", obj.Parent.Uuid)
+		}
 	}
 	if obj.Properties != nil {
 		fmt.Printf("Properties:\n")

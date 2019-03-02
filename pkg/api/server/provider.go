@@ -161,6 +161,7 @@ func (s *Server) providerGetByUuid(
 // Object and merges the object information into the API Provider's generic
 // object fields (like name, tags, properties, etc), returning an API provider
 // object from the combined data
+// TODO(jaypipes): get rid of this when Issue #111 is completed
 func apiProviderFromComponents(
 	p *pb.Provider,
 	obj *pb.Object,
@@ -175,13 +176,17 @@ func apiProviderFromComponents(
 	}
 
 	return &apipb.Provider{
-		Partition:    p.Partition,
-		ProviderType: p.ProviderType,
-		Name:         obj.Name,
-		Uuid:         obj.Uuid,
-		Generation:   p.Generation,
-		Properties:   props,
-		Tags:         obj.Tags,
+		Partition: &apipb.Partition{
+			Uuid: p.Partition.Uuid,
+		},
+		ProviderType: &apipb.ProviderType{
+			Code: p.ProviderType.Code,
+		},
+		Name:       obj.Name,
+		Uuid:       obj.Uuid,
+		Generation: p.Generation,
+		Properties: props,
+		Tags:       obj.Tags,
 	}
 }
 
@@ -512,12 +517,16 @@ func (s *Server) validateProviderCreateRequest(
 	}
 
 	return &apipb.Provider{
-		Partition:    partUuid,
-		ProviderType: ptCode,
-		Name:         input.Name,
-		Uuid:         input.Uuid,
-		Tags:         input.Tags,
-		Properties:   props,
+		Partition: &apipb.Partition{
+			Uuid: partUuid,
+		},
+		ProviderType: &apipb.ProviderType{
+			Code: ptCode,
+		},
+		Name:       input.Name,
+		Uuid:       input.Uuid,
+		Tags:       input.Tags,
+		Properties: props,
 	}, nil
 }
 
@@ -556,7 +565,7 @@ func (s *Server) ProviderCreate(
 
 	// First save the object in the metadata service
 	obj := &pb.Object{
-		Partition:  p.Partition,
+		Partition:  p.Partition.Uuid,
 		ObjectType: "runm.provider",
 		Uuid:       p.Uuid,
 		Name:       p.Name,

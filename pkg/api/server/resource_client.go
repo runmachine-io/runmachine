@@ -80,9 +80,13 @@ func (s *Server) providerCreate(
 	prov *apipb.Provider,
 ) error {
 	p := &pb.Provider{
-		Uuid:         prov.Uuid,
-		Partition:    prov.Partition,
-		ProviderType: prov.ProviderType,
+		Uuid: prov.Uuid,
+		Partition: &pb.Partition{
+			Uuid: prov.Partition.Uuid,
+		},
+		ProviderType: &pb.ProviderType{
+			Code: prov.ProviderType.Code,
+		},
 	}
 	req := &pb.ProviderCreateRequest{
 		Session:  resSession(sess),

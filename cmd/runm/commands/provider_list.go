@@ -63,8 +63,8 @@ func providerList(cmd *cobra.Command, args []string) {
 	rows := make([][]string, len(msgs))
 	for x, obj := range msgs {
 		rows[x] = []string{
-			obj.Partition,
-			obj.ProviderType,
+			obj.Partition.Uuid,
+			obj.ProviderType.Code,
 			obj.Uuid,
 			obj.Name,
 		}

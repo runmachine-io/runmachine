@@ -7,7 +7,7 @@ import (
 	"github.com/golang/protobuf/proto"
 
 	"github.com/runmachine-io/runmachine/pkg/errors"
-	pb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
+	pb "github.com/runmachine-io/runmachine/proto"
 )
 
 const (
@@ -110,9 +110,9 @@ func (s *Store) ObjectTypeGetByCode(
 	return obj, nil
 }
 
-// ObjectTypeList returns a slice of pointers to ObjectType protobuffer
+// ObjectTypeFind returns a slice of pointers to ObjectType protobuffer
 // messages matching a set of supplied filters.
-func (s *Store) ObjectTypeList(
+func (s *Store) ObjectTypeFind(
 	any []*pb.ObjectTypeFilter,
 ) ([]*pb.ObjectType, error) {
 	if len(any) == 0 {

@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package runm;
+
+import "consumer.proto";
+import "provider.proto";
+import "resource_type.proto";
+
+// An allocation is a record of how many resources a particular consumer is
+// consuming on a set pf provider during a given time interval.
+message AllocationItem {
+    Provider provider = 1;
+    ResourceType resource_type = 2;
+    uint64 used = 3;
+}
+
+message Allocation {
+    Consumer consumer = 1;
+    int64 acquire_time = 2;
+    int64 release_time = 3;
+    repeated AllocationItem items = 50;
+}

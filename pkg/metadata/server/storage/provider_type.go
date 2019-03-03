@@ -7,7 +7,7 @@ import (
 	"github.com/golang/protobuf/proto"
 
 	"github.com/runmachine-io/runmachine/pkg/errors"
-	pb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
+	pb "github.com/runmachine-io/runmachine/proto"
 )
 
 // TODO(jaypipes): This file has lots of copied code from
@@ -101,10 +101,10 @@ func (s *Store) ProviderTypeGetByCode(
 	return obj, nil
 }
 
-// ProviderTypeList returns a slice of pointers to ProviderType protobuffer
+// ProviderTypeFind returns a slice of pointers to ProviderType protobuffer
 // messages matching a set of supplied filters.
-func (s *Store) ProviderTypeList(
-	any []*pb.ProviderTypeFilter,
+func (s *Store) ProviderTypeFind(
+	any []*pb.ProviderTypeFindFilter,
 ) ([]*pb.ProviderType, error) {
 	if len(any) == 0 {
 		// Just return all object types

@@ -1,6 +1,6 @@
 package conditions
 
-import pb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
+import pb "github.com/runmachine-io/runmachine/proto"
 
 type HasObjectType interface {
 	GetObjectType() string

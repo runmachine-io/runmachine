@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/net/context"
 
-	apipb "github.com/runmachine-io/runmachine/pkg/api/proto"
+	pb "github.com/runmachine-io/runmachine/proto"
 )
 
 var providerListCommand = &cobra.Command{
@@ -34,15 +34,15 @@ func providerList(cmd *cobra.Command, args []string) {
 	conn := connect()
 	defer conn.Close()
 
-	client := apipb.NewRunmAPIClient(conn)
-	req := &apipb.ProviderListRequest{
+	client := pb.NewRunmAPIClient(conn)
+	req := &pb.ProviderListRequest{
 		Session: getSession(),
 		Any:     buildProviderFilters(),
 	}
 	stream, err := client.ProviderList(context.Background(), req)
 	exitIfConnectErr(err)
 
-	msgs := make([]*apipb.Provider, 0)
+	msgs := make([]*pb.Provider, 0)
 	for {
 		role, err := stream.Recv()
 		if err == io.EOF {
@@ -63,8 +63,8 @@ func providerList(cmd *cobra.Command, args []string) {
 	rows := make([][]string, len(msgs))
 	for x, obj := range msgs {
 		rows[x] = []string{
-			obj.Partition,
-			obj.ProviderType,
+			obj.Partition.Uuid,
+			obj.ProviderType.Code,
 			obj.Uuid,
 			obj.Name,
 		}

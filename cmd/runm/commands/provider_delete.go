@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/spf13/cobra"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	pb "github.com/runmachine-io/runmachine/pkg/api/proto"
-	"github.com/spf13/cobra"
+	pb "github.com/runmachine-io/runmachine/proto"
 )
 
 const (

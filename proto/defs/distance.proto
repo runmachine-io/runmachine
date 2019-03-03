@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package runm;
+
+import "wrappers.proto";
+
+// A distance is a relative amount of space between two provider groups. A
+// distance type is simply a name for the abstract collection of distances.
+//
+// As an example, assume a deployer wishes to measure the relative network
+// latency between two various groups of providers. They might set up a
+// distance type called NETWORK_LATENCY and create 4 distances with type
+// NETWORK_LATENCY called REGION, SITE, RACK and NODE.
+message DistanceType {
+    string code = 1;
+    StringValue description = 2;
+}
+
+message Distance {
+    string code = 1;
+    StringValue description = 2;
+    uint32 position = 3;
+    DistanceType type = 50;
+}

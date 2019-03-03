@@ -1,0 +1,64 @@
+syntax = "proto3";
+
+package runm;
+
+import "capability.proto";
+import "distance.proto";
+import "filter.proto";
+import "partition.proto";
+import "property.proto";
+import "provider_type.proto";
+
+// A collection of related providers
+message ProviderGroup {
+    string uuid = 1;
+    string name = 2;
+    uint32 generation = 100;
+}
+
+// Represents the relative distance between a provider and a provider group
+message ProviderDistance {
+    ProviderGroup provider_group = 1;
+    Distance distance = 2;
+}
+
+// A provider exposes inventory of resources to be claimed by consumers of
+// those resources. Each provider may belong to zero or more provider groups
+// and have capabilities associated with it.
+message Provider {
+    Partition partition = 1;
+    ProviderType provider_type = 2;
+    string uuid = 3;
+    string name = 4;
+    repeated Property properties = 50;
+    repeated string tags = 51;
+    Provider parent = 52;
+    repeated ProviderGroup groups = 53;
+    repeated Capability capabilities = 54;
+    repeated ProviderDistance distances = 55;
+    uint32 generation = 100;
+}
+
+// Used in matching providers in resource service
+message ProviderFindFilter {
+    UuidsFilter uuid_filter = 1;
+    UuidsFilter partition_filter = 2;
+    CodesFilter provider_type_filter = 3;
+}
+
+// Used in matching providers in API
+message ProviderFilter {
+    // UUID or human-readable name of the provider
+    SearchFilter primary_filter = 1;
+    // UUID or human-readable name of the partition
+    SearchFilter partition_filter = 2;
+    // Type of the provider
+    SearchFilter provider_type_filter = 3;
+    // Filter on property keys, values or both
+    PropertyFilter property_filter = 4;
+}
+
+message ProviderCreateResponse {
+    // The newly-created object
+    Provider provider = 1;
+}

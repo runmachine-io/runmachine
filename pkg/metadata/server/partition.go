@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/runmachine-io/runmachine/pkg/errors"
-	pb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
 	"github.com/runmachine-io/runmachine/pkg/util"
+	pb "github.com/runmachine-io/runmachine/proto"
 )
 
 // PartitionGetByUuid looks up a partition by UUID and returns a Partition
@@ -66,16 +66,16 @@ func (s *Server) PartitionGetByName(
 	return obj, nil
 }
 
-// PartitionList streams zero or more Partition objects back to the client that
+// PartitionFind streams zero or more Partition objects back to the client that
 // match a set of optional filters
-func (s *Server) PartitionList(
-	req *pb.PartitionListRequest,
-	stream pb.RunmMetadata_PartitionListServer,
+func (s *Server) PartitionFind(
+	req *pb.PartitionFindRequest,
+	stream pb.RunmMetadata_PartitionFindServer,
 ) error {
 	if err := s.checkSession(req.Session); err != nil {
 		return err
 	}
-	objs, err := s.store.PartitionList(req.Any)
+	objs, err := s.store.PartitionFind(req.Any)
 	if err != nil {
 		return err
 	}

@@ -4,7 +4,7 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/net/context"
 
-	apipb "github.com/runmachine-io/runmachine/pkg/api/proto"
+	pb "github.com/runmachine-io/runmachine/proto"
 )
 
 var partitionGetCommand = &cobra.Command{
@@ -18,14 +18,14 @@ func partitionGet(cmd *cobra.Command, args []string) {
 	conn := connect()
 	defer conn.Close()
 
-	client := apipb.NewRunmAPIClient(conn)
+	client := pb.NewRunmAPIClient(conn)
 
 	session := getSession()
 
-	req := &apipb.PartitionGetRequest{
+	req := &pb.PartitionGetRequest{
 		Session: session,
-		Filter: &apipb.PartitionFilter{
-			PrimaryFilter: &apipb.SearchFilter{
+		Filter: &pb.PartitionFilter{
+			PrimaryFilter: &pb.SearchFilter{
 				Search: args[0],
 			},
 		},

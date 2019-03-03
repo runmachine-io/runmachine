@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package runm;
+
+import "wrappers.proto";
+
+// A binary capability tag to decorate providers
+message Capability {
+    string code = 1;
+    StringValue description = 2;
+}

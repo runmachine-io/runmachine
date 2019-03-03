@@ -3,8 +3,9 @@ package commands
 import (
 	"golang.org/x/net/context"
 
-	pb "github.com/runmachine-io/runmachine/pkg/api/proto"
 	"github.com/spf13/cobra"
+
+	pb "github.com/runmachine-io/runmachine/proto"
 )
 
 var providerTypeGetCommand = &cobra.Command{

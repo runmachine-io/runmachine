@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/runmachine-io/runmachine/pkg/errors"
-	pb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
+	pb "github.com/runmachine-io/runmachine/proto"
 )
 
 // ProviderDefinitionGetGlobalDefault looks up the global default object
@@ -175,7 +175,7 @@ func (s *Server) ProviderDefinitionGetByPartitionAndType(
 // the ObjectDefinition.Partition to the partition's UUID if the Partition
 // field was a name.
 func (s *Server) validateProviderDefinitionSetRequest(
-	req *pb.ProviderDefinitionSetRequest,
+	req *pb.ProviderObjectDefinitionSetRequest,
 ) error {
 	partUuid := req.PartitionUuid
 	if partUuid != "" {
@@ -219,7 +219,7 @@ func (s *Server) validateProviderDefinitionSetRequest(
 // saves the object definition in backend storage
 func (s *Server) ProviderDefinitionSet(
 	ctx context.Context,
-	req *pb.ProviderDefinitionSetRequest,
+	req *pb.ProviderObjectDefinitionSetRequest,
 ) (*pb.ObjectDefinitionSetResponse, error) {
 	if err := s.checkSession(req.Session); err != nil {
 		return nil, err

@@ -5,9 +5,10 @@ import (
 	"log"
 
 	"github.com/go-sql-driver/mysql"
+
 	"github.com/runmachine-io/runmachine/pkg/errors"
-	pb "github.com/runmachine-io/runmachine/pkg/resource/proto"
 	"github.com/runmachine-io/runmachine/pkg/util"
+	pb "github.com/runmachine-io/runmachine/proto"
 )
 
 type ProviderRecord struct {
@@ -87,7 +88,7 @@ WHERE p.uuid = ?`
 // ProviderGetMatching returns provider records matching any of the supplied
 // filters.
 func (s *Store) ProvidersGetMatching(
-	any []*pb.ProviderFilter,
+	any []*pb.ProviderFindFilter,
 ) ([]*ProviderRecord, error) {
 	// TODO(jaypipes): Validate that the slice of supplied ProviderFilters is
 	// valid (for example, that the filter contains at least one UUID,
@@ -153,13 +154,16 @@ OR
 	recs := make([]*ProviderRecord, 0)
 	for rows.Next() {
 		rec := &ProviderRecord{
-			Provider: &pb.Provider{},
+			Provider: &pb.Provider{
+				Partition:    &pb.Partition{},
+				ProviderType: &pb.ProviderType{},
+			},
 		}
 		if err := rows.Scan(
 			&rec.ID,
 			&rec.Provider.Uuid,
-			&rec.Provider.Partition,
-			&rec.Provider.ProviderType,
+			&rec.Provider.Partition.Uuid,
+			&rec.Provider.ProviderType.Code,
 			&rec.Provider.Generation,
 		); err != nil {
 			panic(err.Error())
@@ -278,17 +282,17 @@ func (s *Store) ProviderCreate(
 		return nil, errors.ErrDuplicate
 	}
 
-	if !util.IsUuidLike(prov.Partition) {
+	if !util.IsUuidLike(prov.Partition.Uuid) {
 		return nil, errors.ErrInvalidPartitionFormat
 	}
 
 	// Grab the internal IDs of the new provider's partition and provider type,
 	// ensuring that records exist for the partition and provider type.
-	partId, err := s.ensurePartition(prov.Partition)
+	partId, err := s.ensurePartition(prov.Partition.Uuid)
 	if err != nil {
 		return nil, errors.ErrUnknown
 	}
-	ptId, err := s.ensureProviderType(prov.ProviderType)
+	ptId, err := s.ensureProviderType(prov.ProviderType.Code)
 	if err != nil {
 		return nil, errors.ErrUnknown
 	}

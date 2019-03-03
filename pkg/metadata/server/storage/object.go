@@ -8,9 +8,9 @@ import (
 
 	"github.com/runmachine-io/runmachine/pkg/errors"
 	"github.com/runmachine-io/runmachine/pkg/metadata/conditions"
-	pb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
 	"github.com/runmachine-io/runmachine/pkg/metadata/types"
 	"github.com/runmachine-io/runmachine/pkg/util"
+	pb "github.com/runmachine-io/runmachine/proto"
 )
 
 const (
@@ -84,9 +84,9 @@ func (s *Store) ObjectDelete(
 	return nil
 }
 
-// ObjectList returns a slice of pointers to objects matching any of the
+// ObjectFind returns a slice of pointers to objects matching any of the
 // supplied filters
-func (s *Store) ObjectList(
+func (s *Store) ObjectFind(
 	any []*conditions.ObjectCondition,
 ) ([]*pb.Object, error) {
 	if len(any) == 0 {
@@ -99,7 +99,7 @@ func (s *Store) ObjectList(
 
 	for _, cond := range any {
 		if cond.IsEmpty() {
-			s.log.ERR("received empty types.ObjectCondition in ObjectList()")
+			s.log.ERR("received empty types.ObjectCondition in ObjectFind()")
 			continue
 		}
 		// If the types.ObjectCondition contains a value for the Search field,
@@ -131,12 +131,12 @@ func (s *Store) ObjectList(
 	return res, nil
 }
 
-// ObjectListWithReferences returns a slice of pointers to ObjectWithReference
+// ObjectFindWithReferences returns a slice of pointers to ObjectWithReference
 // structs that have had Partition and ObjectType relations expanded inline.
-func (s *Store) ObjectListWithReferences(
+func (s *Store) ObjectFindWithReferences(
 	any []*conditions.ObjectCondition,
 ) ([]*types.ObjectWithReferences, error) {
-	objects, err := s.ObjectList(any)
+	objects, err := s.ObjectFind(any)
 	if err != nil {
 		return nil, err
 	}

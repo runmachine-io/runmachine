@@ -5,8 +5,8 @@ import (
 
 	"github.com/runmachine-io/runmachine/pkg/errors"
 	"github.com/runmachine-io/runmachine/pkg/metadata/conditions"
-	pb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
 	"github.com/runmachine-io/runmachine/pkg/metadata/types"
+	pb "github.com/runmachine-io/runmachine/proto"
 )
 
 // ObjectDeleteByUuids accepts a payload with one or more UUIDs and deletes the
@@ -25,7 +25,7 @@ func (s *Server) ObjectDeleteByUuids(
 	cond := &conditions.ObjectCondition{
 		UuidsCondition: conditions.UuidIn(req.Uuids),
 	}
-	owrs, err := s.store.ObjectListWithReferences(
+	owrs, err := s.store.ObjectFindWithReferences(
 		[]*conditions.ObjectCondition{cond},
 	)
 	if err != nil {
@@ -191,9 +191,9 @@ func (s *Server) ObjectGetByName(
 	return obj, nil
 }
 
-func (s *Server) ObjectList(
-	req *pb.ObjectListRequest,
-	stream pb.RunmMetadata_ObjectListServer,
+func (s *Server) ObjectFind(
+	req *pb.ObjectFindRequest,
+	stream pb.RunmMetadata_ObjectFindServer,
 ) error {
 	if err := s.checkSession(req.Session); err != nil {
 		return err
@@ -204,7 +204,7 @@ func (s *Server) ObjectList(
 		return err
 	}
 
-	objects, err := s.store.ObjectList(filters)
+	objects, err := s.store.ObjectFind(filters)
 	if err != nil {
 		return err
 	}

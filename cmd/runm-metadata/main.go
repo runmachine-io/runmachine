@@ -10,9 +10,9 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
-	pb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
 	"github.com/runmachine-io/runmachine/pkg/metadata/server"
 	"github.com/runmachine-io/runmachine/pkg/metadata/server/config"
+	pb "github.com/runmachine-io/runmachine/proto"
 
 	"github.com/runmachine-io/runmachine/pkg/logging"
 )

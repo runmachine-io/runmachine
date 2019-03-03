@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/net/context"
 
-	pb "github.com/runmachine-io/runmachine/pkg/api/proto"
+	pb "github.com/runmachine-io/runmachine/proto"
 )
 
 const (

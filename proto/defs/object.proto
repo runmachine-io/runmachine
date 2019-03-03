@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+package runm;
+
+import "filter.proto";
+import "object_type.proto";
+import "property.proto";
+
+// An externally-referenceable object in the runm system. All objects in the
+// system have a type, a partition identifier, an external name and a UUID
+// identifier.
+//
+// The runm-metadata service keeps track of the mapping of external names to
+// UUIDs for all objects it knows about. Therefore, other services in the runm
+// deployment -- such as runm-resource -- only need to store the UUID
+// identifier for various concrete objects it manages.
+//
+// For example, the runm-resource service manages *providers*. The
+// runm-resource database stores provider records, with each record having a
+// uuid field indicating the external record identifier for the provider.
+// However, adminstrators and users probably don't want to refer to a
+// particular compute host with a UUID. Instead, the user prefers to refer to
+// the compute host using a common hostname. The runm-metadata service is
+// responsible for mapping those external names and object types (in this case,
+// the object type would be "runm.provider") to the external UUID identifier.
+message Object {
+    // The UUID of the partition this object is in
+    string partition = 1;
+    // The object type code this object is
+    string object_type = 2;
+    // The external identifier of the project this object is owned by. Can be
+    // empty if the type of object isn't ownable by a project (for instance, a
+    // `runm.provider` isn't ownable by a project, but a `runm.machine` is)
+    string project = 3;
+    // The object's globally-unique identifier
+    string uuid = 4;
+    // The object's human-readable name, unique within the scope of the object
+    // type and partition, and optionally the project.
+    string name = 5;
+    // The collection of key/value properties associated with the object
+    repeated Property properties = 50;
+    // The collection of simple string tags associated with the object
+    repeated string tags = 51;
+}
+
+// Used in matching object records
+message ObjectFilter {
+    UuidsFilter partition_filter = 1;
+    ObjectTypeFilter object_type_filter = 2;
+    UuidFilter uuid_filter = 3;
+    NameFilter name_filter = 4;
+    // The project the object must belong to, if the object type scope of this
+    // object is PROJECT
+    string project = 5;
+    PropertyFilter property_filter = 6;
+}

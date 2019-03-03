@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package runm;
+
+import "filter.proto";
+
+// A partition is a division of the entire global view that runmachine has.
+// Providers are in one and only one partition. Administrators may list
+// inventory and usage across multiple partitions whereas normal project users
+// generally will have results filtered to a specific partition that they are
+// working with or have access to.
+message Partition {
+    string uuid = 1;
+    string name = 2;
+}
+
+// Used in matching partition records
+// TODO(jaypipes): This will go away when partitions are just like any other
+// object in the metadata service and we don't have a special things for them
+message PartitionFindFilter {
+    UuidFilter uuid_filter = 1;
+    NameFilter name_filter = 2;
+}
+
+// Used in matching partitions
+message PartitionFilter {
+    // UUID or human-readable name of the partition
+    SearchFilter primary_filter = 1;
+}
+
+message PartitionCreateResponse {
+    // The newly-created object
+    Partition partition = 1;
+}

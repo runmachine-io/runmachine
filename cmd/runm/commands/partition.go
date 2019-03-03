@@ -3,8 +3,9 @@ package commands
 import (
 	"fmt"
 
-	apipb "github.com/runmachine-io/runmachine/pkg/api/proto"
 	"github.com/spf13/cobra"
+
+	pb "github.com/runmachine-io/runmachine/proto"
 )
 
 var partitionCommand = &cobra.Command{
@@ -18,7 +19,7 @@ func init() {
 	partitionCommand.AddCommand(partitionCreateCommand)
 }
 
-func printPartition(obj *apipb.Partition) {
+func printPartition(obj *pb.Partition) {
 	fmt.Printf("UUID: %s\n", obj.Uuid)
 	fmt.Printf("Name: %s\n", obj.Name)
 }

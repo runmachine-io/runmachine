@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/runmachine-io/runmachine/pkg/errors"
-	pb "github.com/runmachine-io/runmachine/pkg/metadata/proto"
+	pb "github.com/runmachine-io/runmachine/proto"
 )
 
 // ProviderTypeGetByCode returns an ProviderType protobuffer message with the
@@ -36,16 +36,16 @@ func (s *Server) ProviderTypeGetByCode(
 	return obj, nil
 }
 
-// ProviderTypeList streams zero or more ProviderType protobuffer messages back
+// ProviderTypeFind streams zero or more ProviderType protobuffer messages back
 // to the client that match any of the filters specified in the request payload
-func (s *Server) ProviderTypeList(
-	req *pb.ProviderTypeListRequest,
-	stream pb.RunmMetadata_ProviderTypeListServer,
+func (s *Server) ProviderTypeFind(
+	req *pb.ProviderTypeFindRequest,
+	stream pb.RunmMetadata_ProviderTypeFindServer,
 ) error {
 	if err := s.checkSession(req.Session); err != nil {
 		return err
 	}
-	objs, err := s.store.ProviderTypeList(req.Any)
+	objs, err := s.store.ProviderTypeFind(req.Any)
 	if err != nil {
 		return err
 	}

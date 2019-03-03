@@ -4,14 +4,14 @@ import (
 	"context"
 
 	"github.com/runmachine-io/runmachine/pkg/errors"
-	pb "github.com/runmachine-io/runmachine/pkg/resource/proto"
+	pb "github.com/runmachine-io/runmachine/proto"
 )
 
-// ProviderGet looks up a provider by UUID and returns a Provider
+// ProviderGetByUuid looks up a provider by UUID and returns a Provider
 // protobuf message.
-func (s *Server) ProviderGet(
+func (s *Server) ProviderGetByUuid(
 	ctx context.Context,
-	req *pb.ProviderGetRequest,
+	req *pb.ProviderGetByUuidRequest,
 ) (*pb.Provider, error) {
 	if req.Uuid == "" {
 		return nil, ErrUuidRequired
@@ -30,11 +30,11 @@ func (s *Server) ProviderGet(
 	return rec.Provider, nil
 }
 
-// ProviderList streams zero or more Provider objects back to the client that
+// ProviderFind streams zero or more Provider objects back to the client that
 // match a set of optional filters
-func (s *Server) ProviderList(
-	req *pb.ProviderListRequest,
-	stream pb.RunmResource_ProviderListServer,
+func (s *Server) ProviderFind(
+	req *pb.ProviderFindRequest,
+	stream pb.RunmResource_ProviderFindServer,
 ) error {
 	objs, err := s.store.ProvidersGetMatching(req.Any)
 	if err != nil {
@@ -65,9 +65,12 @@ func (s *Server) ProviderCreate(
 	}, nil
 }
 
-func (s *Server) ProviderDelete(
+// ProviderDeleteByUuids deletes any provider from backend storage that matches
+// any supplied UUID, returning a response that indicates the number of
+// providers that were deleted
+func (s *Server) ProviderDeleteByUuids(
 	ctx context.Context,
-	req *pb.ProviderDeleteRequest,
+	req *pb.ProviderDeleteByUuidsRequest,
 ) (*pb.DeleteResponse, error) {
 	if len(req.Uuids) == 0 {
 		return nil, ErrAtLeastOneUuidRequired

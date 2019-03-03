@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package runm;
+
+import "provider.proto";
+import "resource_type.proto";
+
+// An inventory is a record of the capacity of a provider to provide some
+// amount of resources
+message Inventory {
+    Provider provider = 1;
+    ResourceType resource_type = 2;
+    uint64 total = 3;
+    uint64 reserved_for_provider = 4;
+    uint64 min_unit = 5;
+    uint64 max_unit = 6;
+    uint64 step_size = 7;
+    float allocation_ratio = 8;
+}

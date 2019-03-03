@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package runm;
+
+import "resource_type.proto";
+
+// Represents the sum of a particular type of resources that has been consumed
+message Usage {
+    ResourceType resource_type = 1;
+    uint64 used = 2;
+}

@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package runm;
+
+import "wrappers.proto";
+
+// A type of consumer of resources in the system -- e.g. a machine or a
+// persistent volume
+message ConsumerType {
+    string code = 1;
+    StringValue description = 2;
+}
+
+// A consumer is the object that claims and is allocated resources from one or
+// more providers. Consumers are typically machines but may also be abstract
+// concepts such as system processes or application workers that take some
+// amount of resources.
+message Consumer {
+    ConsumerType type = 1;
+    string uuid = 2;
+    string name = 3;
+    string project = 51;
+    string user = 52;
+    uint32 generation = 100;
+}

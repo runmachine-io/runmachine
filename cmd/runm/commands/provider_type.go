@@ -5,7 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	pb "github.com/runmachine-io/runmachine/pkg/api/proto"
+	pb "github.com/runmachine-io/runmachine/proto"
 )
 
 var providerTypeCommand = &cobra.Command{

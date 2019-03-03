@@ -15,3 +15,7 @@ message ObjectDefinition {
     // Collection of access permissions applied to this object's properties
     repeated PropertyPermissions property_permissions = 50;
 }
+
+message ObjectDefinitionSetResponse {
+    ObjectDefinition object_definition = 1;
+}

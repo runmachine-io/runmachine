@@ -8,20 +8,9 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	apipb "github.com/runmachine-io/runmachine/pkg/api/proto"
 	"github.com/runmachine-io/runmachine/pkg/errors"
 	pb "github.com/runmachine-io/runmachine/proto"
 )
-
-// metaSession transforms an API protobuffer Session message into a metadata
-// service protobuffer Session message
-func resSession(sess *apipb.Session) *pb.Session {
-	return &pb.Session{
-		User:      sess.User,
-		Project:   sess.Project,
-		Partition: sess.Partition,
-	}
-}
 
 // TODO(jaypipes): Add retry behaviour
 func (s *Server) resConnect(addr string) (*grpc.ClientConn, error) {
@@ -76,8 +65,8 @@ func (s *Server) resClient() (pb.RunmResourceClient, error) {
 // object may have fields updated on it when creation is successful (such as
 // the provider's generation)
 func (s *Server) providerCreate(
-	sess *apipb.Session,
-	prov *apipb.Provider,
+	sess *pb.Session,
+	prov *pb.Provider,
 ) error {
 	p := &pb.Provider{
 		Uuid: prov.Uuid,
@@ -89,7 +78,7 @@ func (s *Server) providerCreate(
 		},
 	}
 	req := &pb.ProviderCreateRequest{
-		Session:  resSession(sess),
+		Session:  sess,
 		Provider: p,
 	}
 	rc, err := s.resClient()

@@ -88,7 +88,7 @@ WHERE p.uuid = ?`
 // ProviderGetMatching returns provider records matching any of the supplied
 // filters.
 func (s *Store) ProvidersGetMatching(
-	any []*pb.ProviderFilter,
+	any []*pb.ProviderFindFilter,
 ) ([]*ProviderRecord, error) {
 	// TODO(jaypipes): Validate that the slice of supplied ProviderFilters is
 	// valid (for example, that the filter contains at least one UUID,

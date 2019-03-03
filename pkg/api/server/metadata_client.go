@@ -5,21 +5,10 @@ import (
 	"fmt"
 	"io"
 
-	pb "github.com/runmachine-io/runmachine/pkg/api/proto"
 	"github.com/runmachine-io/runmachine/pkg/util"
-	metapb "github.com/runmachine-io/runmachine/proto"
+	pb "github.com/runmachine-io/runmachine/proto"
 	"google.golang.org/grpc"
 )
-
-// metaSession transforms an API protobuffer Session message into a metadata
-// service protobuffer Session message
-func metaSession(sess *pb.Session) *metapb.Session {
-	return &metapb.Session{
-		User:      sess.User,
-		Project:   sess.Project,
-		Partition: sess.Partition,
-	}
-}
 
 // TODO(jaypipes): Add retry behaviour
 func (s *Server) metaConnect(addr string) (*grpc.ClientConn, error) {
@@ -37,7 +26,7 @@ func (s *Server) metaConnect(addr string) (*grpc.ClientConn, error) {
 // service endpoint using the gsr service registry, connect to that endpoint,
 // and if successful, return a constructed gRPC client to the metadata service
 // at that endpoint.
-func (s *Server) metaClient() (metapb.RunmMetadataClient, error) {
+func (s *Server) metaClient() (pb.RunmMetadataClient, error) {
 	if s.metaclient != nil {
 		return s.metaclient, nil
 	}
@@ -64,7 +53,7 @@ func (s *Server) metaClient() (metapb.RunmMetadataClient, error) {
 		s.log.ERR(msg)
 		return nil, fmt.Errorf(msg)
 	}
-	s.metaclient = metapb.NewRunmMetadataClient(conn)
+	s.metaclient = pb.NewRunmMetadataClient(conn)
 	s.log.L2("connected to metadata service at %s", addr)
 	return s.metaclient, nil
 }
@@ -74,14 +63,14 @@ func (s *Server) metaClient() (metapb.RunmMetadataClient, error) {
 func (s *Server) partitionsGetMatchingFilter(
 	sess *pb.Session,
 	filter *pb.SearchFilter,
-) ([]*metapb.Partition, error) {
-	mfil := &metapb.PartitionFilter{}
+) ([]*pb.Partition, error) {
+	mfil := &pb.PartitionFindFilter{}
 	if util.IsUuidLike(filter.Search) {
-		mfil.UuidFilter = &metapb.UuidFilter{
+		mfil.UuidFilter = &pb.UuidFilter{
 			Uuid: filter.Search,
 		}
 	} else {
-		mfil.NameFilter = &metapb.NameFilter{
+		mfil.NameFilter = &pb.NameFilter{
 			Name:      filter.Search,
 			UsePrefix: filter.UsePrefix,
 		}
@@ -90,16 +79,16 @@ func (s *Server) partitionsGetMatchingFilter(
 	if err != nil {
 		return nil, err
 	}
-	req := &metapb.PartitionListRequest{
-		Session: metaSession(sess),
-		Any:     []*metapb.PartitionFilter{mfil},
+	req := &pb.PartitionFindRequest{
+		Session: sess,
+		Any:     []*pb.PartitionFindFilter{mfil},
 	}
-	stream, err := mc.PartitionList(context.Background(), req)
+	stream, err := mc.PartitionFind(context.Background(), req)
 	if err != nil {
 		return nil, err
 	}
 
-	msgs := make([]*metapb.Partition, 0)
+	msgs := make([]*pb.Partition, 0)
 	for {
 		msg, err := stream.Recv()
 		if err == io.EOF {
@@ -131,8 +120,8 @@ func (s *Server) partitionGetByUuid(
 	sess *pb.Session,
 	uuid string,
 ) (*pb.Partition, error) {
-	req := &metapb.PartitionGetByUuidRequest{
-		Session: metaSession(sess),
+	req := &pb.PartitionGetByUuidRequest{
+		Session: sess,
 		Uuid:    uuid,
 	}
 	mc, err := s.metaClient()
@@ -157,8 +146,8 @@ func (s *Server) partitionGetByName(
 	sess *pb.Session,
 	name string,
 ) (*pb.Partition, error) {
-	req := &metapb.PartitionGetByNameRequest{
-		Session: metaSession(sess),
+	req := &pb.PartitionGetByNameRequest{
+		Session: sess,
 		Name:    name,
 	}
 	mc, err := s.metaClient()
@@ -178,14 +167,14 @@ func (s *Server) partitionGetByName(
 }
 
 // partitionCreate takes a new partition definition and returns a
-// metapb.Partition message representing the newly-created partition in the
+// pb.Partition message representing the newly-created partition in the
 // metadata service.
 func (s *Server) partitionCreate(
 	sess *pb.Session,
-	part *metapb.Partition,
-) (*metapb.Partition, error) {
-	req := &metapb.PartitionCreateRequest{
-		Session:   metaSession(sess),
+	part *pb.Partition,
+) (*pb.Partition, error) {
+	req := &pb.PartitionCreateRequest{
+		Session:   sess,
 		Partition: part,
 	}
 	mc, err := s.metaClient()
@@ -206,8 +195,8 @@ func (s *Server) uuidFromName(
 	objType string,
 	name string,
 ) (string, error) {
-	req := &metapb.ObjectGetByNameRequest{
-		Session:        metaSession(sess),
+	req := &pb.ObjectGetByNameRequest{
+		Session:        sess,
 		ObjectTypeCode: objType,
 		Name:           name,
 	}
@@ -227,9 +216,9 @@ func (s *Server) uuidFromName(
 func (s *Server) objectFromUuid(
 	sess *pb.Session,
 	uuid string,
-) (*metapb.Object, error) {
-	req := &metapb.ObjectGetByUuidRequest{
-		Session: metaSession(sess),
+) (*pb.Object, error) {
+	req := &pb.ObjectGetByUuidRequest{
+		Session: sess,
 		Uuid:    uuid,
 	}
 	mc, err := s.metaClient()
@@ -262,8 +251,8 @@ func (s *Server) providerTypeGetByCode(
 	sess *pb.Session,
 	code string,
 ) (*pb.ProviderType, error) {
-	req := &metapb.ProviderTypeGetByCodeRequest{
-		Session: metaSession(sess),
+	req := &pb.ProviderTypeGetByCodeRequest{
+		Session: sess,
 		Code:    code,
 	}
 	mc, err := s.metaClient()
@@ -285,10 +274,10 @@ func (s *Server) providerTypeGetByCode(
 // the metadata service, including any auto-created UUIDs
 func (s *Server) objectCreate(
 	sess *pb.Session,
-	obj *metapb.Object,
+	obj *pb.Object,
 ) error {
-	req := &metapb.ObjectCreateRequest{
-		Session: metaSession(sess),
+	req := &pb.ObjectCreateRequest{
+		Session: sess,
 		Object:  obj,
 	}
 	mc, err := s.metaClient()
@@ -311,8 +300,8 @@ func (s *Server) objectDelete(
 	sess *pb.Session,
 	uuids []string,
 ) error {
-	req := &metapb.ObjectDeleteByUuidsRequest{
-		Session: metaSession(sess),
+	req := &pb.ObjectDeleteByUuidsRequest{
+		Session: sess,
 		Uuids:   uuids,
 	}
 	mc, err := s.metaClient()
@@ -327,25 +316,25 @@ func (s *Server) objectDelete(
 }
 
 // objectsGetMatching takes a slice of pointers to object filters and returns
-// matching metapb.Object messages
+// matching pb.Object messages
 func (s *Server) objectsGetMatching(
 	sess *pb.Session,
-	any []*metapb.ObjectFilter,
-) ([]*metapb.Object, error) {
+	any []*pb.ObjectFilter,
+) ([]*pb.Object, error) {
 	mc, err := s.metaClient()
 	if err != nil {
 		return nil, err
 	}
-	req := &metapb.ObjectListRequest{
-		Session: metaSession(sess),
+	req := &pb.ObjectFindRequest{
+		Session: sess,
 		Any:     any,
 	}
-	stream, err := mc.ObjectList(context.Background(), req)
+	stream, err := mc.ObjectFind(context.Background(), req)
 	if err != nil {
 		return nil, err
 	}
 
-	msgs := make([]*metapb.Object, 0)
+	msgs := make([]*pb.Object, 0)
 	for {
 		msg, err := stream.Recv()
 		if err == io.EOF {

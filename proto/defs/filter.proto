@@ -26,3 +26,11 @@ message CodeFilter {
 message CodesFilter {
     repeated string codes = 1;
 }
+
+// Used in matching records using a simple string with optional prefix
+message SearchFilter {
+    // Search string
+    string search = 1;
+    // Indicates the search should be a prefix expression
+    bool use_prefix = 2;
+}

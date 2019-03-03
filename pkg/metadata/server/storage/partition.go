@@ -93,10 +93,10 @@ func (s *Store) PartitionGetByName(
 	return nil, nil
 }
 
-// PartitionList returns a cursor that may be used to iterate over Partition
+// PartitionFind returns a cursor that may be used to iterate over Partition
 // protobuffer objects stored in etcd
-func (s *Store) PartitionList(
-	any []*pb.PartitionFilter,
+func (s *Store) PartitionFind(
+	any []*pb.PartitionFindFilter,
 ) ([]*pb.Partition, error) {
 	if len(any) == 0 {
 		return s.partitionsGetAll()

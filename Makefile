@@ -1,8 +1,6 @@
 PROTO := proto
 VENDOR := vendor
 VERSION := $(shell git describe --tags --always --dirty)
-API_PROTO_DIR := $(shell pwd)/pkg/api/proto
-API_PROTO_DEFS_DIR := $(shell pwd)/pkg/api/proto/defs
 PROTO_DIR := $(shell pwd)/proto
 PROTO_DEFS_DIR := $(shell pwd)/proto/defs
 GO_BIN_DIR := $(GOPATH)/bin
@@ -25,10 +23,6 @@ generated: $(GO_PROTOC_BIN)
 	@protoc -I $(PROTO_DEFS_DIR) \
 	       $(PROTO_DEFS_DIR)/*.proto \
 	       --go_out=plugins=grpc:$(PROTO_DIR) && echo "ok."
-	@echo -n "Generating protobuffer code from API proto definitions ... "
-	@protoc -I $(API_PROTO_DEFS_DIR) \
-	       $(API_PROTO_DEFS_DIR)/*.proto \
-	       --go_out=plugins=grpc:$(API_PROTO_DIR) && echo "ok."
 
 $(GOMETALINTER):
 	go get -u github.com/alecthomas/gometalinter

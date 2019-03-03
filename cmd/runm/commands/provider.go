@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	pb "github.com/runmachine-io/runmachine/pkg/api/proto"
 	"github.com/spf13/cobra"
+
+	pb "github.com/runmachine-io/runmachine/proto"
 )
 
 const (

@@ -39,9 +39,26 @@ message Provider {
     uint32 generation = 100;
 }
 
-// Used in matching provider records
-message ProviderFilter {
+// Used in matching providers in resource service
+message ProviderFindFilter {
     UuidsFilter uuid_filter = 1;
     UuidsFilter partition_filter = 2;
     CodesFilter provider_type_filter = 3;
+}
+
+// Used in matching providers in API
+message ProviderFilter {
+    // UUID or human-readable name of the provider
+    SearchFilter primary_filter = 1;
+    // UUID or human-readable name of the partition
+    SearchFilter partition_filter = 2;
+    // Type of the provider
+    SearchFilter provider_type_filter = 3;
+    // Filter on property keys, values or both
+    PropertyFilter property_filter = 4;
+}
+
+message ProviderCreateResponse {
+    // The newly-created object
+    Provider provider = 1;
 }

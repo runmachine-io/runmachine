@@ -30,11 +30,11 @@ func (s *Server) ProviderGetByUuid(
 	return rec.Provider, nil
 }
 
-// ProviderList streams zero or more Provider objects back to the client that
+// ProviderFind streams zero or more Provider objects back to the client that
 // match a set of optional filters
-func (s *Server) ProviderList(
-	req *pb.ProviderListRequest,
-	stream pb.RunmResource_ProviderListServer,
+func (s *Server) ProviderFind(
+	req *pb.ProviderFindRequest,
+	stream pb.RunmResource_ProviderFindServer,
 ) error {
 	objs, err := s.store.ProvidersGetMatching(req.Any)
 	if err != nil {

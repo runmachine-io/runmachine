@@ -3,7 +3,7 @@ package commands
 import (
 	"fmt"
 
-	pb "github.com/runmachine-io/runmachine/pkg/api/proto"
+	pb "github.com/runmachine-io/runmachine/proto"
 )
 
 const (

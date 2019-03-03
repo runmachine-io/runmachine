@@ -1,7 +1,8 @@
 syntax = "proto3";
 
-package runmapi;
+package runm;
 
+import "common.proto";
 import "object_definition.proto";
 import "partition.proto";
 import "provider.proto";
@@ -65,10 +66,6 @@ message CreateRequest {
     bytes payload = 3;
 }
 
-message DeleteResponse {
-    uint64 num_deleted = 2;
-}
-
 message PartitionGetRequest {
     Session session = 1;
     PartitionFilter filter = 2;
@@ -78,11 +75,6 @@ message PartitionListRequest {
     Session session = 1;
     SearchOptions options = 2;
     repeated PartitionFilter any = 3;
-}
-
-message PartitionCreateResponse {
-    // The newly-created object
-    Partition partition = 1;
 }
 
 message ProviderTypeGetRequest {
@@ -122,11 +114,6 @@ message ProviderDefinitionSetRequest {
     string provider_type = 5;
 }
 
-message ObjectDefinitionSetResponse {
-    // The newly-set object definition
-    ObjectDefinition object_definition = 1;
-}
-
 message ProviderGetRequest {
     Session session = 1;
     ProviderFilter filter = 2;
@@ -136,11 +123,6 @@ message ProviderListRequest {
     Session session = 1;
     SearchOptions options = 2;
     repeated ProviderFilter any = 3;
-}
-
-message ProviderCreateResponse {
-    // The newly-created object
-    Provider provider = 1;
 }
 
 message ProviderDeleteRequest {

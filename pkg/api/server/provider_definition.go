@@ -6,10 +6,9 @@ import (
 
 	"github.com/ghodss/yaml"
 
-	pb "github.com/runmachine-io/runmachine/pkg/api/proto"
 	"github.com/runmachine-io/runmachine/pkg/api/types"
 	"github.com/runmachine-io/runmachine/pkg/errors"
-	metapb "github.com/runmachine-io/runmachine/proto"
+	pb "github.com/runmachine-io/runmachine/proto"
 )
 
 // ProviderDefinitionGet looks up a provider definition by partition UUID or
@@ -37,7 +36,7 @@ func (s *Server) ProviderDefinitionGet(
 	}
 
 	var err error
-	var odef *metapb.ObjectDefinition
+	var odef *pb.ObjectDefinition
 	if partUuid != "" {
 		if ptCode != "" {
 			odef, err = s.providerDefinitionGetByPartitionAndType(
@@ -245,27 +244,27 @@ func (s *Server) ProviderDefinitionSet(
 
 	// copy API property permissions to metadata property permissions
 	metaPropPerms := make(
-		[]*metapb.PropertyPermissions,
+		[]*pb.PropertyPermissions,
 		len(odef.PropertyPermissions),
 	)
 	for x, apiPropPerms := range odef.PropertyPermissions {
 		metaPropKeyPerms := make(
-			[]*metapb.PropertyPermission, len(apiPropPerms.Permissions),
+			[]*pb.PropertyPermission, len(apiPropPerms.Permissions),
 		)
 		for y, apiPropKeyPerm := range apiPropPerms.Permissions {
-			metaPropKeyPerms[y] = &metapb.PropertyPermission{
+			metaPropKeyPerms[y] = &pb.PropertyPermission{
 				Project:    apiPropKeyPerm.Project,
 				Role:       apiPropKeyPerm.Role,
 				Permission: apiPropKeyPerm.Permission,
 			}
 		}
-		metaPropPerms[x] = &metapb.PropertyPermissions{
+		metaPropPerms[x] = &pb.PropertyPermissions{
 			Key:         apiPropPerms.Key,
 			Permissions: metaPropKeyPerms,
 		}
 	}
 
-	metadef := &metapb.ObjectDefinition{
+	metadef := &pb.ObjectDefinition{
 		Schema:              odef.Schema,
 		PropertyPermissions: metaPropPerms,
 	}
@@ -292,9 +291,9 @@ func (s *Server) ProviderDefinitionSet(
 // If no such object definition could be found, returns (nil, ErrNotFound)
 func (s *Server) providerDefinitionGetGlobalDefault(
 	sess *pb.Session,
-) (*metapb.ObjectDefinition, error) {
-	req := &metapb.ProviderDefinitionGetGlobalDefaultRequest{
-		Session: metaSession(sess),
+) (*pb.ObjectDefinition, error) {
+	req := &pb.ProviderDefinitionGetGlobalDefaultRequest{
+		Session: sess,
 	}
 	mc, err := s.metaClient()
 	if err != nil {
@@ -316,9 +315,9 @@ func (s *Server) providerDefinitionGetGlobalDefault(
 func (s *Server) providerDefinitionGetByPartition(
 	sess *pb.Session,
 	partUuid string,
-) (*metapb.ObjectDefinition, error) {
-	req := &metapb.ProviderDefinitionGetByPartitionRequest{
-		Session:       metaSession(sess),
+) (*pb.ObjectDefinition, error) {
+	req := &pb.ProviderDefinitionGetByPartitionRequest{
+		Session:       sess,
 		PartitionUuid: partUuid,
 	}
 	mc, err := s.metaClient()
@@ -341,9 +340,9 @@ func (s *Server) providerDefinitionGetByPartition(
 func (s *Server) providerDefinitionGetByType(
 	sess *pb.Session,
 	provTypeCode string,
-) (*metapb.ObjectDefinition, error) {
-	req := &metapb.ProviderDefinitionGetByTypeRequest{
-		Session:          metaSession(sess),
+) (*pb.ObjectDefinition, error) {
+	req := &pb.ProviderDefinitionGetByTypeRequest{
+		Session:          sess,
 		ProviderTypeCode: provTypeCode,
 	}
 	mc, err := s.metaClient()
@@ -368,9 +367,9 @@ func (s *Server) providerDefinitionGetByPartitionAndType(
 	sess *pb.Session,
 	partUuid string,
 	provTypeCode string,
-) (*metapb.ObjectDefinition, error) {
-	req := &metapb.ProviderDefinitionGetByPartitionAndTypeRequest{
-		Session:          metaSession(sess),
+) (*pb.ObjectDefinition, error) {
+	req := &pb.ProviderDefinitionGetByPartitionAndTypeRequest{
+		Session:          sess,
 		PartitionUuid:    partUuid,
 		ProviderTypeCode: provTypeCode,
 	}
@@ -404,7 +403,7 @@ func (s *Server) providerDefinitionGetMostExplicit(
 	sess *pb.Session,
 	partUuid string,
 	provTypeCode string,
-) (*metapb.ObjectDefinition, error) {
+) (*pb.ObjectDefinition, error) {
 	if partUuid == "" {
 		return nil, fmt.Errorf("partUuid parameter must not be empty")
 	}
@@ -418,8 +417,8 @@ func (s *Server) providerDefinitionGetMostExplicit(
 
 	// OK, first look to see if there's an override for the partition +
 	// provider type
-	pptreq := &metapb.ProviderDefinitionGetByPartitionAndTypeRequest{
-		Session:          metaSession(sess),
+	pptreq := &pb.ProviderDefinitionGetByPartitionAndTypeRequest{
+		Session:          sess,
 		PartitionUuid:    partUuid,
 		ProviderTypeCode: provTypeCode,
 	}
@@ -437,8 +436,8 @@ func (s *Server) providerDefinitionGetMostExplicit(
 	// We fell through here if there was no partition + provider type override.
 	// Next check to see if there's a partition (with no provider type)
 	// override.
-	preq := &metapb.ProviderDefinitionGetByPartitionRequest{
-		Session:       metaSession(sess),
+	preq := &pb.ProviderDefinitionGetByPartitionRequest{
+		Session:       sess,
 		PartitionUuid: partUuid,
 	}
 	def, err = mc.ProviderDefinitionGetByPartition(context.Background(), preq)
@@ -453,8 +452,8 @@ func (s *Server) providerDefinitionGetMostExplicit(
 	// We fell through here if there was no partition + provider type override
 	// and no partition-only override. Next check to see if there's a provider
 	// type (no partition) override.
-	ptreq := &metapb.ProviderDefinitionGetByTypeRequest{
-		Session:          metaSession(sess),
+	ptreq := &pb.ProviderDefinitionGetByTypeRequest{
+		Session:          sess,
 		ProviderTypeCode: provTypeCode,
 	}
 	def, err = mc.ProviderDefinitionGetByType(context.Background(), ptreq)
@@ -474,12 +473,12 @@ func (s *Server) providerDefinitionGetMostExplicit(
 // service, returning the saved object definition
 func (s *Server) providerDefinitionSet(
 	sess *pb.Session,
-	def *metapb.ObjectDefinition,
+	def *pb.ObjectDefinition,
 	partUuid string,
 	provTypeCode string,
-) (*metapb.ObjectDefinition, error) {
-	req := &metapb.ProviderDefinitionSetRequest{
-		Session:          metaSession(sess),
+) (*pb.ObjectDefinition, error) {
+	req := &pb.ProviderObjectDefinitionSetRequest{
+		Session:          sess,
 		ObjectDefinition: def,
 		PartitionUuid:    partUuid,
 		ProviderTypeCode: provTypeCode,

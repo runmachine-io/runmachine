@@ -25,8 +25,8 @@ service RunmMetadata {
     // Look up partition by name
     rpc partition_get_by_name(PartitionGetByNameRequest) returns (Partition) {}
 
-    // Returns information about multiple partitions
-    rpc partition_list(PartitionListRequest) returns (
+    // Find all partitions matching any supplied condition
+    rpc partition_find(PartitionFindRequest) returns (
         stream Partition) {}
 
     // Create a new partition
@@ -37,8 +37,8 @@ service RunmMetadata {
     rpc object_type_get_by_code(ObjectTypeGetByCodeRequest) returns (
         ObjectType) {}
 
-    // Returns information about multiple object types
-    rpc object_type_list(ObjectTypeListRequest) returns (
+    // Find all object types matching any supplied condition
+    rpc object_type_find(ObjectTypeFindRequest) returns (
         stream ObjectType) {}
 
     // Look up object by UUID
@@ -55,16 +55,16 @@ service RunmMetadata {
     rpc object_create(ObjectCreateRequest) returns (
         ObjectCreateResponse) {}
 
-    // Returns information about multiple objects
-    rpc object_list(ObjectListRequest) returns (
+    // Find all objects matching any supplied condition
+    rpc object_find(ObjectFindRequest) returns (
         stream Object) {}
 
     // Look up provider type by code
     rpc provider_type_get_by_code(ProviderTypeGetByCodeRequest) returns (
         ProviderType) {}
 
-    // Returns information about multiple provider types
-    rpc provider_type_list(ProviderTypeListRequest) returns (
+    // Find all provider types matching any supplied condition
+    rpc provider_type_find(ProviderTypeFindRequest) returns (
         stream ProviderType) {}
 
     // Look up the global provider definition default
@@ -88,7 +88,7 @@ service RunmMetadata {
         ObjectDefinition) {}
 
     // Set information about a specific provider definition
-    rpc provider_definition_set(ProviderDefinitionSetRequest) returns (
+    rpc provider_definition_set(ProviderObjectDefinitionSetRequest) returns (
         ObjectDefinitionSetResponse) {}
 }
 
@@ -102,10 +102,10 @@ message PartitionGetByNameRequest {
     string name = 2;
 }
 
-message PartitionListRequest {
+message PartitionFindRequest {
     Session session = 1;
     SearchOptions options = 2;
-    repeated PartitionFilter any = 3;
+    repeated PartitionFindFilter any = 3;
 }
 
 message PartitionCreateRequest {
@@ -113,17 +113,12 @@ message PartitionCreateRequest {
     Partition partition = 2;
 }
 
-message PartitionCreateResponse {
-    // The newly-created partition
-    Partition partition = 1;
-}
-
 message ObjectTypeGetByCodeRequest {
     Session session = 1;
     string code = 2;
 }
 
-message ObjectTypeListRequest {
+message ObjectTypeFindRequest {
     Session session = 1;
     SearchOptions options = 2;
     // A set of filter expressions that are OR'd together when determining
@@ -156,7 +151,7 @@ message ObjectCreateResponse {
     Object object = 1;
 }
 
-message ObjectListRequest {
+message ObjectFindRequest {
     Session session = 1;
     SearchOptions options = 2;
     // A set of filter expressions that are OR'd together when determining
@@ -174,12 +169,12 @@ message ProviderTypeGetByCodeRequest {
     string code = 2;
 }
 
-message ProviderTypeListRequest {
+message ProviderTypeFindRequest {
     Session session = 1;
     SearchOptions options = 2;
     // A set of filter expressions that are OR'd together when determining
     // matches
-    repeated ProviderTypeFilter any = 3;
+    repeated ProviderTypeFindFilter any = 3;
 }
 
 message ProviderDefinitionGetGlobalDefaultRequest {
@@ -206,7 +201,7 @@ message ProviderDefinitionGetByPartitionAndTypeRequest {
     string provider_type_code = 3;
 }
 
-message ProviderDefinitionSetRequest {
+message ProviderObjectDefinitionSetRequest {
     Session session = 1;
     // The UUID of the partition the object definition applies to, or empty
     // string to apply the object definition as the global default for
@@ -218,8 +213,4 @@ message ProviderDefinitionSetRequest {
     string provider_type_code = 3;
     // The newly-set object definition
     ObjectDefinition object_definition = 50;
-}
-
-message ObjectDefinitionSetResponse {
-    ObjectDefinition object_definition = 1;
 }

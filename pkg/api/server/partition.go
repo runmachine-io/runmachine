@@ -8,9 +8,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	pb "github.com/runmachine-io/runmachine/pkg/api/proto"
 	"github.com/runmachine-io/runmachine/pkg/api/types"
-	metapb "github.com/runmachine-io/runmachine/proto"
+	pb "github.com/runmachine-io/runmachine/proto"
 )
 
 // PartitionGet looks up a partition by UUID or name and returns a Partition
@@ -31,15 +30,15 @@ func (s *Server) PartitionList(
 	req *pb.PartitionListRequest,
 	stream pb.RunmAPI_PartitionListServer,
 ) error {
-	metareq := &metapb.PartitionListRequest{
-		Session: metaSession(req.Session),
+	metareq := &pb.PartitionFindRequest{
+		Session: req.Session,
 		// TODO(jaypipes): Any:     buildPartitionFilters(),
 	}
 	mc, err := s.metaClient()
 	if err != nil {
 		return err
 	}
-	metastream, err := mc.PartitionList(context.Background(), metareq)
+	metastream, err := mc.PartitionFind(context.Background(), metareq)
 	if err != nil {
 		return err
 	}
@@ -96,7 +95,7 @@ func (s *Server) PartitionCreate(
 	}
 
 	// Save the partition in the metadata service
-	partObj := &metapb.Partition{
+	partObj := &pb.Partition{
 		Uuid: input.Uuid,
 		Name: input.Name,
 	}

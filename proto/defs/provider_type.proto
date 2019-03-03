@@ -11,6 +11,14 @@ message ProviderType {
 }
 
 // Used in matching provider type records
-message ProviderTypeFilter {
+message ProviderTypeFindFilter {
     CodeFilter code_filter = 1;
+}
+
+// Used in matching provider type records
+message ProviderTypeFilter {
+    // Identifier of the provider type
+    string search = 1;
+    // Indicates the search should be a prefix expression
+    bool use_prefix = 2;
 }

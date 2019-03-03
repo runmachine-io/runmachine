@@ -14,8 +14,8 @@ service RunmResource {
     // Look up a provider by UUID
     rpc provider_get_by_uuid(ProviderGetByUuidRequest) returns (Provider) {}
 
-    // Returns information about multiple providers
-    rpc provider_list(ProviderListRequest) returns (stream Provider) {}
+    // Find all providers matching any supplied condition
+    rpc provider_find(ProviderFindRequest) returns (stream Provider) {}
 
     // Create a new provider
     rpc provider_create(ProviderCreateRequest) returns (
@@ -31,20 +31,15 @@ message ProviderGetByUuidRequest {
     string uuid = 2;
 }
 
-message ProviderListRequest {
+message ProviderFindRequest {
     Session session = 1;
     SearchOptions options = 2;
-    repeated ProviderFilter any = 3;
+    repeated ProviderFindFilter any = 3;
 }
 
 message ProviderCreateRequest {
     Session session = 1;
     Provider provider = 2;
-}
-
-message ProviderCreateResponse {
-    // The newly-created object
-    Provider provider = 1;
 }
 
 message ProviderDeleteByUuidsRequest {

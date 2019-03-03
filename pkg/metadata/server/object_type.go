@@ -36,16 +36,16 @@ func (s *Server) ObjectTypeGetByCode(
 	return obj, nil
 }
 
-// ObjectTypeList streams zero or more ObjectType protobuffer messages back to
+// ObjectTypeFind streams zero or more ObjectType protobuffer messages back to
 // the client that match any of the filters specified in the request payload
-func (s *Server) ObjectTypeList(
-	req *pb.ObjectTypeListRequest,
-	stream pb.RunmMetadata_ObjectTypeListServer,
+func (s *Server) ObjectTypeFind(
+	req *pb.ObjectTypeFindRequest,
+	stream pb.RunmMetadata_ObjectTypeFindServer,
 ) error {
 	if err := s.checkSession(req.Session); err != nil {
 		return err
 	}
-	objs, err := s.store.ObjectTypeList(req.Any)
+	objs, err := s.store.ObjectTypeFind(req.Any)
 	if err != nil {
 		return err
 	}

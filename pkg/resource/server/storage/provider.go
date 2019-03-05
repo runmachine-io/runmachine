@@ -67,13 +67,15 @@ JOIN partitions AS part
 WHERE p.uuid = ?`
 	rec := &ProviderRecord{
 		Provider: &pb.Provider{
-			Uuid: uuid,
+			Uuid:         uuid,
+			Partition:    &pb.Partition{},
+			ProviderType: &pb.ProviderType{},
 		},
 	}
 	err := s.DB().QueryRow(qs, uuid).Scan(
 		&rec.ID,
-		&rec.Provider.Partition,
-		&rec.Provider.ProviderType,
+		&rec.Provider.Partition.Uuid,
+		&rec.Provider.ProviderType.Code,
 		&rec.Provider.Generation,
 	)
 	switch {

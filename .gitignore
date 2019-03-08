@@ -1,4 +1,4 @@
-tests/poc/venv
+build/bin/
 
 # Don't store vendored code in tree
 vendor/

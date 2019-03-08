@@ -1,6 +1,7 @@
 PROTO := proto
 VENDOR := vendor
 VERSION := $(shell git describe --tags --always --dirty)
+BUILD_DIR := $(shell pwd)/build
 PROTO_DIR := $(shell pwd)/proto
 PROTO_DEFS_DIR := $(shell pwd)/proto/defs
 GO_BIN_DIR := $(GOPATH)/bin
@@ -70,9 +71,9 @@ build-api: build-base
 	@echo "building runm-api Docker image ..."
 	docker build -q --label built-by=runmachine.io -t runm/api:$(VERSION) . -f cmd/runm-api/Dockerfile
 
-build-cli: build-base
-	@echo "building runm CLI Docker image ..."
-	docker build -q --label built-by=runmachine.io -t runm/runm:$(VERSION) . -f cmd/runm/Dockerfile
+build-cli:
+	@echo "building runm CLI Docker image to $(BUILD_BIN_DIR)/runm ..."
+	bash $(BUILD_DIR)/build_runm.sh
 
 build: build-base build-metadata build-resource build-api build-cli
 

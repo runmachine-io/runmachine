@@ -115,6 +115,16 @@ func (s *Server) providerGetByUuid(
 	sess *pb.Session,
 	uuid string,
 ) (*pb.Provider, error) {
+	// Grab the object from the metadata service
+	obj, err := s.objectFromUuid(sess, uuid)
+	if err != nil {
+		if err == errors.ErrNotFound {
+			return nil, ErrUnknown
+		} else {
+			s.log.ERR("failed getting object with UUID %s: %s", uuid, err)
+			return nil, ErrUnknown
+		}
+	}
 	// Grab the provider record from the resource service
 	req := &pb.ProviderGetByUuidRequest{
 		Session: sess,
@@ -124,10 +134,16 @@ func (s *Server) providerGetByUuid(
 	if err != nil {
 		return nil, err
 	}
-	prec, err := rc.ProviderGetByUuid(context.Background(), req)
+	p, err := rc.ProviderGetByUuid(context.Background(), req)
 	if err != nil {
-		if s, ok := status.FromError(err); ok {
-			if s.Code() == codes.NotFound {
+		if se, ok := status.FromError(err); ok {
+			if se.Code() == codes.NotFound {
+				s.log.ERR(
+					"DATA CORRUPTION! failed getting provider with "+
+						"UUID %s: object with UUID %s exists in metadata "+
+						"service but ProviderGetByUuid returned no provider",
+					uuid, err,
+				)
 				return nil, ErrNotFound
 			}
 		}
@@ -137,56 +153,22 @@ func (s *Server) providerGetByUuid(
 		)
 		return nil, ErrUnknown
 	}
-	// Grab the object from the metadata service
-	obj, err := s.objectFromUuid(sess, uuid)
-	if err != nil {
-		if err == errors.ErrNotFound {
-			s.log.ERR(
-				"DATA CORRUPTION! failed getting object with "+
-					"UUID %s: object with UUID %s does not exist in metadata "+
-					"service but providerGetByUuid returned a provider",
-				uuid, err,
-			)
-			return nil, ErrUnknown
-		} else {
-			s.log.ERR("failed getting object with UUID %s: %s", uuid, err)
-			return nil, ErrUnknown
-		}
-	}
-	return apiProviderFromComponents(prec, obj), nil
+	providerMergeObject(p, obj)
+	return p, nil
 }
 
-// apiProviderFromComponents takes a resource service Provider and a metadata
+// providerMergeObject takes a resource service Provider and a metadata
 // Object and merges the object information into the API Provider's generic
 // object fields (like name, tags, properties, etc), returning an API provider
 // object from the combined data
-// TODO(jaypipes): get rid of this when Issue #111 is completed
-func apiProviderFromComponents(
+func providerMergeObject(
 	p *pb.Provider,
 	obj *pb.Object,
-) *pb.Provider {
-	// Copy object properties to the returned Provider result
-	props := make([]*pb.Property, len(obj.Properties))
-	for x, oProp := range obj.Properties {
-		props[x] = &pb.Property{
-			Key:   oProp.Key,
-			Value: oProp.Value,
-		}
-	}
-
-	return &pb.Provider{
-		Partition: &pb.Partition{
-			Uuid: p.Partition.Uuid,
-		},
-		ProviderType: &pb.ProviderType{
-			Code: p.ProviderType.Code,
-		},
-		Name:       obj.Name,
-		Uuid:       obj.Uuid,
-		Generation: p.Generation,
-		Properties: props,
-		Tags:       obj.Tags,
-	}
+) {
+	p.Name = obj.Name
+	p.Uuid = obj.Uuid
+	p.Properties = obj.Properties
+	p.Tags = obj.Tags
 }
 
 // ProviderList streams zero or more Provider objects back to the client that
@@ -284,48 +266,7 @@ func (s *Server) providersGetMatching(
 				partUuidsReqMap[x] = partUuids
 			}
 			if filter.PropertyFilter != nil {
-				propFilter := filter.PropertyFilter
-				// TODO(jaypipes): Once Issue #111 is done, this copying won't
-				// be necessary
-				metaPropFilter := &pb.PropertyFilter{
-					RequireKeys: propFilter.RequireKeys,
-					AnyKeys:     propFilter.AnyKeys,
-					ForbidKeys:  propFilter.ForbidKeys,
-				}
-				if propFilter.RequireItems != nil {
-					numItems := len(propFilter.RequireItems)
-					items := make([]*pb.Property, numItems)
-					for x, prop := range propFilter.RequireItems {
-						items[x] = &pb.Property{
-							Key:   prop.Key,
-							Value: prop.Value,
-						}
-					}
-					metaPropFilter.RequireItems = items
-				}
-				if propFilter.AnyItems != nil {
-					numItems := len(propFilter.AnyItems)
-					items := make([]*pb.Property, numItems)
-					for x, prop := range propFilter.AnyItems {
-						items[x] = &pb.Property{
-							Key:   prop.Key,
-							Value: prop.Value,
-						}
-					}
-					metaPropFilter.AnyItems = items
-				}
-				if propFilter.ForbidItems != nil {
-					numItems := len(propFilter.ForbidItems)
-					items := make([]*pb.Property, numItems)
-					for x, prop := range propFilter.ForbidItems {
-						items[x] = &pb.Property{
-							Key:   prop.Key,
-							Value: prop.Value,
-						}
-					}
-					metaPropFilter.ForbidItems = items
-				}
-				mfil.PropertyFilter = metaPropFilter
+				mfil.PropertyFilter = filter.PropertyFilter
 				primaryFiltered = true
 			}
 			mfils = append(mfils, mfil)
@@ -425,24 +366,24 @@ func (s *Server) providersGetMatching(
 	}
 
 	for {
-		msg, err := stream.Recv()
+		p, err := stream.Recv()
 		if err == io.EOF {
 			break
 		}
 		if err != nil {
 			return nil, err
 		}
-		obj, exists := objMap[msg.Uuid]
+		obj, exists := objMap[p.Uuid]
 		if !exists {
 			s.log.ERR(
 				"DATA CORRUPTION! provider with UUID %s returned from "+
 					"resource service but no matching object exists in "+
 					"metadata service!",
-				msg.Uuid,
+				p.Uuid,
 			)
 			continue
 		}
-		p := apiProviderFromComponents(msg, obj)
+		providerMergeObject(p, obj)
 		res = append(res, p)
 	}
 	return res, nil

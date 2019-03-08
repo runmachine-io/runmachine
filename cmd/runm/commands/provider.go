@@ -145,8 +145,8 @@ func buildProviderFilters() []*pb.ProviderFilter {
 }
 
 func printProvider(obj *pb.Provider) {
-	fmt.Printf("Partition:     %s\n", obj.Partition)
-	fmt.Printf("Provider Type: %s\n", obj.ProviderType)
+	fmt.Printf("Partition:     %s\n", obj.Partition.Uuid)
+	fmt.Printf("Provider Type: %s\n", obj.ProviderType.Code)
 	fmt.Printf("UUID:          %s\n", obj.Uuid)
 	fmt.Printf("Name:          %s\n", obj.Name)
 	fmt.Printf("Generation:    %d\n", obj.Generation)

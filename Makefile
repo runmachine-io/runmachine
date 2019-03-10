@@ -55,21 +55,21 @@ cover:
 		tail -n +2 coverage.out >> coverage-all.out;)
 	go tool cover -html=coverage-all.out -o=coverage-all.html
 
-build-base: test
+build-base:
 	@echo "building base Docker image ..."
-	docker build -q --label built-by=runmachine.io -t runm/base . -f cmd/Dockerfile
+	docker build -q --label built-by=runmachine.io -t runmachine.io/runmachine/base . -f cmd/Dockerfile
 
 build-metadata: build-base
 	@echo "building runm-metadata Docker image ..."
-	docker build -q --label built-by=runmachine.io -t runm/metadata:$(VERSION) . -f cmd/runm-metadata/Dockerfile
+	docker build -q --label built-by=runmachine.io -t runmachine.io/runmachine/metadata:$(VERSION) . -f cmd/runm-metadata/Dockerfile
 
 build-resource: build-base
 	@echo "building runm-resource Docker image ..."
-	docker build -q --label built-by=runmachine.io -t runm/resource:$(VERSION) . -f cmd/runm-resource/Dockerfile
+	docker build -q --label built-by=runmachine.io -t runmachine.io/runmachine/resource:$(VERSION) . -f cmd/runm-resource/Dockerfile
 
 build-api: build-base
 	@echo "building runm-api Docker image ..."
-	docker build -q --label built-by=runmachine.io -t runm/api:$(VERSION) . -f cmd/runm-api/Dockerfile
+	docker build -q --label built-by=runmachine.io -t runmachine.io/runmachine/api:$(VERSION) . -f cmd/runm-api/Dockerfile
 
 build-cli:
 	@echo "building runm CLI Docker image to $(BUILD_BIN_DIR)/runm ..."

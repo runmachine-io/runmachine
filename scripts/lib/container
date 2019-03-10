@@ -55,3 +55,94 @@ container_is_running() {
     fi
     return 1
 }
+
+# Returns 0 if the container with the given name exists, else 1
+#
+# Note that a stopped container still exists on the system. So, while
+# container_is_running returns 1 for a stopped container, container_exists will
+# return 0 for a stopped container.
+#
+# Params:
+#
+#   $1: (required) name for the container
+#
+# Usage:
+#
+#   if container_is_running "etcd-example"; then
+#     echo "etcd-example container is running."
+#   else
+#     echo "etcd-example container is not running."
+#   fi
+container_exists() {
+    local __container_name="$1"
+
+    # Obviously all containers that are running also exist...
+    if container_is_running "$__container_name"; then
+        return 0
+    fi
+
+    __status=$(docker inspect --format='{{.State.Status}}' "$__container_name" 2>/dev/null )
+    if [ $? -eq 1 ]; then
+        return 1
+    fi
+    if [ $__status == "created" ]; then
+        return 0
+    fi
+    return 1
+}
+
+# Gracefully stops the container with the given name but does not destroy the
+# container.
+#
+# Params:
+#
+#   $1: (required) name for the container
+#
+# Usage:
+#
+#   container_stop "etcd-example"
+container_stop() {
+    local __container_name="$1"
+
+    if container_is_running "$__container_name"; then
+        docker stop "$__container_name" --time 2 1>/dev/null
+    fi
+}
+
+# Destroys the container with the given name.
+#
+# If the container with the given name is active, this function first attempts
+# to gracefully stop the container.
+#
+# Params:
+#
+#   $1: (required) name for the container
+#
+# Usage:
+#
+#   container_destroy "etcd-example"
+container_destroy() {
+    local __container_name="$1"
+
+    container_stop "$__container_name"
+    if container_exists "$__container_name"; then
+        docker rm "$__container_name"  1>/dev/null
+    fi
+}
+
+# Returns 0 if an image with the given name:tag exists, else 1
+#
+# Params:
+#
+#   $1: (required) name:tag for the image
+#
+# Usage:
+#
+#   if container_image_exists "runmachine.io/runmachine/meta:$VERSION"; then
+#     echo "runmachine.io/runmachine/meta:$VERSION image exists."
+#   fi
+container_image_exists() {
+    local __image_name_tag="$1"
+
+    docker image inspect "$__image_name_tag" >/dev/null 2>&1
+}

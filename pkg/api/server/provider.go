@@ -31,6 +31,9 @@ func (s *Server) ProviderDelete(
 	if err != nil {
 		return nil, err
 	}
+	if len(provs) == 0 {
+		return nil, ErrNoMatchingRecords
+	}
 
 	uuids := make([]string, len(provs))
 	for x, prov := range provs {

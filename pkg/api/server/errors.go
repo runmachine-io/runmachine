@@ -18,6 +18,10 @@ var (
 		codes.NotFound,
 		"object could not be found.",
 	)
+	ErrNoMatchingRecords = status.Errorf(
+		codes.NotFound,
+		"no matching records could be found.",
+	)
 	ErrSessionUserRequired = status.Errorf(
 		codes.FailedPrecondition,
 		"user is required in session.",

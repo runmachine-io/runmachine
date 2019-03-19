@@ -40,7 +40,7 @@ mysql_start_container() {
         --name $__container_name \
         -e MYSQL_ALLOW_EMPTY_PASSWORD=1 \
         -e MYSQL_ROOT_HOST="%" \
-        mysql/mysql-server:latest \
+        mysql/mysql-server:5.7 \
         --bind-address ${__node_addr} >/dev/null 2>&1
 
     # We need to wait until we see "/usr/sbin/mysqld: ready for connections" in

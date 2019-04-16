@@ -1,4 +1,4 @@
-package storage
+package etcdutil
 
 import (
 	"context"
@@ -10,20 +10,19 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/runmachine-io/runmachine/pkg/logging"
-	"github.com/runmachine-io/runmachine/pkg/metadata/server/config"
 )
 
-// Returns an etcd3 client using an exponential backoff and reconnect strategy.
-// This is to be tolerant of the etcd infrastructure VMs/containers starting
-// *after* the service that requires it.
-func connect(
+// Connect returns an etcd3 client using an exponential backoff and reconnect
+// strategy.  This is to be tolerant of the etcd infrastructure VMs/containers
+// starting *after* the service that requires it.
+func Connect(
 	log *logging.Logs,
-	cfg *config.Config,
+	cfg *Config,
 ) (*etcd.Client, error) {
 	var err error
 	var client *etcd.Client
 	fatal := false
-	connectTimeout := cfg.EtcdConnectTimeoutSeconds
+	connectTimeout := cfg.ConnectTimeoutSeconds
 	etcdCfg := cfg.EtcdConfig()
 	etcdEps := etcdCfg.Endpoints
 

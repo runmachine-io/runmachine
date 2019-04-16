@@ -9,10 +9,10 @@ import (
 	"strings"
 	"time"
 
-	etcd "github.com/coreos/etcd/clientv3"
 	flag "github.com/ogier/pflag"
 
 	"github.com/jaypipes/envutil"
+	"github.com/runmachine-io/runmachine/pkg/etcdutil"
 	"github.com/runmachine-io/runmachine/pkg/util"
 )
 
@@ -22,7 +22,7 @@ const (
 	defaultBindPort                  = 10002
 	defaultServiceName               = "runmachine-metadata"
 	defaultEtcdEndpoints             = "http://127.0.0.1:2379"
-	defaultEtcdKeyPrefix             = "runm-metadata/"
+	defaultEtcdKeyPrefix             = "runm/"
 	defaultEtcdConnectTimeoutSeconds = 300
 	defaultEtcdRequestTimeoutSeconds = 1
 	defaultEtcdDialTimeoutSeconds    = 1
@@ -35,20 +35,16 @@ var (
 )
 
 type Config struct {
-	UseTLS                    bool
-	CertPath                  string
-	KeyPath                   string
-	BindHost                  string
-	BindPort                  int
-	ServiceName               string
-	EtcdEndpoints             []string
-	EtcdKeyPrefix             string
-	EtcdConnectTimeoutSeconds time.Duration
-	EtcdRequestTimeoutSeconds time.Duration
-	EtcdDialTimeoutSeconds    time.Duration
+	UseTLS      bool
+	CertPath    string
+	KeyPath     string
+	BindHost    string
+	BindPort    int
+	ServiceName string
 	// The value of a one-time-use token that can be used to bootstrap a
 	// runmachine deployment with a new partition by an unauthenticated user
 	BootstrapToken string
+	Etcd           *etcdutil.Config
 }
 
 func ConfigFromOpts() *Config {
@@ -94,46 +90,45 @@ func ConfigFromOpts() *Config {
 		),
 		"Name to use when registering with the service registry",
 	)
-
 	optEtcdEndpointsStr := flag.String(
-		"storage-etcd-endpoints",
+		"etcd-endpoints",
 		envutil.WithDefault(
-			"RUNM_METADATA_STORAGE_ETCD_ENDPOINTS", defaultEtcdEndpoints,
+			"RUNM_ETCD_ENDPOINTS", defaultEtcdEndpoints,
 		),
-		"Comma-delimited list of etcd3 endpoints to use for metadata storage",
+		"Comma-delimited list of etcd3 endpoints to use",
 	)
-	endpoints := etcdNormalizeEndpoints(*optEtcdEndpointsStr)
-	optKeyPrefix := flag.String(
-		"storage-etcd-key-prefix",
+	etcdEndpoints := etcdutil.NormalizeEndpoints(*optEtcdEndpointsStr)
+	optEtcdKeyPrefix := flag.String(
+		"etcd-key-prefix",
 		strings.TrimRight(
 			envutil.WithDefault(
-				"RUNM_METADATA_STORAGE_ETCD_KEY_PREFIX",
+				"RUNM_ETCD_KEY_PREFIX",
 				defaultEtcdKeyPrefix,
 			),
 			"/",
 		)+"/",
-		"Prefix to use to segregate all runm-metadata inside etcd3",
+		"Prefix to use to segregate all runm data inside etcd3",
 	)
-	optConnectTimeout := flag.Int(
-		"storage-etcd-connect-timeout-seconds",
+	optEtcdConnectTimeout := flag.Int(
+		"etcd-connect-timeout-seconds",
 		envutil.WithDefaultInt(
-			"RUNM_METADATA_STORAGE_ETCD_CONNECT_TIMEOUT_SECONDS",
+			"RUNM_ETCD_CONNECT_TIMEOUT_SECONDS",
 			defaultEtcdConnectTimeoutSeconds,
 		),
 		"Total number of seconds to attempt connection to etcd",
 	)
-	optRequestTimeout := flag.Int(
-		"storage-etcd-request-timeout-seconds",
+	optEtcdRequestTimeout := flag.Int(
+		"etcd-request-timeout-seconds",
 		envutil.WithDefaultInt(
-			"RUNM_METADATA_STORAGE_ETCD_REQUEST_TIMEOUT_SECONDS",
+			"RUNM_ETCD_REQUEST_TIMEOUT_SECONDS",
 			defaultEtcdRequestTimeoutSeconds,
 		),
 		"Number of seconds to timeout attempting each individual etcd request",
 	)
-	optDialTimeout := flag.Int(
-		"storage-etcd-dial-timeout-seconds",
+	optEtcdDialTimeout := flag.Int(
+		"etcd-dial-timeout-seconds",
 		envutil.WithDefaultInt(
-			"RUNM_METADATA_STORAGE_ETCD_DIAL_TIMEOUT_SECONDS",
+			"RUNM_ETCD_DIAL_TIMEOUT_SECONDS",
 			defaultEtcdDialTimeoutSeconds,
 		),
 		"Number of seconds to timeout attempting each connect/dial attempt to etcd",
@@ -150,31 +145,28 @@ func ConfigFromOpts() *Config {
 	flag.Parse()
 
 	return &Config{
-		UseTLS:                    *optUseTLS,
-		CertPath:                  *optCertPath,
-		KeyPath:                   *optKeyPath,
-		BindHost:                  *optHost,
-		BindPort:                  *optPort,
-		ServiceName:               *optServiceName,
-		EtcdEndpoints:             endpoints,
-		EtcdKeyPrefix:             *optKeyPrefix,
-		EtcdConnectTimeoutSeconds: time.Duration(*optConnectTimeout) * time.Second,
-		EtcdRequestTimeoutSeconds: time.Duration(*optRequestTimeout) * time.Second,
-		EtcdDialTimeoutSeconds:    time.Duration(*optDialTimeout) * time.Second,
-		BootstrapToken:            *optBootstrapToken,
+		UseTLS:         *optUseTLS,
+		CertPath:       *optCertPath,
+		KeyPath:        *optKeyPath,
+		BindHost:       *optHost,
+		BindPort:       *optPort,
+		ServiceName:    *optServiceName,
+		BootstrapToken: *optBootstrapToken,
+		Etcd: &etcdutil.Config{
+			UseTLS:                *optUseTLS,
+			CertPath:              *optCertPath,
+			KeyPath:               *optKeyPath,
+			Endpoints:             etcdEndpoints,
+			KeyPrefix:             *optEtcdKeyPrefix,
+			ConnectTimeoutSeconds: time.Duration(*optEtcdConnectTimeout) * time.Second,
+			RequestTimeoutSeconds: time.Duration(*optEtcdRequestTimeout) * time.Second,
+			DialTimeoutSeconds:    time.Duration(*optEtcdDialTimeout) * time.Second,
+		},
 	}
 }
 
-// Returns an etcd configuration struct populated with all configured options.
-func (c *Config) EtcdConfig() *etcd.Config {
-	return &etcd.Config{
-		Endpoints:   c.EtcdEndpoints,
-		DialTimeout: c.EtcdDialTimeoutSeconds,
-		TLS:         c.TLSConfig(),
-	}
-}
-
-// Returns the TLS configuration struct to use with etcd client.
+// Returns the TLS configuration struct to use with either an etcd client or a
+// gRPC server.
 func (c *Config) TLSConfig() *tls.Config {
 	cfg := &tls.Config{}
 
@@ -227,22 +219,4 @@ func (c *Config) TLSConfig() *tls.Config {
 	cfg.InsecureSkipVerify = false
 	cfg.Certificates = []tls.Certificate{kp}
 	return cfg
-}
-
-// Returns the set of etcd3 endpoints used by runm-metadata
-func etcdNormalizeEndpoints(epsStr string) []string {
-	eps := strings.Split(epsStr, ",")
-	res := make([]string, len(eps))
-	// Ensure endpoints begin with http[s]:// and contain a port. If missing,
-	// add default etcd port.
-	for x, ep := range eps {
-		if !strings.HasPrefix(ep, "http") {
-			ep = "http://" + ep
-		}
-		if strings.Count(ep, ":") == 1 {
-			ep = ep + ":2379"
-		}
-		res[x] = ep
-	}
-	return res
 }

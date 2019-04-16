@@ -6,6 +6,7 @@ import (
 	etcd "github.com/coreos/etcd/clientv3"
 	etcd_namespace "github.com/coreos/etcd/clientv3/namespace"
 
+	"github.com/runmachine-io/runmachine/pkg/etcdutil"
 	"github.com/runmachine-io/runmachine/pkg/logging"
 	"github.com/runmachine-io/runmachine/pkg/metadata/server/config"
 )
@@ -31,7 +32,8 @@ type Store struct {
 }
 
 func New(log *logging.Logs, cfg *config.Config) (*Store, error) {
-	client, err := connect(log, cfg)
+	etcdCfg := cfg.Etcd
+	client, err := etcdutil.Connect(log, etcdCfg)
 	if err != nil {
 		return nil, err
 	}
@@ -39,7 +41,7 @@ func New(log *logging.Logs, cfg *config.Config) (*Store, error) {
 		log:    log,
 		cfg:    cfg,
 		client: client,
-		kv:     etcd_namespace.NewKV(client.KV, cfg.EtcdKeyPrefix+_SERVICE_KEY),
+		kv:     etcd_namespace.NewKV(client.KV, etcdCfg.KeyPrefix+_SERVICE_KEY),
 	}
 	if err = s.ensureObjectTypes(); err != nil {
 		return nil, err
@@ -56,6 +58,6 @@ func New(log *logging.Logs, cfg *config.Config) (*Store, error) {
 func (s *Store) requestCtx() (context.Context, context.CancelFunc) {
 	return context.WithTimeout(
 		context.Background(),
-		s.cfg.EtcdRequestTimeoutSeconds,
+		s.cfg.Etcd.RequestTimeoutSeconds,
 	)
 }

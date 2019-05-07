@@ -1,26 +1,24 @@
 package conditions
 
-import pb "github.com/runmachine-io/runmachine/proto"
-
-type HasObjectType interface {
-	GetObjectType() string
+type HasObjectTypeCode interface {
+	GetObjectTypeCode() string
 }
 
 type ObjectTypeCondition struct {
-	Op         Op
-	ObjectType *pb.ObjectType
+	Op      Op
+	Operand string
 }
 
-func (c *ObjectTypeCondition) Matches(obj HasObjectType) bool {
-	if c == nil || c.ObjectType == nil {
+func (c *ObjectTypeCondition) Matches(obj HasObjectTypeCode) bool {
+	if c == nil || c.Operand == "" {
 		return true
 	}
-	cmp := obj.GetObjectType()
+	cmp := obj.GetObjectTypeCode()
 	switch c.Op {
 	case OP_EQUAL:
-		return c.ObjectType.Code == cmp
+		return c.Operand == cmp
 	case OP_NOT_EQUAL:
-		return c.ObjectType.Code != cmp
+		return c.Operand != cmp
 	default:
 		return false
 	}
@@ -28,9 +26,9 @@ func (c *ObjectTypeCondition) Matches(obj HasObjectType) bool {
 
 // ObjectTypeEqual is a helper function that returns a ObjectTypeCondition
 // filtering on an exact ObjectType object match
-func ObjectTypeEqual(search *pb.ObjectType) *ObjectTypeCondition {
+func ObjectTypeEqual(search string) *ObjectTypeCondition {
 	return &ObjectTypeCondition{
-		Op:         OP_EQUAL,
-		ObjectType: search,
+		Op:      OP_EQUAL,
+		Operand: search,
 	}
 }

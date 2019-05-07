@@ -37,8 +37,8 @@ func (f *ObjectCondition) Matches(obj *pb.Object) bool {
 	if !f.NameCondition.Matches(obj) {
 		return false
 	}
-	if f.ProjectCondition != "" && obj.Project != "" {
-		if obj.Project != f.ProjectCondition {
+	if f.ProjectCondition != "" && obj.ProjectExternalId != "" {
+		if obj.ProjectExternalId != f.ProjectCondition {
 			return false
 		}
 	}
@@ -61,10 +61,10 @@ func (f *ObjectCondition) IsEmpty() bool {
 func (f *ObjectCondition) String() string {
 	attrMap := make(map[string]string, 0)
 	if f.PartitionCondition != nil {
-		attrMap["partition"] = f.PartitionCondition.Partition.Uuid
+		attrMap["partition"] = f.PartitionCondition.Operand
 	}
 	if f.ObjectTypeCondition != nil {
-		attrMap["object_type"] = f.ObjectTypeCondition.ObjectType.Code
+		attrMap["object_type"] = f.ObjectTypeCondition.Operand
 	}
 	if f.UuidCondition != nil {
 		attrMap["uuid"] = f.UuidCondition.Uuid

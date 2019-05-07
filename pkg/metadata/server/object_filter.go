@@ -27,7 +27,7 @@ func (s *Server) defaultObjectFilter(
 		return nil, err
 	}
 	return &conditions.ObjectCondition{
-		PartitionCondition: conditions.PartitionEqual(p),
+		PartitionCondition: conditions.PartitionEqual(p.Uuid),
 		ProjectCondition:   session.Project,
 	}, nil
 }
@@ -119,14 +119,14 @@ func (s *Server) expandObjectFilter(
 		for _, p := range partitions {
 			if len(objTypes) == 0 {
 				f := &conditions.ObjectCondition{
-					PartitionCondition: conditions.PartitionEqual(p),
+					PartitionCondition: conditions.PartitionEqual(p.Uuid),
 				}
 				res = append(res, f)
 			} else {
 				for _, ot := range objTypes {
 					f := &conditions.ObjectCondition{
-						PartitionCondition:  conditions.PartitionEqual(p),
-						ObjectTypeCondition: conditions.ObjectTypeEqual(ot),
+						PartitionCondition:  conditions.PartitionEqual(p.Uuid),
+						ObjectTypeCondition: conditions.ObjectTypeEqual(ot.Code),
 					}
 					res = append(res, f)
 				}
@@ -135,7 +135,7 @@ func (s *Server) expandObjectFilter(
 	} else if len(objTypes) > 0 {
 		for _, ot := range objTypes {
 			f := &conditions.ObjectCondition{
-				ObjectTypeCondition: conditions.ObjectTypeEqual(ot),
+				ObjectTypeCondition: conditions.ObjectTypeEqual(ot.Code),
 			}
 			res = append(res, f)
 		}

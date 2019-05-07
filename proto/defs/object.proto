@@ -7,8 +7,7 @@ import "object_type.proto";
 import "property.proto";
 
 // An externally-referenceable object in the runm system. All objects in the
-// system have a type, a partition identifier, an external name and a UUID
-// identifier.
+// system have a type, an external name and a UUID.
 //
 // The runm-metadata service keeps track of the mapping of external names to
 // UUIDs for all objects it knows about. Therefore, other services in the runm
@@ -24,23 +23,24 @@ import "property.proto";
 // responsible for mapping those external names and object types (in this case,
 // the object type would be "runm.provider") to the external UUID identifier.
 message Object {
-    // The UUID of the partition this object is in
-    string partition = 1;
     // The object type code this object is
-    string object_type = 2;
+    string object_type_code = 1;
+    // The object's globally-unique identifier
+    string uuid = 2;
+    // The object's human-readable name, unique within the scope of the object
+    // type and partition, and optionally the project.
+    string name = 3;
+    // The UUID of the partition this object is in, or empty string if the
+    // object is in global scope
+    string partition_uuid = 50;
     // The external identifier of the project this object is owned by. Can be
     // empty if the type of object isn't ownable by a project (for instance, a
     // `runm.provider` isn't ownable by a project, but a `runm.machine` is)
-    string project = 3;
-    // The object's globally-unique identifier
-    string uuid = 4;
-    // The object's human-readable name, unique within the scope of the object
-    // type and partition, and optionally the project.
-    string name = 5;
+    string project_external_id = 51;
     // The collection of key/value properties associated with the object
-    repeated Property properties = 50;
+    repeated Property properties = 52;
     // The collection of simple string tags associated with the object
-    repeated string tags = 51;
+    repeated string tags = 53;
 }
 
 // Used in matching object records

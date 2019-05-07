@@ -40,7 +40,7 @@ func (s *Store) objectByNameIndexKey(owr *types.ObjectWithReferences) (string, e
 		// $PARTITION/objects/by-type/{type}/by-project/{project}/by-name/{name}
 		return _PARTITIONS_KEY + owr.Partition.Uuid + "/" +
 			_OBJECTS_BY_TYPE_KEY + owr.ObjectType.Code + "/" +
-			_BY_PROJECT_KEY + owr.Object.Project + "/" +
+			_BY_PROJECT_KEY + owr.Object.ProjectExternalId + "/" +
 			_BY_NAME_KEY + owr.Object.Name, nil
 	}
 	return "", fmt.Errorf("Unknown object type scope: %s", owr.ObjectType.Scope)
@@ -149,32 +149,32 @@ func (s *Store) ObjectFindWithReferences(
 	objTypes := make(map[string]*pb.ObjectType, 0)
 	res := make([]*types.ObjectWithReferences, len(objects))
 	for x, obj := range objects {
-		part, ok := partitions[obj.Partition]
+		part, ok := partitions[obj.PartitionUuid]
 		if !ok {
-			part, err = s.PartitionGetByUuid(obj.Partition)
+			part, err = s.PartitionGetByUuid(obj.PartitionUuid)
 			if err != nil {
 				msg := fmt.Sprintf(
 					"failed to find partition %s while attempting to delete "+
 						"object with UUID %s",
-					obj.Partition,
+					obj.PartitionUuid,
 					obj.Uuid,
 				)
 				s.log.ERR(msg)
-				return nil, errors.ErrPartitionNotFound(obj.Partition)
+				return nil, errors.ErrPartitionNotFound(obj.PartitionUuid)
 			}
 		}
-		ot, ok := objTypes[obj.ObjectType]
+		ot, ok := objTypes[obj.ObjectTypeCode]
 		if !ok {
-			ot, err = s.ObjectTypeGetByCode(obj.ObjectType)
+			ot, err = s.ObjectTypeGetByCode(obj.ObjectTypeCode)
 			if err != nil {
 				msg := fmt.Sprintf(
 					"failed to find object type %s while attempting to delete "+
 						"object with UUID %s",
-					obj.ObjectType,
+					obj.ObjectTypeCode,
 					obj.Uuid,
 				)
 				s.log.ERR(msg)
-				return nil, errors.ErrObjectTypeNotFound(obj.ObjectType)
+				return nil, errors.ErrObjectTypeNotFound(obj.ObjectTypeCode)
 			}
 		}
 		owr := &types.ObjectWithReferences{
@@ -220,7 +220,11 @@ func (s *Store) objectsGetMatching(
 		// manually check to see if the deserialized Object's name has the
 		// requested name...
 		if cond.ObjectTypeCondition != nil && cond.PartitionCondition != nil {
-			objScope := cond.ObjectTypeCondition.ObjectType.Scope
+			ot, err := s.ObjectTypeGetByCode(cond.ObjectTypeCondition.Operand)
+			if err != nil {
+				return nil, err
+			}
+			objScope := ot.Scope
 			if objScope == pb.ObjectTypeScope_PROJECT {
 				if cond.ProjectCondition != "" {
 					// Just drop through if we don't have a project because
@@ -229,8 +233,8 @@ func (s *Store) objectsGetMatching(
 					// less efficient range-scan sieve pattern to solve
 					// this cond
 					return s.ObjectsGetByProjectNameIndex(
-						cond.PartitionCondition.Partition.Uuid,
-						cond.ObjectTypeCondition.ObjectType.Code,
+						cond.PartitionCondition.Operand,
+						cond.ObjectTypeCondition.Operand,
 						cond.ProjectCondition,
 						cond.NameCondition.Name,
 						cond.NameCondition.Op != conditions.OP_EQUAL,
@@ -238,8 +242,8 @@ func (s *Store) objectsGetMatching(
 				}
 			} else {
 				return s.ObjectsGetByNameIndex(
-					cond.PartitionCondition.Partition.Uuid,
-					cond.ObjectTypeCondition.ObjectType.Code,
+					cond.PartitionCondition.Operand,
+					cond.ObjectTypeCondition.Operand,
 					cond.NameCondition.Name,
 					cond.NameCondition.Op != conditions.OP_EQUAL,
 				)

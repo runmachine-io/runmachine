@@ -1,26 +1,24 @@
 package conditions
 
-import pb "github.com/runmachine-io/runmachine/proto"
-
-type HasPartition interface {
-	GetPartition() string
+type HasPartitionUuid interface {
+	GetPartitionUuid() string
 }
 
 type PartitionCondition struct {
-	Op        Op
-	Partition *pb.Partition
+	Op      Op
+	Operand string
 }
 
-func (c *PartitionCondition) Matches(obj HasPartition) bool {
-	if c == nil || c.Partition == nil {
+func (c *PartitionCondition) Matches(obj HasPartitionUuid) bool {
+	if c == nil || c.Operand == "" {
 		return true
 	}
-	cmp := obj.GetPartition()
+	cmp := obj.GetPartitionUuid()
 	switch c.Op {
 	case OP_EQUAL:
-		return c.Partition.Uuid == cmp
+		return c.Operand == cmp
 	case OP_NOT_EQUAL:
-		return c.Partition.Uuid != cmp
+		return c.Operand != cmp
 	default:
 		return false
 	}
@@ -28,9 +26,9 @@ func (c *PartitionCondition) Matches(obj HasPartition) bool {
 
 // PartitionEqual is a helper function that returns a PartitionCondition
 // filtering on an exact Partition object match
-func PartitionEqual(search *pb.Partition) *PartitionCondition {
+func PartitionEqual(search string) *PartitionCondition {
 	return &PartitionCondition{
-		Op:        OP_EQUAL,
-		Partition: search,
+		Op:      OP_EQUAL,
+		Operand: search,
 	}
 }

@@ -508,11 +508,11 @@ func (s *Server) ProviderCreate(
 
 	// First save the object in the metadata service
 	obj := &pb.Object{
-		Partition:  p.Partition.Uuid,
-		ObjectType: "runm.provider",
-		Uuid:       p.Uuid,
-		Name:       p.Name,
-		Tags:       p.Tags,
+		ObjectTypeCode: "runm.provider",
+		Uuid:           p.Uuid,
+		Name:           p.Name,
+		PartitionUuid:  p.Partition.Uuid,
+		Tags:           p.Tags,
 	}
 	if len(p.Properties) > 0 {
 		props := make([]*pb.Property, len(p.Properties))

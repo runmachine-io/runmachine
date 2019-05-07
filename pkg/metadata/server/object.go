@@ -82,21 +82,21 @@ func (s *Server) checkObjectOwnership(
 	// and if not, return ErrNotFound.
 	// TODO(jaypipes): Allow not checking this if the user is in a specific
 	// role -- i.e. an admin?
-	if obj.Partition != sess.Partition {
+	if obj.PartitionUuid != sess.Partition {
 		s.log.L3(
 			"found object with UUID '%s' but its partition '%s' did not "+
 				"match user's Session partition '%s'",
-			obj.Uuid, obj.Partition, sess.Partition,
+			obj.Uuid, obj.PartitionUuid, sess.Partition,
 		)
 		return ErrNotFound
 	}
-	objTypeScope := s.objectTypes.ScopeOf(obj.ObjectType)
+	objTypeScope := s.objectTypes.ScopeOf(obj.ObjectTypeCode)
 	if objTypeScope == pb.ObjectTypeScope_PROJECT &&
-		obj.Project != sess.Project {
+		obj.ProjectExternalId != sess.Project {
 		s.log.L3(
 			"found object with UUID '%s' but its project '%s' did not "+
 				"match user's Session project '%s'",
-			obj.Uuid, obj.Project, sess.Project,
+			obj.Uuid, obj.ProjectExternalId, sess.Project,
 		)
 		return ErrNotFound
 	}
@@ -224,28 +224,28 @@ func (s *Server) validateObjectCreateRequest(
 	obj := req.Object
 
 	// Simple input data validations
-	if obj.ObjectType == "" {
-		return nil, ErrObjectTypeRequired
+	if obj.ObjectTypeCode == "" {
+		return nil, ErrObjectTypeCodeRequired
 	}
-	if obj.Partition == "" {
-		return nil, ErrPartitionRequired
+	if obj.PartitionUuid == "" {
+		return nil, ErrPartitionUuidRequired
 	}
 
 	// Validate the referred to type, partition and project actually exist
-	part, err := s.store.PartitionGetByUuid(obj.Partition)
+	part, err := s.store.PartitionGetByUuid(obj.PartitionUuid)
 	if err != nil {
 		if err == errors.ErrNotFound {
-			return nil, errPartitionNotFound(obj.Partition)
+			return nil, errPartitionNotFound(obj.PartitionUuid)
 		}
 		// We don't want to leak internal implementation errors...
 		s.log.ERR("failed when validating partition in object set: %s", err)
 		return nil, errors.ErrUnknown
 	}
 
-	objType, err := s.store.ObjectTypeGetByCode(obj.ObjectType)
+	objType, err := s.store.ObjectTypeGetByCode(obj.ObjectTypeCode)
 	if err != nil {
 		if err == errors.ErrNotFound {
-			return nil, errObjectTypeNotFound(obj.ObjectType)
+			return nil, errObjectTypeNotFound(obj.ObjectTypeCode)
 		}
 		// We don't want to leak internal implementation errors...
 		s.log.ERR("failed when validating object type in object set: %s", err)
@@ -256,13 +256,13 @@ func (s *Server) validateObjectCreateRequest(
 		Partition:  part,
 		ObjectType: objType,
 		Object: &pb.Object{
-			Partition:  part.Uuid,
-			ObjectType: objType.Code,
-			Project:    obj.Project,
-			Name:       obj.Name,
-			Uuid:       obj.Uuid,
-			Tags:       obj.Tags,
-			Properties: obj.Properties,
+			ObjectTypeCode:    objType.Code,
+			Uuid:              obj.Uuid,
+			Name:              obj.Name,
+			PartitionUuid:     part.Uuid,
+			ProjectExternalId: obj.ProjectExternalId,
+			Tags:              obj.Tags,
+			Properties:        obj.Properties,
 		},
 	}, nil
 }

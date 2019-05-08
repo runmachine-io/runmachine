@@ -17,8 +17,10 @@ const (
 	// $PARTITION/objects/ is a key namespace that has sub key namespaces that
 	// index objects by name or project+name
 	_OBJECTS_BY_TYPE_KEY = "objects/by-type/"
-	_BY_NAME_KEY         = "by-name/"
-	_BY_PROJECT_KEY      = "by-project/"
+	// Top-level index for objects with GLOBAL object scope
+	_GLOBAL_OBJECTS_BY_NAME_KEY = "objects/by-name/"
+	_BY_NAME_KEY                = "by-name/"
+	_BY_PROJECT_KEY             = "by-project/"
 	// $ROOT/objects/by-uuid/ is a key namespace that stores valued keys where
 	// the key is the object's UUID and the value is the serialized Object
 	// protobuffer message
@@ -42,6 +44,8 @@ func (s *Store) objectByNameIndexKey(owr *types.ObjectWithReferences) (string, e
 			_OBJECTS_BY_TYPE_KEY + owr.ObjectType.Code + "/" +
 			_BY_PROJECT_KEY + owr.Object.ProjectExternalId + "/" +
 			_BY_NAME_KEY + owr.Object.Name, nil
+	case pb.ObjectTypeScope_GLOBAL:
+		return _GLOBAL_OBJECTS_BY_NAME_KEY, nil
 	}
 	return "", fmt.Errorf("Unknown object type scope: %s", owr.ObjectType.Scope)
 }
@@ -240,7 +244,7 @@ func (s *Store) objectsGetMatching(
 						cond.NameCondition.Op != conditions.OP_EQUAL,
 					)
 				}
-			} else {
+			} else if objScope == pb.ObjectTypeScope_PARTITION {
 				return s.ObjectsGetByNameIndex(
 					cond.PartitionCondition.Operand,
 					cond.ObjectTypeCondition.Operand,
@@ -248,6 +252,8 @@ func (s *Store) objectsGetMatching(
 					cond.NameCondition.Op != conditions.OP_EQUAL,
 				)
 			}
+			// Let GLOBAL object scope fall into below fetch-all-and-filter
+			// code
 		}
 	}
 

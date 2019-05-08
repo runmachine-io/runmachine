@@ -8,10 +8,12 @@ import "filter.proto";
 // the level at which an object's name is guaranteed to be unique. Objects that
 // have an object type with a PROJECT object type scope must be created with a
 // specific project identifier. Objects with a PARTITION object type scope must
-// be created with a partition UUID.
+// be created with a partition UUID. Objects with a GLOBAL object type scope
+// have names that are unique for the deployment of runmachine.
 enum ObjectTypeScope {
-    PARTITION = 0;
-    PROJECT = 1;
+    GLOBAL = 0;
+    PARTITION = 1;
+    PROJECT = 2;
 }
 
 // An object type is a simple classification for various types of things known

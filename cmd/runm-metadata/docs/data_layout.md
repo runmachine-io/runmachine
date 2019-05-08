@@ -90,109 +90,71 @@ $ROOT
       d296e062ef55443a8dd40369e2a3048d -> serialized ObjectDefinition message
       f3823e51dbfd420f807f3a1daac674f0 -> serialized ObjectDefinition message
   partitions/
-    by-name/
-      us-east.example.com -> d3873f99a21f45f5bce156c1f8b84b03
-      us-west.example.com -> d79706e01fbd4e48aae89209061cdb71
-    by-uuid/
-      d3873f99a21f45f5bce156c1f8b84b03 -> serialized Partition message
-      d79706e01fbd4e48aae89209061cdb71 -> serialized Partition message
     d3873f99a21f45f5bce156c1f8b84b03/
     d79706e01fbd4e48aae89209061cdb71/
   types/
     object/
       runm.image -> serialized ObjectType message
       runm.machine -> serialized ObjectType message
+      runm.partition -> serialized ObjectType message
       runm.provider -> serialized ObjectType message
       runm.provider_group -> serialized ObjectType message
     runm.provider/
       runm.compute_node -> serialized ProviderType message
-  objects/by-uuid/
-    54b8d8d7e24c43799bbf70c16e921e52 -> serialized Object message
-    60b53edd16764f6abc081ddb0a73e69c -> serialized Object message
-    3bf3e700f11b4a7cb99244c554b3a856 -> serialized Object message
+  objects/
+    by-type/
+      runm.partition/
+        by-name/
+          us-east.example.com -> d3873f99a21f45f5bce156c1f8b84b03
+          us-west.example.com -> d79706e01fbd4e48aae89209061cdb71
+    by-uuid/
+      d3873f99a21f45f5bce156c1f8b84b03 -> serialized Object message
+      d79706e01fbd4e48aae89209061cdb71 -> serialized Object message
+      54b8d8d7e24c43799bbf70c16e921e52 -> serialized Object message
+      60b53edd16764f6abc081ddb0a73e69c -> serialized Object message
+      3bf3e700f11b4a7cb99244c554b3a856 -> serialized Object message
 ```
 
-Above, you can see that `$ROOT` has four key namespaces, one called
-`types/`, one called `objects/by-uuid/` one called `partitions` and
-another called `definitions/by-type/`.
+Above, you can see that `$ROOT` has a four top-level key namespaces:`types/`,
+`objects/`, `partitions/` and `definitions/`. These top-level key namespaces
+have sub key namespaces under them that either contain serialized protobuffer
+messages or contain a UUID value that points to a `by-uuid` index containing a
+protobuffer message.
 
-The `$ROOT/types/` key namespace has a set of key namespaces, each of which has
-a set of [valued keys](#Valued keys) describing the different types in the
-runmachine system.
+The `$ROOT/types/` key namespace describes different types in the runmachine
+system.
 
-The `$ROOT/definitions/by-type/` key namespace has a set of key namespaces, one
-for each object type. These are the default object definitions that are used
-when an administrator hasn't set up object definitions specific to a partition
-for that object type. The `$ROOT/definitions/by-uuid` key namespace has a set
-of valued keys where the keys are UUIDs and the values are serialized
-ObjectDefinition protobuffer messages.
+The `$ROOT/definitions/` key namespace contains object definitions (schemas)
+that describe different types in the system.
 
-The `$ROOT/objects/by-uuid/` key namespace has a set of valued keys describing
-the objects known to the system.
+The `$ROOT/objects/` key namespace contains actual objects known to the system.
 
-The valued keys in the `$ROOT/objects/by-uuid/` key namespace have the UUID of
-the object as the key and a serialized Google Protobuffer message of the
-[Object](../../../proto/defs/object.proto) itself as the value.
+Finally, the `$ROOT/partitions/` key namespace contains a number of indexes
+that allows the metadata service to quickly determine if a queried-for object
+is in a partition partition.
 
-**NOTE**: Having the serialized Object message as the value of the
-`$ROOT/objects/by-uuid/` key namespace's valued keys allows the `runm-metadata`
-service to answer queries like "get me the tags on this object" with an
-efficient single key fetch operation.
-
-The `$ROOT/partitions/` key namespace has two key namespaces below it that
-implement indexes into partitions, called `by-name` and `by-uuid`. In addition
-to those index key namespaces, each partition's objects are contained in a key
-namespace `$ROOT/partitions/{uuid}/`.
-
-The `$ROOT/partitions/by-name/` key namespace contains valued keys, with the
-key being the human-readable name of the partition and the value being the UUID
-of that partition.
-
-Each UUID value listed in `$ROOT/partitions/by-name/` will be a key namespace
-under `$ROOT/partitions/{uuid}/` that contains *all* objects known to that
-partition. We call these key namespaces "partition key namespaces".
-
-**NOTE**: Typically, clients interacting with `runm-metadata` automatically
-inject a partition identifier into the session when communicating with a
-`runmachine` component, so this partition identifier isn't usually something
-that one specifies manually on the command line. Instead, a configuration file
-or environment variable contains the human-readable name of the partition that
-the user is communicating with.
-
-Therefore, the partition key namespace for the partition with UUID
+The partition key namespace for the partition with UUID
 `d79706e01fbd4e48aae89209061cdb71` will always be
 `$ROOT/partitions/d79706e01fbd4e48aae89209061cdb71/`.
 
 We will refer to an **individual partition key namespace** as `$PARTITION` from
 here on.
 
-**NOTE**: It is important to point out that the following keys are *different*:
-
-* `$ROOT/partitions/by-uuid/d79706e01fbd4e48aae89209061cdb71`
-* `$ROOT/partitions/d79706e01fbd4e48aae89209061cdb71/`
-
-The former is a valued key that will have as its value a serialized `Partition`
-protobuffer object. The latter is the partition key namespace for the partition
-with UUID `d79706e01fbd4e48aae89209061cdb71`.
-
 ### The `$PARTITION` key namespace
 
-Under `$PARTITION`, we store information about the definitions (schemas),
-objects, and the object metadata (properties and tags) in the partition:
+Under `$PARTITION`, we store information about the definitions (schemas) that
+have been set up for a partition as well as a number of name indexes for
+objects contained in the partition.
 
 ```
 $PARTITION (e.g. $ROOT/partitions/d79706e01fbd4e48aae89209061cdb71/)
   definitions/
   objects/
-  properties/
-  tags/
 ```
 
 We will refer to the `$PARTITION/objects/` key namespace as `$OBJECT` from here
 on. Similarly, we will refer to `$PARTITION/definitions/` as just
-`$DEFINITIONS`, `$PARTITION/properties/` as just `$PROPERTIES` and
-`$PARTITION/tags,` as just `$TAGS`. Each of these key namespaces is described
-in detail in the following sections.
+`$DEFINITIONS`.
 
 ### The `$DEFINITIONS` key namespace
 
@@ -248,52 +210,3 @@ means that these objects are not specific to a project, and therefore the
 `$OBJECTS/by-type/runm.provider_group/by-name` is the only index key namespace
 for these types of objects (there is no `by-project/` sub key namespace under
 the object type).
-
-### The `$PROPERTIES` key namespace
-
-The `$PROPERTIES` key namespace stores information about the object properties
-for all objects known to the partition.
-
-Here is an example layout for a partition with a two `runm.image` objects and
-one `runm.machine` object, with the image objects having an "architecture"
-property associated with them and the machine object having an "appgroup"
-property associated with it:
-
-```
-$PROPERTIES (e.g. $ROOT/partitions/d79706e01fbd4e48aae89209061cdb71/properties/)
-  by-type/
-    runm.image/
-      architecture/
-        x86_64/
-          54b8d8d7e24c43799bbf70c16e921e52
-        arm64/
-          60b53edd16764f6abc081ddb0a73e69c
-    runm.machine/
-      appgroup/
-        A/
-          3bf3e700f11b4a7cb99244c554b3a856
-```
-
-`runm-metadata` can use the key namespaces defined in the `$PROPERTIES` key
-namespace to look up objects that have a particular property (key, or key and
-value). The lowest-level keys are UUIDs for the objects that match that
-particular property.
-
-### The `$TAGS` key namespace
-
-Finally, the `$TAGS` namespace contains all the simple string tags for objects
-in a partition. The structure of this key namespace looks like this:
-
-```
-$TAGS (e.g. $ROOT/partitions/d79706e01fbd4e48aae89209061cdb71/tags/)
-  unicorn/
-    54b8d8d7e24c43799bbf70c16e921e52
-    60b53edd16764f6abc081ddb0a73e69c
-  rainbow/
-    3bf3e700f11b4a7cb99244c554b3a856
-```
-
-Above, we have three objects in the partition that have tags decorating them.
-Two objects are decorated with a tag "unicorn" and one object is decorated with
-a tag "rainbow". The lowest-level keys within each tag key namespace are the
-object's UUID.

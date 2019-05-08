@@ -21,6 +21,11 @@ var (
 	// The collection of well-known runm object types
 	runmObjectTypes = []*pb.ObjectType{
 		&pb.ObjectType{
+			Code:        "runm.partition",
+			Description: "A group of resources and control services",
+			Scope:       pb.ObjectTypeScope_GLOBAL,
+		},
+		&pb.ObjectType{
 			Code:        "runm.provider",
 			Description: "A provider of some resources, e.g. a compute node or an SR-IOV NIC",
 			Scope:       pb.ObjectTypeScope_PARTITION,

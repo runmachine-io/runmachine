@@ -302,6 +302,7 @@ func (s *Store) ObjectGetByUuid(
 	if err = proto.Unmarshal(resp.Kvs[0].Value, obj); err != nil {
 		return nil, err
 	}
+	obj.Generation = resp.Kvs[0].Version
 
 	return obj, nil
 }
@@ -426,11 +427,12 @@ func (s *Store) objectsGetAll() ([]*pb.Object, error) {
 
 	res := make([]*pb.Object, resp.Count)
 	for x, kv := range resp.Kvs {
-		msg := &pb.Object{}
-		if err := proto.Unmarshal(kv.Value, msg); err != nil {
+		obj := &pb.Object{}
+		if err := proto.Unmarshal(kv.Value, obj); err != nil {
 			return nil, err
 		}
-		res[x] = msg
+		obj.Generation = kv.Version
+		res[x] = obj
 	}
 
 	return res, nil
@@ -495,6 +497,12 @@ func (s *Store) ObjectUpdate(
 ) (*types.ObjectWithReferences, error) {
 	objUuid := owr.Object.Uuid
 
+	origGeneration := owr.Object.Generation
+	// We know because of the generation/version check below that if the etcd
+	// trx succeeds, the generation will be incremented from the original
+	// generation by one, so this is safe to do since we return nil, err
+	// whenever the transaction fails.
+	owr.Object.Generation += 1
 	objValue, err := proto.Marshal(owr.Object)
 	if err != nil {
 		s.log.ERR("failed to serialize object: %v", err)
@@ -522,7 +530,7 @@ func (s *Store) ObjectUpdate(
 	compare := []etcd.Cmp{
 		// Ensure the object value and index by name exists
 		etcd.Compare(etcd.Version(objByNameKey), ">", 0),
-		etcd.Compare(etcd.Version(objByUuidKey), ">", 0),
+		etcd.Compare(etcd.Version(objByUuidKey), "=", origGeneration),
 	}
 	resp, err := s.kv.Txn(ctx).If(compare...).Then(then...).Commit()
 

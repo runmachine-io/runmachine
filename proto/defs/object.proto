@@ -7,7 +7,8 @@ import "object_type.proto";
 import "property.proto";
 
 // An externally-referenceable object in the runm system. All objects in the
-// system have a type, an external name and a UUID.
+// system have a type, an external name, a generation integer representing the
+// number of times the object has changed and a UUID.
 //
 // The runm-metadata service keeps track of the mapping of external names to
 // UUIDs for all objects it knows about. Therefore, other services in the runm
@@ -30,6 +31,9 @@ message Object {
     // The object's human-readable name, unique within the scope of the object
     // type and partition, and optionally the project.
     string name = 3;
+    // Incremented each type the object is changed. It will be 1 upon initial
+    // creation.
+    int64 generation = 4;
     // The UUID of the partition this object is in, or empty string if the
     // object is in global scope
     string partition_uuid = 50;

@@ -44,29 +44,7 @@ METADATA_CONTAINER_NAME=${METADATA_CONTAINER_NAME:-"runm-test-metadata"}
 RESOURCE_CONTAINER_NAME=${RESOURCE_CONTAINER_NAME:-"runm-test-resource"}
 API_CONTAINER_NAME=${API_CONTAINER_NAME:-"runm-test-api"}
 
-if container_exists "$ETCD_CONTAINER_NAME"; then
-    inline_if_verbose "Destroying etcd container named $ETCD_CONTAINER_NAME... "
-    container_destroy "$ETCD_CONTAINER_NAME"
-    print_if_verbose "ok."
-fi
-
-if container_exists "$API_CONTAINER_NAME"; then
-    inline_if_verbose "Destroying runm-api container named $API_CONTAINER_NAME... "
-    container_destroy "$API_CONTAINER_NAME"
-    print_if_verbose "ok."
-fi
-
-if container_exists "$METADATA_CONTAINER_NAME"; then
-    inline_if_verbose "Destroying runm-metadata container named $METADATA_CONTAINER_NAME... "
-    container_destroy "$METADATA_CONTAINER_NAME"
-    print_if_verbose "ok."
-fi
-
-if container_exists "$RESOURCE_CONTAINER_NAME"; then
-    inline_if_verbose "Destroying runm-resource container named $RESOURCE_CONTAINER_NAME... "
-    container_destroy "$RESOURCE_CONTAINER_NAME"
-    print_if_verbose "ok."
-fi
+source $SCRIPTS_DIR/service-down.sh
 
 if ! container_is_running "$MYSQL_CONTAINER_NAME"; then
     $SCRIPTS_DIR/start-mysql-container.sh "$MYSQL_CONTAINER_NAME"
